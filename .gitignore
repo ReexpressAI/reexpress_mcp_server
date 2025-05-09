@@ -1,0 +1,29 @@
+.DS_Store
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+################
+
+*.mlmodel
+*.mlmodelc
+*.mlpackage
+*.mlpackagec
+*.mlmodelkey
+*.mlarchive
+
+############### Reexpress file formats (versions 1 and 2)
+*.re1
+*.re2
+
+############### sdm support files
+*.pt
+*.npy

@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "reexpress": {
+            "type": "stdio",
+            "command": "/bin/bash",
+            "args": [
+                "-c",
+                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate conda_environment_macos15_arm64 && source /Users/a/Documents/projects/cloud/llm_api_setup.sh && python /Users/a/Documents/repos_agents/re_mcp_v1/code/running/reexpress/reexpress_mcp_server.py"
+            ]
+        }
+    }
+}
