@@ -43,7 +43,7 @@ Navigate to the GitHub repository's Releases section and download the required m
 ```bash
 # Create the Conda environment for the MCP server
 cd ${REEXPRESS_MCP_SERVER_REPO_DIR}
-conda env create -f setup/dependencies/conda_environment_macos15_arm64.yml`
+conda env create -f setup/dependencies/conda_environment_macos15_arm64.yml
 ```
 
 This will create an environment "conda_environment_macos15_arm64" with the required dependencies for macOS 15 and Apple silicon.
