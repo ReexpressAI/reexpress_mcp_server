@@ -1,6 +1,6 @@
 
 # Reexpress Model-Context-Protocol (MCP) Server
-### For Claude 3.7 Sonnet and Apple silicon on macOS Sequoia 15 (more platforms and models coming) 
+### For Claude (Sonnet 3.7, Sonnet 4, or Opus 4) and MCP clients running on Apple silicon on macOS Sequoia 15 
 
 ### Video overview: [Here](https://youtu.be/PaWrTFPJv2M)
 
@@ -9,7 +9,7 @@
 
 Reexpress MCP Server is a drop-in solution to add state-of-the-art statistical verification to your complex LLM pipelines, as well as your everyday use of LLMs for search and QA for **software development and data science settings**. It's the first reliable, statistically robust AI second opinion for your AI workflows.
 
-Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. Claude 3.7 Sonnet (from Anthropic) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-4.1-2025-04-14, o4-mini-2025-04-16, and text-embedding-3-large, along with the output from Cladue 3.7, and calculates a robust estimate of the predictive uncertainty against a database of over 100,000 training examples, calibrated against over 100,000 calibration examples. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability.
+Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. Anthropic's LLM model Claude (Sonnet 3.7, Sonnet 4, or Opus 4) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-4.1-2025-04-14, o4-mini-2025-04-16, and text-embedding-3-large, along with the output from Cladue, and calculates a robust estimate of the predictive uncertainty against a database of over 100,000 training examples, calibrated against over 100,000 calibration examples. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability.
 
 > [!NOTE]
 > In addition to providing you (the user) with a principled estimate of confidence in the output given your instructions, Claude itself can use the verification output to progressively refine its answer, determine if it needs additional outside resources or tools, or has reached an impasse and needs to ask you for further clarification or information. That's what we call **reasoning with SDM verification** --- an entirely new capability in the AI toolkit that we think will open up a much broader range of use-cases for LLMs and LLM agents, for both individuals and enterprises.

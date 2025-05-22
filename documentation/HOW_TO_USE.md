@@ -19,7 +19,7 @@
 
 ## Choose an MCP client and Setup Azure/OpenAI API keys
 
-The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). Our recommended way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option and makes it easy to toggle extended thinking for Claude 3.7, which we recommend using when calling the main Reexpress tool. We will assume you have downloaded and installed Claude Desktop in the following. As of writing, you can get everything setup with the free plan, but you may need a paid subscription to access web search and extended thinking, which are useful for verification. Consult the Anthropic documentation for details.
+The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). Our recommended way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option and makes it easy to toggle extended thinking for Claude, which we recommend using when calling the main Reexpress tool. We will assume you have downloaded and installed Claude Desktop in the following. As of writing, you can get everything setup with the free plan, but you may need a paid subscription to access web search and extended thinking, which are useful for verification. Consult the Anthropic documentation for details.
 
 Separately you will also need an OpenAI or Azure OpenAI API key, as detailed in [INSTALL.md](/INSTALL.md).
 

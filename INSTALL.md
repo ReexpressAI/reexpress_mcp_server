@@ -1,8 +1,8 @@
 
 # Installation Instructions for the Reexpress Model-Context-Protocol (MCP) Server
-### For Claude 3.7 Sonnet and Apple silicon on macOS Sequoia 15
+### For Claude (Sonnet 3.7, Sonnet 4, or Opus 4) and MCP clients running on Apple silicon on macOS Sequoia 15
 
-The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option and makes it easy to toggle extended thinking for Claude 3.7, which we recommend using when calling the main Reexpress tool. We will assume you have downloaded and installed Claude Desktop in the following.
+The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option and makes it easy to toggle extended thinking for Claude, which we recommend using when calling the main Reexpress tool. We will assume you have downloaded and installed Claude Desktop in the following.
 
 Installation consists of installing conda, downloading the repo AND model file, installing Python dependencies, and setting file paths. You will also need an [OpenAI API key](https://platform.openai.com/api-keys) or [Microsoft Azure](https://azure.microsoft.com) OpenAI model deployments and corresponding API key (as described below).
 
