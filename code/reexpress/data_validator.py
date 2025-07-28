@@ -1,16 +1,5 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 
-import constants
-
-# import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
-
-# import faiss
-# import time
-import constants
-from collections import namedtuple
-
 #### DataValidator
 unlabeledLabel: int = -1
 oodLabel: int = -99

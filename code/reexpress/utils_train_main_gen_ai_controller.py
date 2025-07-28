@@ -11,30 +11,17 @@ import math
 
 from collections import defaultdict
 
-import codecs
-import time
 
-import json
-import copy
+import time
 import os
 
-import utils_train_main
-import utils_classification
-import uncertainty_statistics
-import uuid
-import constants
 import utils_model
-import sdm_model
-import utils_gen
+# import utils_gen
 import utils_train_main_gen_ai_router
-import utils_preprocess
-
-from mlx_lm import load
-
-import data_validator
 
 
 def train_genai_controller(options, rng, taskCategory=None, llmType=None, gen_ai_model=None, tokenizer=None, main_device=None):
+    import utils_gen
     start_time = time.time()
     best_shuffle_index = 0
     max_calibration_balanced_accuracy = 0

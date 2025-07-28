@@ -1,0 +1,756 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reexpress MCP Server Output</title>
+    
+    <style>
+        body {
+            background-color: #f5f5f5;
+            color: #212529;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .field-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .field-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .field-value {
+            font-size: 15px;
+            color: #212529;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            font-weight: 600;
+        }
+
+        .tag-positive {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .tag-caution {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tag-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tag-neutral {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+
+        .tag-highest {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .prompt-box, .document-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #212529;
+        }
+        
+        .model-name {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .resize-button {
+            float: right;
+            background: none;
+            border: none;
+            color: #0056b3;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            font-weight: 500;
+        }
+
+        .resize-button:hover {
+            color: #004085;
+            text-decoration: underline;
+        }
+        
+        .nearest-match-box {
+            border-left: 4px solid #dee2e6;
+        }
+        
+        .explanation-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #004085;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-positive {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #155724;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-positive {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-negative {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #721c24;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-negative {
+            font-weight: 700;
+            color: #721c24;
+            margin-bottom: 4px;
+        }
+
+        .separator {
+            border-top: 2px solid #dee2e6;
+            margin: 30px 0;
+        }
+
+        .info-icon {
+            color: #0056b3;
+        }
+
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .math-operator {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            display: inline-block;
+        }
+        
+        .math-tilde {
+            position: relative;
+        }
+        
+        .math-superscript {
+            position: absolute;
+            top: -0.5em;
+            right: -0.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript {
+            font-size: 0.75em;
+            font-style: normal;
+            vertical-align: sub;
+        }
+        
+        .math-qtilde {
+            display: inline-block;
+            position: relative;
+            font-style: italic;
+            width: 0.7em;
+            text-align: center;
+        }
+        
+        .math-qtilde::after {
+            content: "~";
+            position: absolute;
+            top: -0.3em;
+            left: 0;
+            right: 0;
+            font-style: normal;
+        }
+        
+        .math-operator-m {
+            font-family: 'Times New Roman', serif;
+            display: inline-block;
+            position: relative;
+            padding-right: 1.2em; /* Space for super/subscripts */
+        }
+        
+        .math-superscript-hat-y {
+            position: absolute;
+            top: -0.5em;
+            left: 1.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript-floor {
+            position: absolute;
+            bottom: -0.3em;
+            left: 1.2em;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+        
+        .qtilde-small {
+            display: inline-block;
+            position: relative;
+            width: 0.6em;
+            font-style: italic;
+        }
+        
+        .qtilde-small::after {
+            content: "~";
+            position: absolute;
+            top: -0.2em;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-style: normal;
+            font-size: 0.9em;
+        }
+        
+        .math-parens {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .math-parens > .paren {
+            font-size: 1.3em;
+            vertical-align: -0.1em;
+        }
+
+        /* For Legend */
+
+        .legend-content {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .legend-content p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .legend-label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        
+        .legend-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+        
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Reexpress MCP Server Output
+        </div>
+
+        <div class="section">
+            <div class="section-title">Verification Results</div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Successfully Verified (Prediction)</div>
+                <div class="field-value">
+                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                </div>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Confidence</div>
+                <div class="field-value"><span class="tag tag-negative">Out-of-distribution (unreliable)</span></div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                <div>The AI response accurately reviews the code for correctness, focusing on the trigger logic, HTML escaping, SQL safety, and duplicate handling. It correctly notes that there are no correctness bugs and that the code functions as intended. The response does not focus on style or documentation, as requested, and all points are supported by the code in the attached file. The only minor caveat is that concurrency and upsert are not implemented, but this does not constitute a correctness bug for the described use case.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                <div>The AI response addresses the user’s request for a correctness-focused code review and correctly identifies that there are no apparent logic or runtime errors in the provided SQLite controller. While it is fairly concise, it covers trigger behavior, SQL parameterization, HTML escaping, and duplicate handling, which aligns with the user’s instruction.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                <div>The AI&#x27;s response correctly analyzes several key aspects of the provided Python code for correctness. It accurately states that: 1) The SQLite trigger for updating timestamps will not cause recursion. 2) The HTML escaping, while applied to non-HTML fields like timestamps, is harmless and does not cause a bug. 3) The `update_document` method safely constructs its SQL query by whitelisting fields, preventing SQL injection. 4) The `add_document` method correctly handles duplicate entries by catching `IntegrityError`. The overall conclusion that the code is free of correctness bugs is well-supported by these points.</div>
+            </div>
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                <div>Do the model explanations agree that the response is correct?</div>
+                <div><span class="tag tag-positive">Yes</span></div>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Additional Information</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">File Access</div>
+                    <div class="field-value">The verification model had access to: mcp_utils_sqlite_document_db_controller.py</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">Date</div>
+                    <div class="field-value">2025-07-26 15:22:41</div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Uncertainty (instance-level) Details</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[0.44798907120576303, 0.5342400437952868]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-value">
+                        <span class="tag tag-negative">False</span>
+                    </div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">Out-of-Distribution</div>
+                    <div class="field-value">
+                        <span class="tag tag-negative">True</span>
+                    </div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
+                        </span></div>
+                    <div class="field-value">0.40553459903082273</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Iterated offset_lower (for class 1), 
+                        <span class="math-operator-m">
+                            m
+                            <span class="math-superscript-hat-y">ŷ</span>
+                            <span class="math-subscript-floor">
+                                ⌊<span class="qtilde-small">q</span>⌋
+                            </span>
+                        </span>
+                    </div>
+                    <div class="field-value">0.017770884998950177</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[2208.0, 2811.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">15</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training (d) Quantile
+                    </div>
+                    <div class="field-value">0.10468961298465729</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-1.0374560356140137, 0.6888865232467651]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="field-grid">
+            
+                <div class="field-box">
+                    <div class="field-label">
+                        α'
+                    </div>
+                    <div class="field-value">0.9</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Min valid rescaled q
+                        <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
+                        </span>
+                    </div>
+                    <div class="field-value">1.0006589859127233</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Class-wise output thresholds (ψ)
+                    </div>
+                    <div class="field-value">[0.9284970760345459, 0.9016774892807007]</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
+                        Support/training size
+                    </div>
+                    <div class="field-value">28227</div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="section">
+            <div class="section-title">Prompt</div>
+            <div class="prompt-box">The attached file is a controller class for an sqlite database in python. Do a code review. Don&#x27;t focus on documentation or style; only focus on correctness.</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">AI Response</div>
+            <div class="document-box">Reference [1, file mcp_utils_sqlite_document_db_controller.py, 1-51]: The UPDATE trigger modifies updated_at using &#x27;UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE document_id = NEW.document_id&#x27; which SQLite handles safely without recursion; Reference [2, file mcp_utils_sqlite_document_db_controller.py, 1-173]: get_document and similar methods apply html.escape(str(row_dict[key])) to all string fields including timestamps, but this doesn&#x27;t break functionality since timestamp strings don&#x27;t contain HTML special characters; Reference [3, file mcp_utils_sqlite_document_db_controller.py, 1-126]: update_document validates fields against a whitelist before SQL construction; Reference [4, file mcp_utils_sqlite_document_db_controller.py, 1-82]: add_document catches IntegrityError and returns False, providing correct behavior for duplicate detection; Answer: After careful analysis, there are no actual correctness bugs in this code that would cause incorrect behavior. The trigger works correctly without recursion, HTML escaping preserves timestamp strings, SQL construction is safe with field validation, and duplicate handling works as designed. While there are potential improvements for concurrent usage (like adding upsert functionality), the existing code functions correctly for its intended single-threaded usage pattern.</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        
+        <div class="nearest-match-box">
+            <div class="section" style="margin-left: 40px;">
+                <div class="section-title">Nearest Match in Training</div>
+                
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Successfully Verified (Prediction)</div>
+                        <div class="field-value">
+                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                        </div>
+                    </div>
+        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">True Label</div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                    </div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                    <div>The response correctly implements the Deposit, Contract, and Guarantee classes with all required methods as specified in the user instructions. Each method returns data in a structure that matches the described requirements, and the logic for processing (such as summing balances and counting accounts) is present. The data is simulated, which is appropriate given the lack of a real data source. The only minor limitation is that the data is hardcoded, but this is acceptable for a functional example as requested. No subjective or recent information is involved.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                    <div>The response provides concrete implementations for Deposit, Contract, and Guarantee classes with the required methods, matching the user’s specification. It uses simulated data arrays to demonstrate functionality, which satisfies the instruction to implement the missing methods. Additional real‐world data retrieval details could improve completeness, but all requested methods are present and functional.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                    <div>The AI response correctly implements all the requested PHP classes (`Deposit`, `Contract`, `Guarantee`) and their specified methods. The code is functional, uses a logical approach with simulated data, and directly addresses every part of the user&amp;#x27;s prompt.</div>
+                </div>
+                
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                    <div>Do the model explanations agree that the response is correct?</div>
+                    <div><span class="tag tag-positive">Yes</span></div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Prompt</div>
+                    <div class="prompt-box">You are tasked with creating a class that manages financial data for a credit union. The given code snippet is part of a method within this class, which retrieves and processes various financial information for a specific member. Your task is to implement the missing methods and classes required to make this code snippet functional.
+
+The `Deposit` class has the following methods:
+- `current($member_id, $fixed_date)`: Retrieves the current deposit information for the given member and fixed date.
+- `getAccount()`: Returns the account data for the current deposit.
+- `getAccountCount()`: Returns the count of accounts for the current deposit.
+- `getBalanceAll()`: Returns the balance for all accounts in the current deposit.
+
+The `Contract` class has the following methods:
+- `current($member_id)`: Retrieves the current contract information for the given member.
+- `get()`: Returns the contract data for the current member.
+- `getATM()`: Returns the ATM data for the current contract.
+
+The `Guarantee` class has the following methods:
+- `current($member_id)`: Retrieves the current guarantee information for the given member.
+- `get()`: Returns the guarantee data for the current member.
+
+You need to implement the missing methods and classes to make the given code snippet functional. Additionally, you need to ensure that the returned data is accurate and properly processed.
+
+Your task is to:
+1. Create the `Deposit` class with the required methods.
+2. Create the `Contract` class with the required methods.
+3. Create the `Guarantee` class with the required methods.
+4. Implement the missing methods within each class to retrieve and process the financial data as per the given code snippet.</div>
+                </div>
+    
+                <div class="section">
+                    <div class="section-title">AI Response</div>
+                    <div class="document-box">To solve this problem, we need to create three classes: `Deposit`, `Contract`, and `Guarantee`, each with specific methods to retrieve and process financial data for a credit union member. The goal is to ensure that these classes and their methods can be used to fetch and process financial information accurately.
+
+### Approach
+1. **Deposit Class**: This class will handle deposit-related information. It will retrieve the current deposit data for a member and a specific date, and provide methods to get account details, count of accounts, and the total balance across all accounts.
+2. **Contract Class**: This class will manage contract-related information. It will retrieve the current contract data for a member and provide methods to get the contract details and associated ATM information.
+3. **Guarantee Class**: This class will handle guarantee-related information. It will retrieve the current guarantees for a member and provide a method to get the guarantee details.
+
+Each class will have a `current` method to initialize the relevant data and other methods to retrieve specific parts of this data.
+
+### Solution Code
+```php
+class Deposit {
+    private $currentDeposit;
+
+    public function current($member_id, $fixed_date) {
+        // Simulated data retrieval based on member_id and fixed_date
+        $this-&amp;gt;currentDeposit = [
+            &amp;#x27;accounts&amp;#x27; =&amp;gt; [
+                [&amp;#x27;account_number&amp;#x27; =&amp;gt; &amp;#x27;123456&amp;#x27;, &amp;#x27;balance&amp;#x27; =&amp;gt; 1500.00],
+                [&amp;#x27;account_number&amp;#x27; =&amp;gt; &amp;#x27;789012&amp;#x27;, &amp;#x27;balance&amp;#x27; =&amp;gt; 3000.00]
+            ]
+        ];
+    }
+
+    public function getAccount() {
+        return $this-&amp;gt;currentDeposit[&amp;#x27;accounts&amp;#x27;] ?? [];
+    }
+
+    public function getAccountCount() {
+        return count($this-&amp;gt;getAccount());
+    }
+
+    public function getBalanceAll() {
+        $total = 0.0;
+        foreach ($this-&amp;gt;getAccount() as $account) {
+            $total += $account[&amp;#x27;balance&amp;#x27;];
+        }
+        return $total;
+    }
+}
+
+class Contract {
+    private $currentContract;
+
+    public function current($member_id) {
+        // Simulated data retrieval based on member_id
+        $this-&amp;gt;currentContract = [
+            &amp;#x27;contract_id&amp;#x27; =&amp;gt; &amp;#x27;CTR001&amp;#x27;,
+            &amp;#x27;start_date&amp;#x27; =&amp;gt; &amp;#x27;2023-01-01&amp;#x27;,
+            &amp;#x27;end_date&amp;#x27; =&amp;gt; &amp;#x27;2024-01-01&amp;#x27;,
+            &amp;#x27;atm&amp;#x27; =&amp;gt; [
+                &amp;#x27;card_number&amp;#x27; =&amp;gt; &amp;#x27;4111111111111111&amp;#x27;,
+                &amp;#x27;daily_limit&amp;#x27; =&amp;gt; 500.00
+            ]
+        ];
+    }
+
+    public function get() {
+        return $this-&amp;gt;currentContract;
+    }
+
+    public function getATM() {
+        return $this-&amp;gt;currentContract[&amp;#x27;atm&amp;#x27;] ?? [];
+    }
+}
+
+class Guarantee {
+    private $currentGuarantee;
+
+    public function current($member_id) {
+        // Simulated data retrieval based on member_id
+        $this-&amp;gt;currentGuarantee = [
+            &amp;#x27;guarantees&amp;#x27; =&amp;gt; [
+                [&amp;#x27;id&amp;#x27; =&amp;gt; &amp;#x27;GRT001&amp;#x27;, &amp;#x27;amount&amp;#x27; =&amp;gt; 2000.00],
+                [&amp;#x27;id&amp;#x27; =&amp;gt; &amp;#x27;GRT002&amp;#x27;, &amp;#x27;amount&amp;#x27; =&amp;gt; 3500.00]
+            ]
+        ];
+    }
+
+    public function get() {
+        return $this-&amp;gt;currentGuarantee[&amp;#x27;guarantees&amp;#x27;] ?? [];
+    }
+}
+```
+
+### Explanation
+1. **Deposit Class**:
+   - `current($member_id, $fixed_date)`: Initializes the deposit data with a simulated array of accounts.
+   - `getAccount()`: Returns the list of accounts.
+   - `getAccountCount()`: Returns the number of accounts.
+   - `getBalanceAll()`: Calculates and returns the total balance across all accounts.
+
+2. **Contract Class**:
+   - `current($member_id)`: Initializes the contract data, including ATM details.
+   - `get()`: Returns the entire contract data.
+   - `getATM()`: Returns the ATM-specific details from the contract.
+
+3. **Guarantee Class**:
+   - `current($member_id)`: Initializes the guarantee data with a list of guarantees.
+   - `get()`: Returns the list of guarantees.
+
+These classes are designed to simulate data retrieval and processing, ensuring that the required methods are present and functional. Each method returns appropriate data structures, allowing the financial information to be accurately processed as needed.</div>
+                </div>
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document ID</div>
+                        <div class="field-value">pos_856914</div>
+                    </div>
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document Source</div>
+                        <div class="field-value">openthoughts.o4mini_high</div>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    
+
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Legend</div>
+            <div class="legend-content">
+                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="legend-label">Class 0:</span>
+                        <span class="legend-value">NOT Verified</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-label">Class 1:</span>
+                        <span class="legend-value">Verified</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

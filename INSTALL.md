@@ -1,10 +1,10 @@
 
 # Installation Instructions for the Reexpress Model-Context-Protocol (MCP) Server
-### For Claude (Sonnet 3.7, Sonnet 4, or Opus 4) and MCP clients running on Apple silicon on macOS Sequoia 15
+### For Claude Opus 4 and MCP clients running on Linux or macOS (Sequoia 15 on Apple silicon) 
 
-The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option and makes it easy to toggle extended thinking for Claude, which we recommend using when calling the main Reexpress tool. We will assume you have downloaded and installed Claude Desktop in the following.
+The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following.
 
-Installation consists of installing conda, downloading the repo AND model file, installing Python dependencies, and setting file paths. You will also need an [OpenAI API key](https://platform.openai.com/api-keys) or [Microsoft Azure](https://azure.microsoft.com) OpenAI model deployments and corresponding API key (as described below).
+Installation consists of installing conda, downloading the repo AND model file, installing Python dependencies, and setting file paths. You will also need an [OpenAI API key](https://platform.openai.com/api-keys) or [Microsoft Azure](https://azure.microsoft.com) OpenAI model deployments and corresponding API key (as described below), and a [Google Gemini API key](https://aistudio.google.com/). The IBM Granite model runs locally and will be downloaded from HuggingFace if it is not already in your local model cache directory.
 
 ## 1. Install Conda
 
@@ -40,13 +40,20 @@ Navigate to the GitHub repository's Releases section and download the required m
 
 ## 4. Create and Configure Conda Environment
 
+Run the following lines from the Terminal.
+
 ```bash
 # Create the Conda environment for the MCP server
-cd ${REEXPRESS_MCP_SERVER_REPO_DIR}
-conda env create -f setup/dependencies/conda_environment_macos15_arm64.yml
+conda create -n re_mcp_v110 python=3.12
+conda activate re_mcp_v110
+pip install torch==2.7.1 transformers==4.53.0 accelerate==1.8.1 numpy==1.26.4
+conda install -c pytorch faiss-cpu=1.9.0
+pip install "mcp[cli]==1.6.0"
+pip install openai==1.70.0
+pip install google-genai==1.25.0
 ```
 
-This will create an environment "conda_environment_macos15_arm64" with the required dependencies for macOS 15 and Apple silicon.
+This will create an environment "re_mcp_v110" with the required dependencies for macOS 15 and Apple silicon.
 
 ## 5. Configure environment variables and LLM API keys
 
@@ -62,24 +69,32 @@ export USE_AZURE_01='0'
 ### OPENAI_API_KEY is only needed if USE_AZURE_01='0'. Just set to '' or keep this default text if not used
 export OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 
-### The following 5 variables are only needed if USE_AZURE_01='1'. Just set to '' or keep this default text if not used
+### The following 4 variables are only needed if USE_AZURE_01='1'. Just set to '' or keep this default text if not used
 export AZURE_OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 export AZURE_OPENAI_ENDPOINT='https://REPLACE_WITH_YOUR_ENDPOINT.azure.com/'
 # Fill in with your deployment names. Replace these with whatever names you chose in Azure.
 export GPT41_2025_04_14_AZURE_DEPLOYMENT_NAME='gpt-4.1'
 export O4_MINI_2025_04_16_AZURE_DEPLOYMENT_NAME='o4-mini'
-export TEXT_EMBEDDING_3_LARGE_AZURE_DEPLOYMENT_NAME='text-embedding-3-large'
+
+# Google Gemini API key is required
+export GEMINI_API_KEY='REPLACE_WITH_API_KEY'
+
+# Optionally, set a cache directory for "ibm-granite/granite-3.3-8b-instruct" by uncommenting the following and adding a valid path
+# export HF_HOME=''
+
+# '1' to create the HTML page in ${REEXPRESS_MCP_MODEL_DIR}/visualize/current_reexpression.html for each call to the MCP server; '0' turns this feature off
+export REEXPRESS_MCP_SAVE_OUTPUT='0'
 ```
 
-Replace REEXPRESS_MCP_SERVER_REPO_DIR and REEXPRESS_MCP_MODEL_DIR with the repo and model directory from above, respectively. If you want to use OpenAI, set USE_AZURE_01='0' and supply your API key in OPENAI_API_KEY. If instead, you want to use Azure, set USE_AZURE_01='1' and fill in the corresponding 5 variables. 
+Replace REEXPRESS_MCP_SERVER_REPO_DIR and REEXPRESS_MCP_MODEL_DIR with the repo and model directory from above, respectively. If you want to use OpenAI, set USE_AZURE_01='0' and supply your API key in OPENAI_API_KEY. If instead, you want to use Azure, set USE_AZURE_01='1' and fill in the corresponding 4 variables. Optionally add a Huggingface model cache directory. Finally, set REEXPRESS_MCP_SAVE_OUTPUT='1' if you want to create an HTML page for the tool call output.
 
 Save the complete file to a location of your choosing and record the path; it will be referenced below. In addition to not including llm_api_setup.sh in version control (e.g., .git), as a best practice, it is further recommended to not put the file in a location accessible to an LLM agent.
 
 > [!IMPORTANT]
-> If using Azure, you must choose OpenAI deployments corresponding to the specific models gpt-4.1-2025-04-14 for GPT41_2025_04_14_AZURE_DEPLOYMENT_NAME; o4-mini-2025-04-16 for O4_MINI_2025_04_16_AZURE_DEPLOYMENT_NAME; and text-embedding-3-large for TEXT_EMBEDDING_3_LARGE_AZURE_DEPLOYMENT_NAME, otherwise the SDM estimator will have undefined behavior, since it is calibrated against those specific versions (i.e., from those release dates). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
+> If using Azure, you must choose OpenAI deployments corresponding to the specific models gpt-4.1-2025-04-14 for GPT41_2025_04_14_AZURE_DEPLOYMENT_NAME and o4-mini-2025-04-16 for O4_MINI_2025_04_16_AZURE_DEPLOYMENT_NAME, otherwise the SDM estimator will have undefined behavior, since it is calibrated against those specific versions (i.e., from those release dates). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
 
 > [!TIP]
-> Each time you call the main Reexpress tool, gpt-4.1-2025-04-14 will be called 1 time; o4-mini-2025-04-16 will be called 1 time; and text-embedding-3-large will be called 2 times. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the calls to `client.beta.chat.completions.parse` (e.g., max_completion_tokens or reasoning_effort for o4-mini-2025-04-16, which is set to "medium" for this SDM estimator), as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
+> Each time you call the main Reexpress tool, gpt-4.1-2025-04-14 will be called 1 time; o4-mini-2025-04-16 will be called 1 time; and gemini-2.5-pro will be called 1 time. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the API calls, as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
 
 ## 6. Configure the MCP Server
 
@@ -93,7 +108,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate conda_environment_macos15_arm64 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
+                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate re_mcp_v110 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -123,7 +138,7 @@ the file would be the following:
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate conda_environment_macos15_arm64 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
+                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate re_mcp_v110 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -145,5 +160,6 @@ If you run into issues, the first things to check are:
 - Verify you are using macOS 15 on Apple silicon and have installed Claude Desktop.
 - You used absolute paths in all of the above.
 - You supplied valid API keys in llm_api_setup.sh, and if using Azure, your deployments are properly configured.
+- Your Mac needs to be able to run "ibm-granite/granite-3.3-8b-instruct" locally. Try a simple example from the model page at [https://huggingface.co/ibm-granite/granite-3.3-8b-instruct](https://huggingface.co/ibm-granite/granite-3.3-8b-instruct).
 - Check that there isn't something wrong with your Claude Desktop install. Try walking through the weather MCP server demo at [https://modelcontextprotocol.io/quickstart/server](https://modelcontextprotocol.io/quickstart/server). If that does not work, then other MCP servers are unlikely to work.
-- Verify you are using our supplied conda environment. The underlying SDM estimator code is dependent on these versions of Faiss, NumPy, and PyTorch, among others.
+- Verify you are using the dependencies noted above. The underlying SDM estimator code is dependent on these versions of Faiss, NumPy, and PyTorch.

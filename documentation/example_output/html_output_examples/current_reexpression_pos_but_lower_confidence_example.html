@@ -1,0 +1,700 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reexpress MCP Server Output</title>
+    
+    <style>
+        body {
+            background-color: #f5f5f5;
+            color: #212529;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .field-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .field-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .field-value {
+            font-size: 15px;
+            color: #212529;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            font-weight: 600;
+        }
+
+        .tag-positive {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .tag-caution {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tag-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tag-neutral {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+
+        .tag-highest {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .prompt-box, .document-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #212529;
+        }
+        
+        .model-name {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .resize-button {
+            float: right;
+            background: none;
+            border: none;
+            color: #0056b3;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            font-weight: 500;
+        }
+
+        .resize-button:hover {
+            color: #004085;
+            text-decoration: underline;
+        }
+        
+        .nearest-match-box {
+            border-left: 4px solid #dee2e6;
+        }
+        
+        .explanation-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #004085;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-positive {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #155724;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-positive {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-negative {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #721c24;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-negative {
+            font-weight: 700;
+            color: #721c24;
+            margin-bottom: 4px;
+        }
+
+        .separator {
+            border-top: 2px solid #dee2e6;
+            margin: 30px 0;
+        }
+
+        .info-icon {
+            color: #0056b3;
+        }
+
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .math-operator {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            display: inline-block;
+        }
+        
+        .math-tilde {
+            position: relative;
+        }
+        
+        .math-superscript {
+            position: absolute;
+            top: -0.5em;
+            right: -0.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript {
+            font-size: 0.75em;
+            font-style: normal;
+            vertical-align: sub;
+        }
+        
+        .math-qtilde {
+            display: inline-block;
+            position: relative;
+            font-style: italic;
+            width: 0.7em;
+            text-align: center;
+        }
+        
+        .math-qtilde::after {
+            content: "~";
+            position: absolute;
+            top: -0.3em;
+            left: 0;
+            right: 0;
+            font-style: normal;
+        }
+        
+        .math-operator-m {
+            font-family: 'Times New Roman', serif;
+            display: inline-block;
+            position: relative;
+            padding-right: 1.2em; /* Space for super/subscripts */
+        }
+        
+        .math-superscript-hat-y {
+            position: absolute;
+            top: -0.5em;
+            left: 1.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript-floor {
+            position: absolute;
+            bottom: -0.3em;
+            left: 1.2em;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+        
+        .qtilde-small {
+            display: inline-block;
+            position: relative;
+            width: 0.6em;
+            font-style: italic;
+        }
+        
+        .qtilde-small::after {
+            content: "~";
+            position: absolute;
+            top: -0.2em;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-style: normal;
+            font-size: 0.9em;
+        }
+        
+        .math-parens {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .math-parens > .paren {
+            font-size: 1.3em;
+            vertical-align: -0.1em;
+        }
+
+        /* For Legend */
+
+        .legend-content {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .legend-content p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .legend-label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        
+        .legend-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+        
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Reexpress MCP Server Output
+        </div>
+
+        <div class="section">
+            <div class="section-title">Verification Results</div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Successfully Verified (Prediction)</div>
+                <div class="field-value">
+                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                </div>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Confidence</div>
+                <div class="field-value"><span class="tag tag-caution">< 90% (use with caution)</span></div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                <div>The review correctly identifies the main bug (using addition instead of subtraction for absolute deviations), points out code quality issues (duplicated logic, lack of input validation, unnecessary sorting), and suggests improvements. All points are accurate and relevant to the code provided.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                <div>The response accurately identifies the critical bug (using addition instead of subtraction for deviations) and other valid code review points (duplication, input validation, sorting), directly addressing the user’s request.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                <div>The AI correctly identifies the critical bug in the provided Python function (using addition instead of subtraction). It also provides several other valid and important code review points, such as the lack of input validation and repeated code logic. The response is a thorough and accurate review of the code.</div>
+            </div>
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                <div>Do the model explanations agree that the response is correct?</div>
+                <div><span class="tag tag-positive">Yes</span></div>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Additional Information</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">File Access</div>
+                    <div class="field-value">The verification model did not have access to any external files.</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">Date</div>
+                    <div class="field-value">2025-07-26 14:45:17</div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Uncertainty (instance-level) Details</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[0.09184703614163829, 0.8980999446707616]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-value">
+                        <span class="tag tag-negative">False</span>
+                    </div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">Out-of-Distribution</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">False</span>
+                    </div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
+                        </span></div>
+                    <div class="field-value">1.3849779422529718</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Iterated offset_lower (for class 1), 
+                        <span class="math-operator-m">
+                            m
+                            <span class="math-superscript-hat-y">ŷ</span>
+                            <span class="math-subscript-floor">
+                                ⌊<span class="qtilde-small">q</span>⌋
+                            </span>
+                        </span>
+                    </div>
+                    <div class="field-value">0.010053019187599994</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[4670.0, 5647.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">28</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training (d) Quantile
+                    </div>
+                    <div class="field-value">0.4347662627696991</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-1.507110595703125, 1.486783504486084]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="field-grid">
+            
+                <div class="field-box">
+                    <div class="field-label">
+                        α'
+                    </div>
+                    <div class="field-value">0.9</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Min valid rescaled q
+                        <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
+                        </span>
+                    </div>
+                    <div class="field-value">1.0006589859127233</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Class-wise output thresholds (ψ)
+                    </div>
+                    <div class="field-value">[0.9284970760345459, 0.9016774892807007]</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
+                        Support/training size
+                    </div>
+                    <div class="field-value">28227</div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="section">
+            <div class="section-title">Prompt</div>
+            <div class="prompt-box">The following python function is intended to calculate the median absolute deviation around the median. Perform a code review.
+def calculate_mad(data):
+    &quot;&quot;&quot;
+    Calculate the Median Absolute Deviation (MAD) around the median.
+    MAD = median(|x_i - median(x)|)
+    Parameters:
+    data (list): List of numerical values
+    Returns:
+    float: The median absolute deviation
+    &quot;&quot;&quot;
+    # Sort the data to find median
+    sorted_data = sorted(data)
+    n = len(sorted_data)
+    # Calculate median
+    if n % 2 == 0:
+        median = (sorted_data[n // 2 - 1] + sorted_data[n // 2]) / 2
+    else:
+        median = sorted_data[n // 2]
+    # Calculate absolute deviations from median
+    absolute_deviations = [abs(x + median) for x in data]
+    # Sort absolute deviations to find their median
+    sorted_deviations = sorted(absolute_deviations)
+    # Calculate median of absolute deviations
+    if n % 2 == 0:
+        mad = (sorted_deviations[n // 2 - 1] + sorted_deviations[n // 2]) / 2
+    else:
+        mad = sorted_deviations[n // 2]
+    return mad</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">AI Response</div>
+            <div class="document-box">Reference [1, internal knowledge]: The MAD formula is MAD = median(|x_i - median(x)|), which requires calculating the absolute value of the difference between each value and the median;
+
+Reference [2, internal reasoning]: Line 18 of the code shows &quot;absolute_deviations = [abs(x + median) for x in data]&quot; which adds the median instead of subtracting it;
+
+Reference [3, internal reasoning]: The median calculation logic is duplicated in lines 14-17 and lines 23-26, which violates the DRY (Don&#x27;t Repeat Yourself) principle;
+
+Reference [4, internal reasoning]: The function lacks input validation for edge cases like empty lists, non-numeric values, or single-element lists;
+
+Reference [5, internal reasoning]: The function sorts the data twice (line 11 and line 21) when only one sort is necessary since the original order doesn&#x27;t matter for calculating deviations;
+
+Answer: The code has a critical bug in line 18 where it uses addition (x + median) instead of subtraction (x - median) when calculating absolute deviations. This will produce incorrect MAD values. Additional issues include: no input validation for edge cases, duplicated median calculation logic, unnecessary double sorting, and lack of type hints. The improved version fixes the subtraction bug, adds input validation, extracts median calculation into a helper function, and includes proper error handling.</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        
+        <div class="nearest-match-box">
+            <div class="section" style="margin-left: 40px;">
+                <div class="section-title">Nearest Match in Training</div>
+                
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Successfully Verified (Prediction)</div>
+                        <div class="field-value">
+                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                        </div>
+                    </div>
+        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">True Label</div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                    </div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                    <div>The response provides a clear and correct Python function that takes a paragraph as input and returns a dictionary counting the frequency of each word, handling punctuation and case sensitivity as described in the instructions. The explanation and code are both accurate and complete for the task.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                    <div>The provided function correctly splits the input, normalizes words by stripping punctuation and lowercasing, and counts each word’s occurrences, which directly fulfills the user’s request to generate a word-frequency dictionary.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                    <div>The AI response provides a correct and functional Python solution that directly addresses the user&amp;#x27;s request. The code correctly tokenizes the paragraph, normalizes the words (lowercase, removes punctuation), and counts their frequencies, which is exactly what was asked.</div>
+                </div>
+                
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                    <div>Do the model explanations agree that the response is correct?</div>
+                    <div><span class="tag tag-positive">Yes</span></div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Prompt</div>
+                    <div class="prompt-box">Design a function that takes in a unique input paragraph and generates a dictionary that counts the frequency of each word in it.
+Paragraph: The quick brown fox jumps over the lazy dog.</div>
+                </div>
+    
+                <div class="section">
+                    <div class="section-title">AI Response</div>
+                    <div class="document-box">To solve this problem, we need to design a function that takes a paragraph as input and generates a dictionary that counts the frequency of each word. The function should handle punctuation and case sensitivity appropriately to ensure accurate word counts.
+
+### Approach
+1. **Splitting the Paragraph**: Split the input paragraph into individual words using whitespace as the delimiter.
+2. **Processing Words**: For each word, remove any leading and trailing punctuation and convert it to lowercase to ensure case insensitivity.
+3. **Counting Frequencies**: Use a dictionary to count the occurrences of each processed word, ensuring that words with different cases or attached punctuation are considered the same if they normalize to the same string.
+
+### Solution Code
+```python
+import re
+
+def count_word_frequency(paragraph):
+    words = paragraph.split()
+    processed_words = []
+    for word in words:
+        processed_word = re.sub(r&amp;#x27;^\W+|\W+$&amp;#x27;, &amp;#x27;&amp;#x27;, word).lower()
+        if processed_word:
+            processed_words.append(processed_word)
+    
+    frequency_dict = {}
+    for word in processed_words:
+        frequency_dict[word] = frequency_dict.get(word, 0) + 1
+    return frequency_dict
+```
+
+### Explanation
+1. **Splitting the Paragraph**: The `split()` method is used to break the paragraph into a list of words based on whitespace.
+2. **Processing Words**: Each word is processed using a regular expression to remove any non-word characters from the start (`^\W+`) and end (`\W+$`). The word is then converted to lowercase to ensure case insensitivity.
+3. **Counting Frequencies**: A dictionary is used to keep track of word counts. The `get` method is used to safely retrieve the current count of a word, defaulting to 0 if the word is not yet in the dictionary. The count is then incremented by 1.
+
+This approach ensures that words are normalized (stripped of punctuation and converted to lowercase) before counting, leading to accurate frequency counts regardless of punctuation or case differences.</div>
+                </div>
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document ID</div>
+                        <div class="field-value">pos_560012</div>
+                    </div>
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document Source</div>
+                        <div class="field-value">openthoughts.o4mini_high</div>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    
+
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Legend</div>
+            <div class="legend-content">
+                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="legend-label">Class 0:</span>
+                        <span class="legend-value">NOT Verified</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-label">Class 1:</span>
+                        <span class="legend-value">Verified</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

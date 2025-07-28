@@ -1,0 +1,665 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reexpress MCP Server Output</title>
+    
+    <style>
+        body {
+            background-color: #f5f5f5;
+            color: #212529;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .field-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .field-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .field-value {
+            font-size: 15px;
+            color: #212529;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            font-weight: 600;
+        }
+
+        .tag-positive {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .tag-caution {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tag-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tag-neutral {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+
+        .tag-highest {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .prompt-box, .document-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #212529;
+        }
+        
+        .model-name {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .resize-button {
+            float: right;
+            background: none;
+            border: none;
+            color: #0056b3;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            font-weight: 500;
+        }
+
+        .resize-button:hover {
+            color: #004085;
+            text-decoration: underline;
+        }
+        
+        .nearest-match-box {
+            border-left: 4px solid #dee2e6;
+        }
+        
+        .explanation-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #004085;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-positive {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #155724;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-positive {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-negative {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #721c24;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-negative {
+            font-weight: 700;
+            color: #721c24;
+            margin-bottom: 4px;
+        }
+
+        .separator {
+            border-top: 2px solid #dee2e6;
+            margin: 30px 0;
+        }
+
+        .info-icon {
+            color: #0056b3;
+        }
+
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .math-operator {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            display: inline-block;
+        }
+        
+        .math-tilde {
+            position: relative;
+        }
+        
+        .math-superscript {
+            position: absolute;
+            top: -0.5em;
+            right: -0.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript {
+            font-size: 0.75em;
+            font-style: normal;
+            vertical-align: sub;
+        }
+        
+        .math-qtilde {
+            display: inline-block;
+            position: relative;
+            font-style: italic;
+            width: 0.7em;
+            text-align: center;
+        }
+        
+        .math-qtilde::after {
+            content: "~";
+            position: absolute;
+            top: -0.3em;
+            left: 0;
+            right: 0;
+            font-style: normal;
+        }
+        
+        .math-operator-m {
+            font-family: 'Times New Roman', serif;
+            display: inline-block;
+            position: relative;
+            padding-right: 1.2em; /* Space for super/subscripts */
+        }
+        
+        .math-superscript-hat-y {
+            position: absolute;
+            top: -0.5em;
+            left: 1.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript-floor {
+            position: absolute;
+            bottom: -0.3em;
+            left: 1.2em;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+        
+        .qtilde-small {
+            display: inline-block;
+            position: relative;
+            width: 0.6em;
+            font-style: italic;
+        }
+        
+        .qtilde-small::after {
+            content: "~";
+            position: absolute;
+            top: -0.2em;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-style: normal;
+            font-size: 0.9em;
+        }
+        
+        .math-parens {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .math-parens > .paren {
+            font-size: 1.3em;
+            vertical-align: -0.1em;
+        }
+
+        /* For Legend */
+
+        .legend-content {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .legend-content p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .legend-label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        
+        .legend-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+        
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Reexpress MCP Server Output
+        </div>
+
+        <div class="section">
+            <div class="section-title">Verification Results</div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Successfully Verified (Prediction)</div>
+                <div class="field-value">
+                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                </div>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Confidence</div>
+                <div class="field-value"><span class="tag tag-positive">>= 90%</span></div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                <div>The response correctly explains the differentiation process for ln(x) and arrives at the correct answer, dy/dx = 1/x. The explanation is mathematically sound and complete, with no ambiguity or missing information.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                <div>The response correctly applies implicit differentiation of y=ln(x) to obtain dy/dx=1/x, which exactly answers the question. I am highly confident given the standard calculus result.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                <div>The AI response correctly identifies the derivative of ln(x) as 1/x. This is a standard and fundamental result in calculus, and the provided derivation using implicit differentiation is mathematically sound.</div>
+            </div>
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                <div>Do the model explanations agree that the response is correct?</div>
+                <div><span class="tag tag-positive">Yes</span></div>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Additional Information</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">File Access</div>
+                    <div class="field-value">The verification model did not have access to any external files.</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">Date</div>
+                    <div class="field-value">2025-07-27 00:09:00</div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Uncertainty (instance-level) Details</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[2.5758892845540722e-05, 0.9999665364493279]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">True</span>
+                    </div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">Out-of-Distribution</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">False</span>
+                    </div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
+                        </span></div>
+                    <div class="field-value">5.877670139868471</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Iterated offset_lower (for class 1), 
+                        <span class="math-operator-m">
+                            m
+                            <span class="math-superscript-hat-y">ŷ</span>
+                            <span class="math-subscript-floor">
+                                ⌊<span class="qtilde-small">q</span>⌋
+                            </span>
+                        </span>
+                    </div>
+                    <div class="field-value">7.704657826504745e-06</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[9990.0, 13530.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">378</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training (d) Quantile
+                    </div>
+                    <div class="field-value">0.937171220779419</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-1.6011075973510742, 1.9713913202285767]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="field-grid">
+            
+                <div class="field-box">
+                    <div class="field-label">
+                        α'
+                    </div>
+                    <div class="field-value">0.9</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Min valid rescaled q
+                        <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
+                        </span>
+                    </div>
+                    <div class="field-value">1.0006589859127233</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Class-wise output thresholds (ψ)
+                    </div>
+                    <div class="field-value">[0.9284970760345459, 0.9016774892807007]</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
+                        Support/training size
+                    </div>
+                    <div class="field-value">28227</div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="section">
+            <div class="section-title">Prompt</div>
+            <div class="prompt-box">What is the derivative of ln(x)?</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">AI Response</div>
+            <div class="document-box">Reference [1, internal knowledge]: By definition, if y = ln(x), then e^y = x; Reference [2, internal reasoning]: Differentiating both sides: e^y · dy/dx = 1, so dy/dx = 1/e^y = 1/x; Answer: The derivative of ln(x) is 1/x.</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        
+        <div class="nearest-match-box">
+            <div class="section" style="margin-left: 40px;">
+                <div class="section-title">Nearest Match in Training</div>
+                
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Successfully Verified (Prediction)</div>
+                        <div class="field-value">
+                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                        </div>
+                    </div>
+        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">True Label</div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                    </div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                    <div>The response correctly finds the inverse function, sets it equal to 8, and solves for x, showing all steps clearly. The answer x = 2 is correct and verified by both direct substitution and by solving the inverse equation. No ambiguity or missing information is present.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-medium)</span></div>
+                    <div>The response correctly derives and applies the inverse function f^{-1}(x)=3^x−1 and solves f^{-1}(x)=8 to get x=2. This is straightforward and matches internal mathematical knowledge.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                    <div>The AI correctly solves the mathematical problem using two distinct and valid methods. Both methods are explained clearly, the calculations are accurate, and the final answer is correct.</div>
+                </div>
+                
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                    <div>Do the model explanations agree that the response is correct?</div>
+                    <div><span class="tag tag-positive">Yes</span></div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Prompt</div>
+                    <div class="prompt-box">Let $f(x) = \log_{3}(x+1)$ be a function, and its inverse function be $y=f^{-1}(x)$. Solve the equation $f^{-1}(x) = 8$ for $x$.</div>
+                </div>
+    
+                <div class="section">
+                    <div class="section-title">AI Response</div>
+                    <div class="document-box">To solve the equation \( f^{-1}(x) = 8 \) for \( x \), where \( f(x) = \log_{3}(x+1) \), we use the property of inverse functions. If \( f^{-1}(x) = 8 \), then applying the original function \( f \) to 8 gives \( x \). 
+
+First, we compute \( f(8) \):
+\[
+f(8) = \log_{3}(8 + 1) = \log_{3}(9)
+\]
+Since \( 3^2 = 9 \), we have:
+\[
+\log_{3}(9) = 2
+\]
+Thus, \( x = 2 \).
+
+To verify, we find the inverse function \( f^{-1}(x) \). Starting with \( y = \log_{3}(x + 1) \), we swap \( x \) and \( y \) and solve for \( y \):
+\[
+x = \log_{3}(y + 1)
+\]
+Converting to exponential form:
+\[
+3^x = y + 1
+\]
+Solving for \( y \):
+\[
+y = 3^x - 1
+\]
+Thus, the inverse function is \( f^{-1}(x) = 3^x - 1 \). Setting this equal to 8:
+\[
+3^x - 1 = 8
+\]
+Solving for \( x \):
+\[
+3^x = 9 \implies x = 2
+\]
+
+Both methods confirm that the solution is \(\boxed{2}\).</div>
+                </div>
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document ID</div>
+                        <div class="field-value">pos_125144</div>
+                    </div>
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document Source</div>
+                        <div class="field-value">openthoughts</div>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    
+
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Legend</div>
+            <div class="legend-content">
+                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="legend-label">Class 0:</span>
+                        <span class="legend-value">NOT Verified</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-label">Class 1:</span>
+                        <span class="legend-value">Verified</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -4,7 +4,7 @@ from sdm_model import SimilarityDistanceMagnitudeCalibrator
 import constants
 import utils_classification
 import utils_model
-import utils_gen
+# import utils_gen
 import data_validator
 from utils_test import print_summary
 

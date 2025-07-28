@@ -1,35 +1,18 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 
 import torch
-import torch.nn as nn
 
 import numpy as np
 import argparse
-import copy
-from pathlib import Path
-import math
-
-from collections import defaultdict
-
-import codecs
-import time
-
-import json
-import copy
-import os
 
 import utils_train_main
-import utils_classification
-import uncertainty_statistics
-import uuid
+
 import constants
 import utils_model
-import sdm_model
-import utils_gen
-import utils_train_main_gen_ai_router
-import utils_preprocess
 
-from mlx_lm import load
+if False:
+    import utils_gen
+    from mlx_lm import load
 
 import data_validator
 import utils_train_iterative_main
@@ -102,8 +85,13 @@ def main():
     parser.add_argument("--warm_up_epochs", default=0, type=int, help="Epochs of initial training with standard "
                                                                        "softmax and CrossEntropy loss.")
     parser.add_argument("--use_balanced_accuracy", default=False, action='store_true',
-                        help="Training is determined by highest balanced accuracy. If not provided, the max "
-                             "balanced median q is used.")
+                        help="Training is determined by highest balanced accuracy on calibration. If this and "
+                             "--use_balanced_median_q are not provided, the minimum "
+                             "balanced SDM loss is used.")
+    parser.add_argument("--use_balanced_median_q", default=False, action='store_true',
+                        help="Training is determined by highest balanced accuracy on calibration. If this and "
+                             "--use_balanced_accuracy are not provided, the minimum "
+                             "balanced SDM loss is used.")
     parser.add_argument("--train_rescaler", default=False, action='store_true',
                         help="If training exited without training the rescaler, use this option. "
                              "Remember to use --load_train_and_calibration_from_best_iteration_data_dir if the "
@@ -194,9 +182,23 @@ def main():
     parser.add_argument("--valid_index_conditional_file", default="",
                         help="If provided, instances with valid index-conditional predictions are saved, "
                              "sorted by the LOWER predictive probability.")
+    parser.add_argument("--prediction_output_file", default="",
+                        help="If provided, output predictions are saved to this file "
+                             "in the order of the input file.")
     parser.add_argument("--eval_gen_ai", default=False, action='store_true', help="eval_gen_ai")
     parser.add_argument("--update_support_set_with_eval_data", default=False, action='store_true',
                         help="update_support_set_with_eval_data")
+    parser.add_argument("--main_device", default="cpu",
+                        help="")
+    parser.add_argument("--aux_device", default="cpu",
+                        help="")
+    parser.add_argument("--pretraining_initialization_epochs", default=0, type=int,
+                        help="")
+    parser.add_argument("--pretraining_learning_rate", default=0.00001, type=float, help="")
+    parser.add_argument("--pretraining_initialization_tensors_file", default="",
+                        help="")
+    parser.add_argument("--ood_support_file", default="",
+                        help="")
 
     options = parser.parse_args()
 
@@ -210,12 +212,20 @@ def main():
         assert options.eval_only, f"Currently we assume generation-decoded gen AI evaluation is accompanied with " \
                                   f"--eval_only, which will also eval the force-decoded classifier."
 
-    print("Currently unlabeled and OOD labels are not supported in training and calibration (i.e., -1 and -99, "
-          "respectively, in Reexpress one). We assume at least two "
-          "labels per class (but typically you will want on the order of 1000's per class).")
+    print("OOD labels (-99) can participate in learning and calibrating the estimator by including --ood_support_file, "
+          "which will add those instances to "
+          "the training support. They can also be added to support after learning the estimator via "
+          "--update_support_set_with_eval_data. We assume at least two "
+          "labels per class, including after random shuffling "
+          "(but typically you will want on the order of 1000's per class).")
     if options.use_gpu:
+        # TODO: These flags are not yet fully implemented in the release version.
+        #  Our internal versions for training make use of
+        #  constants.USE_GPU_FAISS_INDEX and options.main_device and options.aux_device. The MCP server is
+        #  currently expected to run on the default device.
         print("Currently, NVIDIA gpu is not supported. Exiting.")
         exit()
+        main_device = torch.device("cuda")
         # main_device = torch.device("cuda:0")
     elif options.use_mps:  # mps is Apple Silicon
         main_device = torch.device("mps")
@@ -241,7 +251,7 @@ def main():
         print(f"LLM weight reset complete. Exiting.")
         exit()
     # assert options.taskCategory in utils_gen.taskCategories
-    assert options.llmType in utils_gen.llmTypes
+    #assert options.llmType in utils_gen.llmTypes
     # taskCategory = options.taskCategory
     llmType = options.llmType
     if int(options.cache_embeddings_for_classification_with_force_decoded_generation__document_level) + \

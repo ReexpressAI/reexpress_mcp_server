@@ -37,6 +37,21 @@ async def reexpress_add_true() -> str:
 
 
 @mcp.tool()
+async def reexpress_add_ood() -> str:
+    """
+    The ReexpressAddOOD tool modifies the model's training set. When the user calls this tool, simply return the output verbatim without taking additional action nor further analysis. Do not take any further action without consulting the user.
+
+    Call this tool if the user says "ReexpressAddOOD".
+
+    Returns
+    -------
+    Success or Failure message
+    """
+    message = mcp_server_state_controller_object.update_model_support(label=-99)
+    return message
+
+
+@mcp.tool()
 async def reexpress_directory_set(directory: str) -> str:
     """
     The ReexpressDirectorySet tool adds a parent file directory to the verification tool for subsequent consideration. When the user calls this tool, simply return the output verbatim without taking additional action nor further analysis. Do not take any further action without consulting the user.
@@ -113,7 +128,7 @@ async def reexpress_view() -> str:
 @mcp.tool()
 async def reexpress(user_question: str, ai_response: str) -> str:
     """
-    The Reexpress tool provides a calibrated probability of whether the AI's response answers the user's question or instruction. This is a binary classification task where True indicates that the AI's response has been verified as answering the query or instruction, and False indicates that the AI's response cannot be verified as answering the query or instruction. The verification classification is accompanied by a probability between 0 and 1, where a probability of 0 indicates no confidence and a probability of 1 indicates 100% confidence. Separate from the calibrated probability is an estimate of the reliability of the statistical model, which takes one of three values: "Highest", "Low", or "Lowest". "Highest" is the desired value and "Low" indicates that the estimated probability might not be reliable. "Lowest" indicates that the probability is not reliable and the classification is out-of-distribution. The tool also provides informal suggestions from two LLMs that may help inform what additional information may be needed if a True verification classification with a probability of at least 95% with Highest calibration reliability is not obtained.
+    The Reexpress tool provides an estimate of whether the AI's response answers the user's question or instruction. This is a binary classification prediction where True indicates that the AI's response has been verified as answering the query or instruction, and False indicates that the AI's response cannot be verified as answering the query or instruction. In-distribution predictions are accompanied by a confidence estimate in the classification. Out-of-distribution predictions are indicated with an out-of-distribution label. Out-of-distribution predictions should be considered unreliable. The tool also provides informal suggestions from four LLMs that may help inform what additional information may be needed if a True verification classification with a confidence of at least 90% is not obtained.
 
     Call this tool if the user says "reexpress" or "Reexpress".
 
@@ -124,11 +139,12 @@ async def reexpress(user_question: str, ai_response: str) -> str:
 
     Returns
     -------
-    Successfully Verified: True or False \n
-    Confidence in Successful Verification: Real-valued probability between 0.0 and 1.0 \n
-    Calibration Reliability: Highest, Low, or Lowest \n
-    Informal Explanation [1]: <model1_explanation> Brief summary from model 1 </model1_explanation> \n
-    Informal Explanation [2]: <model2_explanation> Brief summary from model 2 </model2_explanation>
+    <successfully_verified> True or False </successfully_verified> \n
+    <confidence> A range between 0% (no confidence) and 100% (full confidence) </confidence> \n
+    <model1_explanation> Brief summary from model 1 </model1_explanation> \n
+    <model2_explanation> Brief summary from model 2 </model2_explanation> \n
+    <model3_explanation> Brief summary from model 3 </model3_explanation> \n
+    <model4_agreement> Do the model explanations agree that the response is correct? Yes or No </model4_agreement>
     """
     tool_is_available, availability_message = mcp_server_state_controller_object.controller_get_tool_availability()
     if tool_is_available:
@@ -137,6 +153,7 @@ async def reexpress(user_question: str, ai_response: str) -> str:
             user_question=user_question.strip(),
             ai_response=ai_response.strip())
     return availability_message
+
 
 if __name__ == "__main__":
     # Initialize and run the server

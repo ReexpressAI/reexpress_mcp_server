@@ -33,7 +33,7 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
     if eval_labels is not None:
         print(f"++Evaluating model over {split_label}++")
     model.eval()
-
+    criterion = nn.NLLLoss(reduction="none")
     eval_size = eval_embeddings.shape[0]
     if set_model_unrescaledOutputCDF:
         assert eval_labels is not None
@@ -48,8 +48,11 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
     cumulative_losses = []
     acc = []
     acc_by_class = {}
+    loss = []
+    loss_by_class = {}
     for class_i in range(model.numberOfClasses):
         acc_by_class[class_i] = []
+        loss_by_class[class_i] = []
     batch_f_positive_outputs = []  # before re-scaling
     soft_sdm_max_batch_outputs = []
     updated_dataset_q = []
@@ -116,6 +119,8 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
             #     batch_f_positive, soft_sdm_max_unrescaled_batch_output = \
             #         transform_gen_ai_output_to_binary_classification(model.gen_ai_vocab, batch_f_positive,
             #                                                          soft_sdm_max_unrescaled_batch_output)
+            if eval_labels is not None:
+                batch_updated_q_values = torch.zeros(soft_sdm_max_unrescaled_batch_output.shape[0], 1).to(main_device)
             for batch_i in range(soft_sdm_max_unrescaled_batch_output.shape[0]):
                 soft_sdm_max_batch_outputs.append(soft_sdm_max_unrescaled_batch_output[batch_i].unsqueeze(0).cpu())  # soft_sdm_max, not logits
                 batch_f_positive_outputs.append(batch_f_positive[batch_i].unsqueeze(0).cpu())  # logits
@@ -130,10 +135,12 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
                     updated_dataset_q.append(0)
                     total_q_flips += 1
                     if eval_labels is not None:
+                        batch_updated_q_values[batch_i, 0] = 0.0
                         updated_dataset_q_by_class[batch_y[batch_i].item()].append(0)
                 else:
                     updated_dataset_q.append(batch_q[batch_i, 0].item())
                     if eval_labels is not None:
+                        batch_updated_q_values[batch_i, 0] = batch_q[batch_i, 0]
                         updated_dataset_q_by_class[batch_y[batch_i].item()].append(batch_q[batch_i, 0].item())
                 if eval_labels is not None:
                     true_y = batch_y[batch_i].item()
@@ -145,6 +152,20 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
                     if set_model_unrescaledOutputCDF:
                         model.trueClass_To_unrescaledOutputCDF[true_y].append(soft_sdm_max_unrescaled_batch_output[batch_i][true_y].item())
                 running_instance_i += 1
+            if eval_labels is not None:
+                # calculate loss using the updated q
+                # Here, we do not need to rerun the convolution, so we use the cached version of batch_f_positive
+                # from above and call model.soft_sdm_max() directly
+                batch_soft_sdm_max_log_with_updated_q = \
+                    model.soft_sdm_max(batch_f_positive, batch_updated_q_values,
+                                       distance_quantile_per_class=batch_distance_quantile_per_class,
+                                       log=True, change_of_base=True)
+                batch_loss_no_reduction = criterion(batch_soft_sdm_max_log_with_updated_q, batch_y).cpu()
+                loss.extend(batch_loss_no_reduction.tolist())
+                for batch_i in range(soft_sdm_max_unrescaled_batch_output.shape[0]):
+                    true_y = batch_y[batch_i].item()
+                    loss_by_class[true_y].append(batch_loss_no_reduction[batch_i].item())
+
     if end_of_document_indicators:
         assert running_instance_i == len(end_of_document_indicators), f"ERROR: There is a mismatch with indexing to " \
                                                                       f"determine document-level labels. Evaluation " \
@@ -162,9 +183,9 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
                 unrescaled_CDFquantiles = torch.zeros(model.numberOfClasses)
                 for label in range(model.numberOfClasses):
                     unrescaled_CDFquantiles[label] = model.getCDFIndex(model.trueClass_To_unrescaledOutputCDF,
-                                                                          soft_sdm_max_batch_outputs[cal_i][label].item(),
-                                                                            label,
-                                                                reverse=False,
+                                                                       soft_sdm_max_batch_outputs[cal_i][label].item(),
+                                                                       label,
+                                                                       reverse=False,
                                                                        val_in_0to1=True)
                 assert torch.argmax(batch_f_positive_outputs[cal_i]) == model.calibration_predicted_labels[cal_i], \
                 "Error: There is an unexpected mismatch between the model's saved calibration predictions and " \
@@ -205,6 +226,17 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
         balanced_accuracy = np.mean(balanced_accuracy_list)  # mean of the accuracies across classes
         print(f"\t..>{split_label}: Balanced (i.e., averaged over classes) accuracy: {balanced_accuracy}")
 
+        print(f"///////{split_label} LOSS")
+        balanced_loss_list = []
+        for class_i in range(model.numberOfClasses):
+            print(f"\t{split_label}: Avg. SDM loss (class {class_i}): {np.mean(loss_by_class[class_i])} out of {len(loss_by_class[class_i])}")
+            balanced_loss_list.append(np.mean(loss_by_class[class_i]))
+        balanced_loss = np.mean(balanced_loss_list)
+        print(
+            f"\t{split_label}: Avg. SDM loss: {np.mean(loss)}; "
+            f"Median SDM loss: {np.median(loss)}")
+        print(f"\t@@>{split_label} Balanced SDM loss: {balanced_loss}")
+
         if end_of_document_indicators is not None:
             document_level_mean_overall_acc = np.mean(document_acc)
             print(f"{split_label}: Overall document-level ACC: {document_level_mean_overall_acc} out of {len(document_acc)} documents")
@@ -220,11 +252,11 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
             return mean_overall_acc, torch.tensor(updated_dataset_q).unsqueeze(1).to(main_device), \
                 batch_f_positive_outputs, soft_sdm_max_batch_outputs, \
                 torch.cat(all_exemplar_vectors, dim=0), \
-                balanced_accuracy, balanced_q_median
+                balanced_accuracy, balanced_q_median, balanced_loss
         else:
             return mean_overall_acc, torch.tensor(updated_dataset_q).unsqueeze(1).to(main_device), \
                 batch_f_positive_outputs, soft_sdm_max_batch_outputs, \
-                balanced_accuracy, balanced_q_median
+                balanced_accuracy, balanced_q_median, balanced_loss
     else:
         if return_exemplar_vectors:
             return torch.tensor(updated_dataset_q).unsqueeze(1).to(main_device), batch_f_positive_outputs, \
@@ -232,5 +264,4 @@ def global_eval(options, model, eval_embeddings=None, eval_labels=None, split_la
         else:
             return torch.tensor(updated_dataset_q).unsqueeze(1).to(main_device), batch_f_positive_outputs, \
                 soft_sdm_max_batch_outputs
-
 

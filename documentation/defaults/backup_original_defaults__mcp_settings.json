@@ -1,9 +1,9 @@
 {
     "allowed_parent_directory": "",
-    "file_access_timeout_in_minutes": 5.0,
-    "max_lines_to_consider": 1000,
+    "file_access_timeout_in_minutes": 15.0,
+    "max_lines_to_consider": 2000,
     "max_file_size_to_open_in_mb": 5.0,
-    "max_number_of_files_to_send_to_llms": 3,
-    "max_number_of_reexpress_tool_calls_before_required_server_reset": 100,
-    "max_number_of_sequential_reexpress_tool_calls_before_required_user_reset": 10
+    "max_number_of_files_to_send_to_llms": 10,
+    "max_number_of_reexpress_tool_calls_before_required_server_reset": 200,
+    "max_number_of_sequential_reexpress_tool_calls_before_required_user_reset": 100
 }

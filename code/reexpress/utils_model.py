@@ -209,6 +209,8 @@ def load_model_torch(model_dir, main_device, load_for_inference=False):
 
 def save_index(index, model_dir):
     index_output_file = path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_INDEX)
+    if constants.USE_GPU_FAISS_INDEX:
+        index = faiss.index_gpu_to_cpu(index)
     serialized_index = faiss.serialize_index(index)
     np.save(index_output_file, serialized_index, allow_pickle=False)
     # faiss.write_index(index, index_output_file)
@@ -217,7 +219,13 @@ def save_index(index, model_dir):
 def load_index(model_dir):
     index_output_file = path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_INDEX)
     loaded_index = np.load(index_output_file, allow_pickle=False)
-    return faiss.deserialize_index(loaded_index)
+    if constants.USE_GPU_FAISS_INDEX:
+        loaded_index = faiss.deserialize_index(loaded_index)
+        gpu_id = 0
+        res = faiss.StandardGpuResources()
+        return faiss.index_cpu_to_gpu(res, gpu_id, loaded_index)
+    else:
+        return faiss.deserialize_index(loaded_index)
     # return faiss.read_index(index_output_file)
 
 

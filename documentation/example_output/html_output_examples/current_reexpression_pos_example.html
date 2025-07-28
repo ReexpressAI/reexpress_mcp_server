@@ -1,0 +1,683 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reexpress MCP Server Output</title>
+    
+    <style>
+        body {
+            background-color: #f5f5f5;
+            color: #212529;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .field-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .field-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .field-value {
+            font-size: 15px;
+            color: #212529;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            font-weight: 600;
+        }
+
+        .tag-positive {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .tag-caution {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tag-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tag-neutral {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+
+        .tag-highest {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .prompt-box, .document-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #212529;
+        }
+        
+        .model-name {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .resize-button {
+            float: right;
+            background: none;
+            border: none;
+            color: #0056b3;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            font-weight: 500;
+        }
+
+        .resize-button:hover {
+            color: #004085;
+            text-decoration: underline;
+        }
+        
+        .nearest-match-box {
+            border-left: 4px solid #dee2e6;
+        }
+        
+        .explanation-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #004085;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-positive {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #155724;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-positive {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 4px;
+        }
+        
+        .explanation-box-negative {
+            background-color: #f8f9fa;                        
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #721c24;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .explanation-title-negative {
+            font-weight: 700;
+            color: #721c24;
+            margin-bottom: 4px;
+        }
+
+        .separator {
+            border-top: 2px solid #dee2e6;
+            margin: 30px 0;
+        }
+
+        .info-icon {
+            color: #0056b3;
+        }
+
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .math-operator {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            display: inline-block;
+        }
+        
+        .math-tilde {
+            position: relative;
+        }
+        
+        .math-superscript {
+            position: absolute;
+            top: -0.5em;
+            right: -0.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript {
+            font-size: 0.75em;
+            font-style: normal;
+            vertical-align: sub;
+        }
+        
+        .math-qtilde {
+            display: inline-block;
+            position: relative;
+            font-style: italic;
+            width: 0.7em;
+            text-align: center;
+        }
+        
+        .math-qtilde::after {
+            content: "~";
+            position: absolute;
+            top: -0.3em;
+            left: 0;
+            right: 0;
+            font-style: normal;
+        }
+        
+        .math-operator-m {
+            font-family: 'Times New Roman', serif;
+            display: inline-block;
+            position: relative;
+            padding-right: 1.2em; /* Space for super/subscripts */
+        }
+        
+        .math-superscript-hat-y {
+            position: absolute;
+            top: -0.5em;
+            left: 1.2em;
+            font-size: 0.75em;
+        }
+        
+        .math-subscript-floor {
+            position: absolute;
+            bottom: -0.3em;
+            left: 1.2em;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+        
+        .qtilde-small {
+            display: inline-block;
+            position: relative;
+            width: 0.6em;
+            font-style: italic;
+        }
+        
+        .qtilde-small::after {
+            content: "~";
+            position: absolute;
+            top: -0.2em;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-style: normal;
+            font-size: 0.9em;
+        }
+        
+        .math-parens {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .math-parens > .paren {
+            font-size: 1.3em;
+            vertical-align: -0.1em;
+        }
+
+        /* For Legend */
+
+        .legend-content {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .legend-content p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .legend-label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        
+        .legend-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+        
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Reexpress MCP Server Output
+        </div>
+
+        <div class="section">
+            <div class="section-title">Verification Results</div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Successfully Verified (Prediction)</div>
+                <div class="field-value">
+                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                </div>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">Confidence</div>
+                <div class="field-value"><span class="tag tag-positive">>= 90%</span></div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                <div>The response correctly analyzes the nearest_match_html() function, noting that it escapes user content, uses proper HTML tag nesting, and closes all tags appropriately. The function returns a string that forms a valid HTML fragment, and the explanation is accurate and supported by the code in the attached file. There are no obvious HTML syntax errors or unescaped user content, so the answer is verified as correct.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
+                <div>The code shows that nearest_match_html properly escapes user content, uses well-nested div and span elements, and closes every tag, so it produces valid HTML.</div>
+            </div>
+
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                <div>The user asks if a specific function generates valid HTML. The AI correctly identifies the two key aspects for this: the use of `html.escape()` to handle user-generated content and the proper nesting of HTML tags within the f-string. The answer is fully supported by a direct analysis of the provided code.</div>
+            </div>
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                <div>Do the model explanations agree that the response is correct?</div>
+                <div><span class="tag tag-positive">Yes</span></div>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Additional Information</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">File Access</div>
+                    <div class="field-value">The verification model had access to: utils_visualization.py</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">Date</div>
+                    <div class="field-value">2025-07-26 00:30:16</div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Uncertainty (instance-level) Details</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[0.03546960994374478, 0.9594950292781664]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">True</span>
+                    </div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">Out-of-Distribution</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">False</span>
+                    </div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
+                        </span></div>
+                    <div class="field-value">2.2112443240526343</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Iterated offset_lower (for class 1), 
+                        <span class="math-operator-m">
+                            m
+                            <span class="math-superscript-hat-y">ŷ</span>
+                            <span class="math-subscript-floor">
+                                ⌊<span class="qtilde-small">q</span>⌋
+                            </span>
+                        </span>
+                    </div>
+                    <div class="field-value">0.005035360778088779</div>
+                </div>
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[6357.0, 7562.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">101</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training (d) Quantile
+                    </div>
+                    <div class="field-value">0.2965579330921173</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-2.1485655307769775, 2.0994796752929688]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="field-grid">
+            
+                <div class="field-box">
+                    <div class="field-label">
+                        α'
+                    </div>
+                    <div class="field-value">0.9</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Min valid rescaled q
+                        <span style="font-family: 'Times New Roman', serif;">
+                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
+                        </span>
+                    </div>
+                    <div class="field-value">1.0006589859127233</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Class-wise output thresholds (ψ)
+                    </div>
+                    <div class="field-value">[0.9284970760345459, 0.9016774892807007]</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
+                        Support/training size
+                    </div>
+                    <div class="field-value">28224</div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="section">
+            <div class="section-title">Prompt</div>
+            <div class="prompt-box">The attached file creates a static HTML page from python dictionaries. Does the newly added nearest_match_html() function construct valid HTML?</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">AI Response</div>
+            <div class="document-box">Reference [1, utils_visualization.py, 1-164:1-169]: &quot;model1_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL1_EXPLANATION, &#x27;&#x27;)) model2_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL2_EXPLANATION, &#x27;&#x27;)) model3_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL3_EXPLANATION, &#x27;&#x27;)) user_question = html.escape(nearest_match_meta_data.get(&#x27;user_question&#x27;, &#x27;&#x27;)) ai_response = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_AI_RESPONSE_KEY, &#x27;&#x27;))&quot;; Reference [2, utils_visualization.py, 1-175:1-226]: The function returns an f-string containing HTML markup with proper div nesting, span tags, and class attributes that match the CSS classes used elsewhere in the file; Reference [3, internal knowledge]: Valid HTML requires properly nested tags, escaped special characters in user content, and well-formed attributes; Answer: Yes, the nearest_match_html() function constructs valid HTML because it properly escapes all user-generated content using html.escape(), maintains correct HTML tag structure with proper opening and closing of all div and span elements, and uses consistent CSS class naming that integrates with the existing stylesheet.</div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        
+        <div class="nearest-match-box">
+            <div class="section" style="margin-left: 40px;">
+                <div class="section-title">Nearest Match in Training</div>
+                
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Successfully Verified (Prediction)</div>
+                        <div class="field-value">
+                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                        </div>
+                    </div>
+        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">True Label</div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                    </div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
+                    <div>The response provides a correct and efficient implementation using a regular expression to extract a 4-digit year following the word &amp;#x27;Copyright&amp;#x27; as specified. The explanation matches the requirements, and the code will return the correct year or None as required. The function signature and behavior align with the user&amp;#x27;s instructions and examples.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-medium)</span></div>
+                    <div>The provided regex-based implementation correctly meets the specification and examples for extracting a 4-digit copyright year or returning None when not found.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                    <div>The provided code correctly implements the requested function using a robust regular expression. The solution correctly handles the specified format, is case-insensitive, and returns the year as an integer or None as required. The explanation is clear and accurately describes how the code works.</div>
+                </div>
+                
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                    <div>Do the model explanations agree that the response is correct?</div>
+                    <div><span class="tag tag-positive">Yes</span></div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Prompt</div>
+                    <div class="prompt-box">You are tasked with implementing a function that extracts the year from a copyright notice in a given source code file. The copyright notice is in the format &amp;quot;Copyright [year] [owner]&amp;quot;. Your function should take a string representing the source code file as input and return the year from the copyright notice. If the copyright notice is not found or the year is not in a valid format, the function should return None.
+
+Function Signature: 
+```python
+def extract_copyright_year(source_code: str) -&amp;gt; Union[int, None]:
+    pass
+```
+
+For example, given the following source code:
+```python
+# Copyright 2018 The Crashpad Authors. All rights reserved.
+#
+```
+The function should return 2018.
+
+However, if the source code is:
+```python
+# Licensed under the Apache License, Version 2.0 (the &amp;quot;License&amp;quot;);
+```
+The function should return None, as there is no valid copyright notice.
+
+Assume that the year in the copyright notice will always be a 4-digit integer.</div>
+                </div>
+    
+                <div class="section">
+                    <div class="section-title">AI Response</div>
+                    <div class="document-box">To solve this problem, we need to extract the year from a copyright notice in a given source code string. The copyright notice is formatted as &amp;quot;Copyright [year] [owner]&amp;quot;, where the year is a 4-digit integer. If the notice is not found or the year is invalid, the function should return None.
+
+### Approach
+1. **Regular Expression Matching**: Use a regular expression to identify the copyright notice and extract the year. The regex pattern is designed to:
+   - Be case-insensitive to match variations like &amp;quot;COPYRIGHT&amp;quot; or &amp;quot;copyright&amp;quot;.
+   - Ensure &amp;quot;Copyright&amp;quot; is a whole word to avoid partial matches (e.g., &amp;quot;Copyrighted&amp;quot;).
+   - Skip any non-digit characters between &amp;quot;Copyright&amp;quot; and the year.
+   - Capture the first occurrence of a 4-digit number following &amp;quot;Copyright&amp;quot;.
+
+2. **Validation**: The regex ensures that the year is a 4-digit number, which is validated by the pattern itself. If a match is found, the captured year is converted to an integer and returned. If no match is found, return None.
+
+### Solution Code
+```python
+import re
+from typing import Union
+
+def extract_copyright_year(source_code: str) -&amp;gt; Union[int, None]:
+    match = re.search(r&amp;#x27;(?i)\bcopyright\b[^\d]*(\d{4})&amp;#x27;, source_code)
+    return int(match.group(1)) if match else None
+```
+
+### Explanation
+- **Regular Expression**: The regex pattern `r&amp;#x27;(?i)\bcopyright\b[^\d]*(\d{4})&amp;#x27;` works as follows:
+  - `(?i)` makes the match case-insensitive.
+  - `\bcopyright\b` ensures &amp;quot;Copyright&amp;quot; is matched as a whole word.
+  - `[^\d]*` skips any non-digit characters after &amp;quot;Copyright&amp;quot;.
+  - `(\d{4})` captures the first 4-digit number following &amp;quot;Copyright&amp;quot;.
+
+- **Search and Extract**: The function uses `re.search` to find the first occurrence of the pattern in the source code. If found, the captured year is converted to an integer and returned. If no valid copyright notice is found, the function returns None.
+
+This approach efficiently and accurately extracts the year from a valid copyright notice while adhering to the problem constraints and requirements.</div>
+                </div>
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document ID</div>
+                        <div class="field-value">pos_1105163</div>
+                    </div>
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document Source</div>
+                        <div class="field-value">openthoughts</div>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    
+
+        <div class="separator"></div>
+
+        <div class="section">
+            <div class="section-title">Legend</div>
+            <div class="legend-content">
+                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="legend-label">Class 0:</span>
+                        <span class="legend-value">NOT Verified</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-label">Class 1:</span>
+                        <span class="legend-value">Verified</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

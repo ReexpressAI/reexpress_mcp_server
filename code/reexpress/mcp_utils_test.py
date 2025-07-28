@@ -8,78 +8,99 @@ import numpy as np
 import constants
 
 
-def get_formatted_sdm_estimator_output_string(verification_classification, confidence_in_verification,
+def _format_probability_as_string_percentage(valid_probability_float: float) -> str:
+    threshold_as_string = (
+        constants.floatProbToDisplaySignificantDigits(
+            floatProb=valid_probability_float))
+    return f"{threshold_as_string[2:]}%"
+
+
+def get_formatted_sdm_estimator_output_string(verification_classification,
                                               calibration_reliability, log_prob_model_explanation,
-                                              reasoning_model_explanation) -> str:
+                                              reasoning_model_explanation,
+                                              gemini_model_explanation,
+                                              agreement_model_classification: bool,
+                                              non_odd_class_conditional_accuracy: float) -> str:
     # If this changes, the docstring in reexpress_mcp_server.reexpress() should also be updated to avoid confusing
     # the downstream LLMs/agents.
+    classification_confidence = \
+        get_calibration_confidence_label(calibration_reliability=calibration_reliability,
+                                         non_odd_class_conditional_accuracy=non_odd_class_conditional_accuracy)
+    if agreement_model_classification:
+        agreement_model_classification_string = "Yes"
+    else:
+        agreement_model_classification_string = "No"
     formatted_output_string = f"""
-        Successfully Verified: {verification_classification}\n
-        Confidence in Successful Verification: {confidence_in_verification}\n
-        Calibration Reliability: {calibration_reliability} \n
-        Informal Explanation [1]: <model1_explanation> {log_prob_model_explanation} </model1_explanation> \n
-        Informal Explanation [2]: <model2_explanation> {reasoning_model_explanation} </model2_explanation>
+        <successfully_verified> {verification_classification} </successfully_verified> \n
+        <confidence> {classification_confidence} </confidence> \n
+        <model1_explanation> {log_prob_model_explanation} </model1_explanation> \n
+        <model2_explanation> {reasoning_model_explanation} </model2_explanation> \n
+        <model3_explanation> {gemini_model_explanation} </model3_explanation> \n
+        <model4_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model4_agreement>
     """
     return formatted_output_string
 
 
-def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, log_prob_model_explanation,
-                                             reasoning_model_explanation, ood_limit):
-    # SDM() calibrated probabilities are typically not presented as single float values, but existing tool-calling
-    # LLMs will not have an understanding of those different quantities, so we compress the additional information
-    # (such as the notion of index-conditional estimate validity) into a single value for the purpose of the MCP
-    # server. In practice, this means we set a ceiling of 94% (constants.ARBITRARY_NON_INDEX_CONDITIONAL_ESTIMATE_MAX),
-    # given that alpha prime is 0.95, on estimates that are not valid index-conditional estimates. Additionally,
-    # we refer to OOD estimates as having "Lowest" calibration reliability since existing LLMs may not understand the
-    # relative ranking of the phrase "Out-of-distribution (OOD)" vs Highest or Low.
-    # (Our own MCP client will directly expose the additional information and nuance to the end-user.)
-    # The calibrated probability is relative to class 1 (verified).
-    predicted_class = prediction_meta_data["prediction"]
-
-    prediction_conditional_distribution__lower = \
-        prediction_meta_data["rescaled_prediction_conditional_distribution__lower"]
-    is_valid_index_conditional__lower = prediction_meta_data["is_valid_index_conditional__lower"]
-
-    verification_classification = predicted_class == 1
-
-    prediction_conditional_estimate_of_predicted_class__lower = \
-        prediction_conditional_distribution__lower[predicted_class].item()
-    if verification_classification:
-        prediction_conditional_estimate_of_predicted_class__lower = (
-            max(0.5,
-                prediction_conditional_estimate_of_predicted_class__lower))
-        if not is_valid_index_conditional__lower:
-            prediction_conditional_estimate_of_predicted_class__lower = (
-                min(constants.ARBITRARY_NON_INDEX_CONDITIONAL_ESTIMATE_MAX,
-                    prediction_conditional_estimate_of_predicted_class__lower))
-        confidence_in_verification = (
-            constants.floatProbToDisplaySignificantDigits(
-                floatProb=prediction_conditional_estimate_of_predicted_class__lower))
+def get_files_in_consideration_message(attached_files_names_list):
+    if len(attached_files_names_list) > 0:
+        files_in_consideration_message = f'The verification model had access to: ' \
+                                         f'{",".join(attached_files_names_list)}\n\n'
     else:
-        # The lower offset is only applied to the index of the predicted_class, so in this case, the class 1 value
-        # is from the original normalized distribution (i.e., there is no need to re-add the lower offset since it
-        # has only been applied to class 0).
-        prediction_class1__lower__normalized = prediction_conditional_distribution__lower[1].item()
-        # The ceiling handles edge cases for OOD/etc. where, e.g., the argmax of the calibrated distribution does
-        # not coincide with the argmax of the predicted class, which is rare, but can occur for unreliable/OOD
-        # predictions.
-        prediction_class1__lower__normalized = (
-            min(0.5,
-                prediction_class1__lower__normalized))
-        confidence_in_verification = (
-            constants.floatProbToDisplaySignificantDigits(floatProb=prediction_class1__lower__normalized))
+        files_in_consideration_message = f'The verification model did not have access to any external files.\n\n'
+    return files_in_consideration_message
 
+
+def get_calibration_confidence_label(calibration_reliability: str, non_odd_class_conditional_accuracy: float,
+                                     return_html_class=False) -> str:
+
+    if calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_OOD:
+        classification_confidence_html_class = "negative"
+        classification_confidence = "Out-of-distribution (unreliable)"
+    elif calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST:
+        classification_confidence_html_class = "positive"
+        classification_confidence = f">= {_format_probability_as_string_percentage(valid_probability_float=non_odd_class_conditional_accuracy)}"
+    else:
+        classification_confidence_html_class = "caution"
+        classification_confidence = f"< {_format_probability_as_string_percentage(valid_probability_float=non_odd_class_conditional_accuracy)} (use with caution)"
+    if return_html_class:
+        return classification_confidence, classification_confidence_html_class
+    return classification_confidence
+
+
+def get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_lower):
     calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_LOW
     if is_valid_index_conditional__lower:
         calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST
-    else:
-        hard_qbin_lower = int(prediction_meta_data["soft_qbin__lower"][0].item())
-        if hard_qbin_lower <= ood_limit:
-            calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
+    elif is_ood_lower:
+        calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
+    return calibration_reliability
+
+
+def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, log_prob_model_explanation,
+                                             reasoning_model_explanation, gemini_model_explanation,
+                                             agreement_model_classification: bool):
+    # Starting in v1.1.0, we've streamlined the primary output to the information needed in (and at a
+    # default granularity suitable for) typical applications.
+    predicted_class = prediction_meta_data["prediction"]
+
+    # prediction_conditional_distribution__lower = \
+    #     prediction_meta_data["rescaled_prediction_conditional_distribution__lower"]
+
+    verification_classification = predicted_class == 1
+    is_valid_index_conditional__lower = prediction_meta_data["is_valid_index_conditional__lower"]
+    is_ood_lower = prediction_meta_data["is_ood_lower"]
+    calibration_reliability = \
+        get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_lower)
+
     formatted_output_string = \
-        get_formatted_sdm_estimator_output_string(verification_classification, confidence_in_verification,
+        get_formatted_sdm_estimator_output_string(verification_classification,
                                                   calibration_reliability,
-                                                  log_prob_model_explanation, reasoning_model_explanation)
+                                                  log_prob_model_explanation,
+                                                  reasoning_model_explanation,
+                                                  gemini_model_explanation,
+                                                  agreement_model_classification,
+                                                  non_odd_class_conditional_accuracy=
+                                                  prediction_meta_data["non_odd_class_conditional_accuracy"])
     return formatted_output_string
 
 
@@ -99,7 +120,18 @@ def test(main_device, model, global_uncertainty_statistics, reexpression_input):
                   min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
                   min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
                   predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
-                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin)
+                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin,
+                  return_k_nearest_training_idx_in_prediction_metadata=1)
+        nearest_training_idx = int(prediction_meta_data["top_k_distances_idx"][0])
+        # We defer retrieving the training instance from the database, since it is not needed if the
+        # visualization is turned off:
+        prediction_meta_data["nearest_training_idx"] = nearest_training_idx
+        # add the following model-level values for convenience
+        prediction_meta_data["min_valid_qbin_for_class_conditional_accuracy_with_bounded_error"] = \
+            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error
+        prediction_meta_data["non_odd_thresholds"] = model.non_odd_thresholds.tolist()
+        prediction_meta_data["non_odd_class_conditional_accuracy"] = model.non_odd_class_conditional_accuracy
+        prediction_meta_data["support_index_ntotal"] = model.support_index.ntotal
         return prediction_meta_data
     except:
         return None

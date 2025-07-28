@@ -4,6 +4,7 @@ from sdm_model import SimilarityDistanceMagnitudeCalibrator
 import constants
 import utils_classification
 import utils_model
+import utils_pretraining_initialization
 
 import torch
 import torch.optim as optim
@@ -17,6 +18,7 @@ import math
 import logging
 import sys
 from os import path
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -34,11 +36,50 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
     if model is None:
         print("Initializing model")
         model = SimilarityDistanceMagnitudeCalibrator(**model_params).to(main_device)
+    if options.pretraining_initialization_epochs > 0:
+        # The train and calibration data for the iterative shuffle and SDM loss
+        # (i.e., train_embeddings and calibration_embeddings) are assumed to be disjoint from
+        # options.pretraining_initialization_tensors_file
+        held_out_embeddings = torch.cat([train_embeddings, calibration_embeddings], dim=0)  # 0 is batch dim
+        held_out_labels = torch.cat([train_labels, calibration_labels], dim=0)
+        model = utils_pretraining_initialization.pretrain(options, model=model, model_dir=model_dir,
+                                                          held_out_embeddings=held_out_embeddings,
+                                                          held_out_labels=held_out_labels,
+                                                          ).to(main_device)
+        del held_out_embeddings
+        del held_out_labels
     if model.is_gen_ai:
         print(f"FREEZING LLM DISTRIBUTION WEIGHTS")
         model.fc_negative.weight.requires_grad = False
         model.fc_positive.weight.requires_grad = False
         model.fc_original.weight.requires_grad = False
+
+    if options.ood_support_file.strip() != "":
+        import utils_preprocess
+        import data_validator
+        ood_support_meta_data, _ = \
+            utils_preprocess.get_metadata_lines(options, options.ood_support_file,
+                                                reduce=False,
+                                                use_embeddings=options.use_embeddings,
+                                                concat_embeddings_to_attributes=options.concat_embeddings_to_attributes,
+                                                calculate_summary_stats=False, is_training=False)
+        ood_support_embeddings = ood_support_meta_data["embeddings"].to(main_device)
+        ood_support_labels = ood_support_meta_data["labels"]
+        label_parity_warning = False
+        for ood_label in ood_support_labels:
+            if ood_label != data_validator.oodLabel:
+                label_parity_warning = True
+        if label_parity_warning:
+            print(f">>NOTE: Using --ood_support_file is primarily intended for adding OOD "
+                  f"(label=={data_validator.oodLabel}) instances to the training database. "
+                  f"You can add other instances to the support (as you are doing) using this "
+                  f"mechanism, but note that they will not participate in the iterative shuffling with the "
+                  f"calibration set. As such, typically documents with labels in [0, C) should instead be added to "
+                  f"--input_training_set_file or --input_calibration_set_file.<<")
+        ood_support_document_ids = ood_support_meta_data["uuids"]
+        print(f"Loaded {len(ood_support_labels)} OOD/additional documents to add to the training support set")
+    else:
+        ood_support_meta_data = None
 
     train_size = train_embeddings.shape[0]
 
@@ -58,6 +99,10 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
     max_dev_balanced_median_q = 0
     max_dev_balanced_median_q_epoch = -1
     train_balanced_median_q_for_max_dev_median_q = 0
+
+    min_dev_balanced_sdm_loss = np.inf
+    min_dev_balanced_sdm_loss_epoch = -1
+    train_balanced_sdm_loss_for_min_dev_sdm_loss = np.inf
 
     all_epoch_cumulative_losses = []
 
@@ -114,7 +159,6 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
         print(f"Epoch average loss: {np.mean(cumulative_losses)}")
         all_epoch_cumulative_losses.extend(cumulative_losses)
         print(f"Average loss across all mini-batches (all epochs): {np.mean(all_epoch_cumulative_losses)}")
-
         _, train_batch_f_positive_outputs, _, \
             train_exemplar_vectors = \
             utils_classification.global_eval(options, model, eval_embeddings=train_embeddings, eval_labels=None,
@@ -135,10 +179,31 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
                                              dataset_distance_quantile_per_class=None
                                              )  # eval not needed on this pass; hence, labels are None
         model.set_calibration_predicted_labels(torch.argmax(calibration_batch_f_positive_outputs, dim=1))
-        # Set the exemplar vectors of training as the support set and fetch the calibration distances
-        _, calibration_top_k_distances, calibration_top_k_distances_idx = \
-            model.construct_support_index(support_exemplar_vectors_numpy=train_exemplar_vectors.detach().numpy(),
-                                      calibration_exemplar_vectors_numpy=calibration_exemplar_vectors.detach().numpy())
+        if ood_support_meta_data is not None:
+            _, ood_support_batch_f_positive_outputs, _, \
+                ood_support_exemplar_vectors = \
+                utils_classification.global_eval(options, model, eval_embeddings=ood_support_embeddings,
+                                                 eval_labels=None,
+                                                 split_label="OOD_support",
+                                                 return_exemplar_vectors=True,
+                                                 dataset_q=None,
+                                                 dataset_distance_quantile_per_class=None
+                                                 )
+            ood_support_predicted_labels = torch.argmax(ood_support_batch_f_positive_outputs, dim=1).detach().numpy().tolist()
+            _, calibration_top_k_distances, calibration_top_k_distances_idx = \
+                model.construct_support_index(support_exemplar_vectors_numpy=train_exemplar_vectors.detach().numpy(),
+                                              calibration_exemplar_vectors_numpy=calibration_exemplar_vectors.detach().numpy(),
+                                              ood_support_exemplar_vectors_numpy=ood_support_exemplar_vectors.detach().numpy(),
+                                              ood_support_labels=ood_support_labels,
+                                              ood_support_predicted_labels=ood_support_predicted_labels,
+                                              ood_support_document_ids=ood_support_document_ids
+                                              )
+        else:
+            # Set the exemplar vectors of training as the support set and fetch the calibration distances
+            _, calibration_top_k_distances, calibration_top_k_distances_idx = \
+                model.construct_support_index(support_exemplar_vectors_numpy=train_exemplar_vectors.detach().numpy(),
+                                              calibration_exemplar_vectors_numpy=calibration_exemplar_vectors.detach().numpy())
+
         # Fetch the training distances. This will include the identity match, which is handled below.
         # Currently, we assume there are not duplicates in the data splits.
         train_top_k_distances__including_self, train_top_k_distances_idx__including_self = \
@@ -148,7 +213,8 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
         # Note that the distance quantiles for training are determined by distances over training. The class
         # attribute model.trueClass_To_dCDF is over calibration, which is what should be used for new, unseen
         # test instances.
-        train_dataset_q_values, train_trueClass_To_dataset_total_q_ood, train_trueClass_To_total_labels, train_dataset_d0_values, train_trueClass_To_dCDF = model.set_summary_stats_for_support(
+        train_dataset_q_values, train_trueClass_To_dataset_total_q_ood, train_trueClass_To_total_labels, \
+            train_dataset_d0_values, train_trueClass_To_dCDF = model.set_summary_stats_for_support(
             train_exemplar_vectors.shape[0],
             train_top_k_distances__including_self, train_top_k_distances_idx__including_self,
             train_batch_f_positive_outputs,
@@ -213,15 +279,14 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
         # additional eval passes to get rescaled and calculate metrics
         # train_dataset_q_values will change if predictions flip after rescaling
         train_acc, train_dataset_q_values, train_batch_f_positive_outputs, _, \
-            train_balanced_accuracy, train_balanced_q_median = \
+            train_balanced_accuracy, train_balanced_q_median, train_balanced_loss = \
             utils_classification.global_eval(options, model, eval_embeddings=train_embeddings, eval_labels=train_labels,
                                              split_label="TRAIN", return_exemplar_vectors=False,
                                              dataset_q=train_dataset_q_values,
                                              dataset_distance_quantile_per_class=train_dataset_distance_quantile_per_class
                                              )
-
         calibration_acc, _, _, _, \
-            calibration_balanced_accuracy, calibration_balanced_q_median = \
+            calibration_balanced_accuracy, calibration_balanced_q_median, calibration_balanced_loss = \
             utils_classification.global_eval(options, model, eval_embeddings=calibration_embeddings,
                                              eval_labels=calibration_labels,
                                              split_label=constants.SPLIT_LABEL_calibration_during_training, return_exemplar_vectors=False,
@@ -229,15 +294,21 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
                                              dataset_distance_quantile_per_class=calibration_dataset_distance_quantile_per_class,
                                              set_model_unrescaledOutputCDF=True
                                              )
-
         print(f"Epoch: {e + 1} / Calibration set Accuracy: {calibration_acc}; "
-              f"Calibration set Balanced Accuracy: {calibration_balanced_accuracy}")
+              f"Calibration set Balanced Accuracy: {calibration_balanced_accuracy}; "
+              f"Balanced median q: {calibration_balanced_q_median}, Balanced SDM loss: {calibration_balanced_loss}")
 
         if use_balanced_accuracy:
             is_best_running_epoch = calibration_balanced_accuracy >= max_dev_balanced_acc
-        else:
+        elif options.use_balanced_median_q:
             is_best_running_epoch = calibration_balanced_q_median >= max_dev_balanced_median_q
-            # is_best_running_epoch = calibration_acc >= max_dev_acc
+        else:
+            is_best_running_epoch = calibration_balanced_loss <= min_dev_balanced_sdm_loss
+
+        if calibration_balanced_loss <= min_dev_balanced_sdm_loss:
+            min_dev_balanced_sdm_loss = calibration_balanced_loss
+            min_dev_balanced_sdm_loss_epoch = e + 1
+            train_balanced_sdm_loss_for_min_dev_sdm_loss = train_balanced_loss
 
         if calibration_acc >= max_dev_acc:
             max_dev_acc = calibration_acc
@@ -265,6 +336,8 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
               f"(corresponding Training set Balanced accuracy: {train_balanced_acc_for_max_dev_acc})")
         print(f"\tCurrent max Calibration set Balanced MEDIAN Q: {max_dev_balanced_median_q} at epoch {max_dev_balanced_median_q_epoch} "
               f"(corresponding Training set Balanced MEDIAN Q: {train_balanced_median_q_for_max_dev_median_q})")
+        print(f"\tCurrent min Calibration set Balanced SDM loss: {min_dev_balanced_sdm_loss} at epoch {min_dev_balanced_sdm_loss_epoch} "
+              f"(corresponding Training set Balanced SDM loss: {train_balanced_sdm_loss_for_min_dev_sdm_loss})")
 
     print(f"\tMax Calibration set accuracy: {max_dev_acc} at epoch {max_dev_acc_epoch} "
           f"(corresponding Training set accuracy: {train_acc_for_max_dev_acc})")
@@ -274,16 +347,22 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
     print(
         f"\tMax Calibration set Balanced MEDIAN Q: {max_dev_balanced_median_q} at epoch {max_dev_balanced_median_q_epoch} "
         f"(corresponding Training set Balanced MEDIAN Q: {train_balanced_median_q_for_max_dev_median_q}")
+    print(
+        f"\tMin Calibration set Balanced SDM loss: {min_dev_balanced_sdm_loss} at epoch {min_dev_balanced_sdm_loss_epoch} "
+        f"(corresponding Training set Balanced SDM loss: {train_balanced_sdm_loss_for_min_dev_sdm_loss}")
 
     if use_balanced_accuracy:
         print(f"Final epoch chosen based on Balanced Accuracy.")
-    else:
+    elif options.use_balanced_median_q:
         print(f"Final epoch chosen based on Balanced MEDIAN Q.")
+    else:
+        print(f"Final epoch chosen based on the minimum Balanced SDM loss (over calibration).")
 
     print(f"Reloading best epoch model for training the model re-scaler")
     min_valid_qbin_for_class_conditional_accuracy, predicted_class_to_bin_to_median_output_magnitude = \
         train_rescaler(options, model_dir=model_dir)
-    return max_dev_balanced_acc, max_dev_balanced_median_q, min_valid_qbin_for_class_conditional_accuracy, \
+    return max_dev_balanced_acc, max_dev_balanced_median_q, min_dev_balanced_sdm_loss, \
+        min_valid_qbin_for_class_conditional_accuracy, \
         predicted_class_to_bin_to_median_output_magnitude
 
 
@@ -315,6 +394,14 @@ def train_rescaler(options, model_dir=None):
 
 
 def _train_model_rescaler(options, model, calibration_unrescaled_CDFquantiles, calibration_soft_qbins, true_labels):
+    start_time = time.time()
+    # main_device = torch.device(options.main_device)
+    # aux_device = torch.device(options.aux_device)
+    # if main_device != aux_device:
+    #     calibration_unrescaled_CDFquantiles, calibration_soft_qbins, true_labels = \
+    #         calibration_unrescaled_CDFquantiles.to(aux_device), calibration_soft_qbins.to(aux_device), true_labels.to(aux_device)
+    #     model.model_rescaler = model.model_rescaler.to(aux_device)
+    # print(f"Training rescaler on {aux_device}")
 
     epochs = options.model_rescaler_training_max_epochs
     learning_rate = options.model_rescaler_training_learning_rate
@@ -363,7 +450,7 @@ def _train_model_rescaler(options, model, calibration_unrescaled_CDFquantiles, c
         print(f"Training model rescaler: Epoch: {epoch+1}: mean loss for epoch: {mean_loss_for_epoch}")
         print(f"\t Cumulative losses: {np.mean(cumulative_losses)}")
     print(f"Final epoch (min loss): {min_loss_epoch} with loss of {min_loss}")
-    model.model_rescaler.weight = nn.Parameter(best_rescaler_weights)
+    model.model_rescaler.weight = nn.Parameter(best_rescaler_weights)  # .to(main_device)
     print(f"Final rescaler weights: {model.model_rescaler.weight}")
+    print(f"Total time to rescale: {time.time() - start_time}")
     return model
-

@@ -1,36 +1,14 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 
 import torch
-import torch.nn as nn
 
 import numpy as np
-import argparse
-import copy
-from pathlib import Path
-import math
-
-from collections import defaultdict
-
-import codecs
-import time
-
-import json
-import copy
-import os
-
-import utils_train_main
-import utils_classification
 import uncertainty_statistics
-import uuid
 import constants
 import utils_model
 import sdm_model
-import utils_gen
 import utils_train_main_gen_ai_router
 import utils_preprocess
-
-from mlx_lm import load
-
 import data_validator
 
 
@@ -95,9 +73,10 @@ def test(options, main_device):
                     lower_offset = predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin[label][hard_bin]
                 else:
                     lower_offset = "NA"
-                print(f"\tPredicted label: {label} for hard_q_bin {hard_bin}: Magnitude MAD (only for reference): "
-                      f"{predicted_class_to_bin_to_output_magnitude_mad[label][hard_bin]}, "
-                      f"Lower offset (for subtraction from rescaled output): {lower_offset}")
+                print(f"\tPredicted label: {label} for hard_q_bin__centroid {hard_bin}: "
+                      f"Lower offset (for subtraction from rescaled output): {lower_offset}, "
+                      f"Magnitude MAD (for reference): "
+                      f"{predicted_class_to_bin_to_output_magnitude_mad[label][hard_bin]}")
 
     print(f"Embedding summary stats (for normalization): {model.training_embedding_summary_stats}")
     print(f"Estimated class-conditional accuracy over calibration for filtering: "
@@ -142,6 +121,10 @@ def test(options, main_device):
     class_conditional_accuracy_filtered__lower = {}
     class_conditional_accuracy_filtered__centroid = {}
     class_conditional_accuracy_filtered__upper = {}
+
+    class_conditional_accuracy__is_ood_lower = {}
+    class_conditional_accuracy__NOT_is_ood_lower__AND__NOT_is_valid_index_conditional__lower = {}
+
     prediction_conditional_accuracy = {}
     prediction_conditional_accuracy_filtered__lower = {}
     prediction_conditional_accuracy_filtered__centroid = {}
@@ -151,6 +134,10 @@ def test(options, main_device):
         class_conditional_accuracy_filtered__lower[label] = []
         class_conditional_accuracy_filtered__centroid[label] = []
         class_conditional_accuracy_filtered__upper[label] = []
+
+        class_conditional_accuracy__is_ood_lower[label] = []
+        class_conditional_accuracy__NOT_is_ood_lower__AND__NOT_is_valid_index_conditional__lower[label] = []
+
         prediction_conditional_accuracy[label] = []
         prediction_conditional_accuracy_filtered__lower[label] = []
         prediction_conditional_accuracy_filtered__centroid[label] = []
@@ -164,6 +151,7 @@ def test(options, main_device):
     # end for plotting
     possible_label_error_json_lines = []
     valid_index_conditional_json_lines = []
+    all_predictions_json_lines = []
     number_of_divisions = 20
     predicted_f_binned = [x for x in range(number_of_divisions)]
     true_frequency_binned = [[] for x in range(number_of_divisions)]
@@ -177,9 +165,20 @@ def test(options, main_device):
             [[] for x in range(number_of_divisions)]
         true_frequency_binned_class_conditional[label] = [[] for x in range(number_of_divisions)]
     instance_i = -1
+    number_of_unlabeled_labels = 0
+    number_of_ood_labels = 0
     for test_embedding, test_label in zip(test_embeddings, test_labels):
         instance_i += 1
+        if instance_i % 50000 == 0:
+            print(f"Currently processing index {instance_i}")
         true_test_label = test_label.item()
+        assert data_validator.isValidLabel(label=true_test_label, numberOfClasses=model.numberOfClasses)
+        if not data_validator.isKnownValidLabel(label=true_test_label, numberOfClasses=model.numberOfClasses):
+            if true_test_label == data_validator.unlabeledLabel:
+                number_of_unlabeled_labels += 1
+            elif true_test_label == data_validator.oodLabel:
+                number_of_ood_labels += 1
+            continue
         prediction_meta_data = \
             model(test_embedding.unsqueeze(0),
                   forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST,
@@ -206,29 +205,35 @@ def test(options, main_device):
         prediction_conditional_estimate_of_predicted_class__upper = \
             prediction_conditional_distribution__upper[predicted_class].item()
 
-        hard_qbin = int(prediction_meta_data["soft_qbin__centroid"])
+        # 2025-07-21: The default here is now soft_qbin__lower and the output stratifications in the log file
+        # are by the lower value. Previously it was soft_qbin__centroid for dev
+        # analysis.
+        # hard_qbin = int(prediction_meta_data["soft_qbin__centroid"])
+        hard_qbin = int(prediction_meta_data["soft_qbin__lower"])
         q_val_rescaled_by_cdf_by_classConditionalAccuracy[hard_qbin][true_test_label].append(
             predicted_class == true_test_label)
         q_val_rescaled_by_cdf_by_predictionConditionalAccuracy[hard_qbin][predicted_class].append(
             predicted_class == true_test_label)
         hardbin_by_prediction_conditional_sample_sizes[hard_qbin][predicted_class].append(
             prediction_meta_data["cumulative_effective_sample_sizes"][predicted_class].item())
+        # q_val_rescaled_by_cdf_by_predictionConditionalMeanOutputMagnitude[hard_qbin][predicted_class].append(
+        #     prediction_conditional_estimate_of_predicted_class__centroid)
         q_val_rescaled_by_cdf_by_predictionConditionalMeanOutputMagnitude[hard_qbin][predicted_class].append(
-            prediction_conditional_estimate_of_predicted_class__centroid)
+            prediction_conditional_estimate_of_predicted_class__lower)
 
         marginal_accuracy.append(predicted_class == true_test_label)
         class_conditional_accuracy[true_test_label].append(predicted_class == true_test_label)
         prediction_conditional_accuracy[predicted_class].append(predicted_class == true_test_label)
-        if prediction_meta_data["is_valid_index_conditional__lower"]:  # primary quantity of interest
-            class_conditional_accuracy_filtered__lower[true_test_label].append(predicted_class == true_test_label)
-            prediction_conditional_accuracy_filtered__lower[predicted_class].append(predicted_class == true_test_label)
-            marginal_accuracy_filtered__lower.append(predicted_class == true_test_label)
-            if "original_labels" in test_meta_data and len(test_meta_data["original_labels"]) > 0 \
-                    and "original_predictions" in test_meta_data and len(test_meta_data["original_predictions"]) > 0:
-                projected_accuracy_filtered_marginal_original_labels__lower.append(
-                    test_meta_data["original_labels"][instance_i] == test_meta_data["original_predictions"][instance_i]
-                )
 
+        is_ood_lower = prediction_meta_data["is_ood_lower"]
+        if is_ood_lower:
+            class_conditional_accuracy__is_ood_lower[true_test_label].append(predicted_class == true_test_label)
+        if not is_ood_lower and not prediction_meta_data["is_valid_index_conditional__lower"]:
+            class_conditional_accuracy__NOT_is_ood_lower__AND__NOT_is_valid_index_conditional__lower[true_test_label].append(
+                predicted_class == true_test_label)
+        if prediction_meta_data["is_valid_index_conditional__lower"] or options.prediction_output_file != "":
+            soft_qbin__lower = prediction_meta_data["soft_qbin__lower"][0].item()
+            hard_qbin_lower = prediction_meta_data["hard_qbin_lower"]
             json_obj = {
                 "id": test_meta_data['uuids'][instance_i],
                 "document": test_meta_data['lines'][instance_i],
@@ -240,20 +245,42 @@ def test(options, main_device):
                 "prediction_probability__upper": prediction_conditional_estimate_of_predicted_class__upper,
                 "prediction": predicted_class,
                 "label": true_test_label,
-                "n": prediction_meta_data['cumulative_effective_sample_sizes'].detach().cpu().numpy().tolist()
+                "n": prediction_meta_data['cumulative_effective_sample_sizes'].detach().cpu().numpy().tolist(),
+                "is_ood": is_ood_lower,
+                "soft_qbin__lower": soft_qbin__lower,
+                "hard_qbin_lower": hard_qbin_lower,
+                "q": prediction_meta_data["original_q"],
+                "d": torch.min(prediction_meta_data["distance_quantiles"]).item(),
+                "f": prediction_meta_data["f"].detach().numpy().tolist(),
+                "p_lower": prediction_meta_data["rescaled_prediction_conditional_distribution__lower"].detach().numpy().tolist(),
+                "offset_lower": prediction_meta_data["iterated_lower_offset__lower"]
             }
+        if prediction_meta_data["is_valid_index_conditional__lower"]:  # primary quantity of interest
+            class_conditional_accuracy_filtered__lower[true_test_label].append(predicted_class == true_test_label)
+            prediction_conditional_accuracy_filtered__lower[predicted_class].append(predicted_class == true_test_label)
+            marginal_accuracy_filtered__lower.append(predicted_class == true_test_label)
+            if "original_labels" in test_meta_data and len(test_meta_data["original_labels"]) > 0 \
+                    and "original_predictions" in test_meta_data and len(test_meta_data["original_predictions"]) > 0:
+                projected_accuracy_filtered_marginal_original_labels__lower.append(
+                    test_meta_data["original_labels"][instance_i] == test_meta_data["original_predictions"][instance_i]
+                )
             # first element is for sorting before saving
             valid_index_conditional_json_lines.append(
                 (prediction_conditional_estimate_of_predicted_class__lower, json_obj))
             if predicted_class != true_test_label:
                 possible_label_error_json_lines.append(
                     (prediction_conditional_estimate_of_predicted_class__lower, json_obj))
+        if options.prediction_output_file != "":  # for saving all lines
+            all_predictions_json_lines.append(json_obj)
+
         if prediction_meta_data["is_valid_index_conditional__centroid"]:
             class_conditional_accuracy_filtered__centroid[true_test_label].append(predicted_class == true_test_label)
             prediction_conditional_accuracy_filtered__centroid[predicted_class].append(
                 predicted_class == true_test_label)
             marginal_accuracy_filtered__centroid.append(predicted_class == true_test_label)
             if predicted_class != true_test_label:
+                # for reference in the log file, this is based on the centroid value; the saved error files,
+                # in contrast, is by the lower value, which is the estimator to use in real deployments.
                 if "refusals" in test_meta_data and len(test_meta_data["refusals"]) > 0:
                     print(f"///// Valid index conditional (centroid) but the prediction is incorrect. "
                           f"Possible label error:")
@@ -298,8 +325,9 @@ def test(options, main_device):
                 projected_accuracy_filtered_marginal_original_labels__upper.append(
                     test_meta_data["original_labels"][instance_i] == test_meta_data["original_predictions"][instance_i]
                 )
+        # 2025-07-21: As noted above, switching default display to lower
         prediction_conditional_estimate_binned = \
-            get_bin(prediction_conditional_estimate_of_predicted_class__centroid, divisions=number_of_divisions)
+            get_bin(prediction_conditional_estimate_of_predicted_class__lower, divisions=number_of_divisions)
         true_frequency_binned[prediction_conditional_estimate_binned].append(predicted_class == true_test_label)
         true_frequency_binned_prediction_conditional[predicted_class][prediction_conditional_estimate_binned].append(
             predicted_class == true_test_label)
@@ -309,30 +337,43 @@ def test(options, main_device):
         true_frequency_binned_class_conditional[true_test_label][prediction_conditional_estimate_binned].append(
             predicted_class == true_test_label)
 
-    print(f"######## Conditional estimates ########")
+    print(f"######## Conditional estimates (LOWER, CENTROID, UPPER) ########")
+    print(f"\tLegend: 'vic': valid-index conditional estimate")
     for label in range(model.numberOfClasses):
         print(f"Label {label} ---")
         print_summary(f"Class-conditional accuracy: Label {label}",
                       class_conditional_accuracy[label])
-        print_summary(f"\t>>Class-conditional filtered accuracy LOWER: \t\tLabel {label}",
+        print_summary(f"\t>>Class-conditional vic accuracy LOWER: \t\tLabel {label}",
                       class_conditional_accuracy_filtered__lower[label], total=test_set_size)
-        print_summary(f"\t>>Class-conditional filtered accuracy CENTROID: \tLabel {label}",
+        print_summary(f"\t>>Class-conditional vic accuracy CENTROID: \tLabel {label}",
                       class_conditional_accuracy_filtered__centroid[label], total=test_set_size)
-        print_summary(f"\t>>Class-conditional filtered accuracy UPPER: \t\tLabel {label}",
+        print_summary(f"\t>>Class-conditional vic accuracy UPPER: \t\tLabel {label}",
                       class_conditional_accuracy_filtered__upper[label], total=test_set_size)
 
         print_summary(f"Prediction-conditional accuracy: Label {label}",
                       prediction_conditional_accuracy[label])
 
-        print_summary(f"\t++Prediction-conditional filtered accuracy LOWER: "
+        print_summary(f"\t++Prediction-conditional vic accuracy LOWER: "
                       f"\t\tLabel {label}",
                       prediction_conditional_accuracy_filtered__lower[label], total=test_set_size)
-        print_summary(f"\t++Prediction-conditional filtered accuracy CENTROID: \t\tLabel {label}",
+        print_summary(f"\t++Prediction-conditional vic accuracy CENTROID: \t\tLabel {label}",
                       prediction_conditional_accuracy_filtered__centroid[label], total=test_set_size)
-        print_summary(f"\t++Prediction-conditional filtered accuracy UPPER: \t\tLabel {label}",
+        print_summary(f"\t++Prediction-conditional vic accuracy UPPER: \t\tLabel {label}",
                       prediction_conditional_accuracy_filtered__upper[label], total=test_set_size)
+    print(f"######## Class-Conditional estimates for non-index-conditional (LOWER) instances that are NOT OOD ########")
+    for label in range(model.numberOfClasses):
+        print(f"Label {label} ---")
+        print_summary(f"Class-conditional accuracy (not vic AND not OOD): Label {label}",
+                      class_conditional_accuracy__NOT_is_ood_lower__AND__NOT_is_valid_index_conditional__lower[label],
+                      total=test_set_size)
+    print(f"######## Class-Conditional estimates for OOD ########")
+    for label in range(model.numberOfClasses):
+        print(f"Label {label} ---")
+        print_summary(f"Class-conditional accuracy (OOD): Label {label}",
+                      class_conditional_accuracy__is_ood_lower[label],
+                      total=test_set_size)
 
-    print(f"######## Stratified by probability (CENTROID) ########")
+    print(f"######## Stratified by probability (LOWER) ########")
     for bin in predicted_f_binned:
         print_summary(f"{bin/number_of_divisions}-{(min(number_of_divisions, bin+1))/number_of_divisions}: "
                       f"PREDICTION CONDITIONAL: Marginal",
@@ -351,7 +392,7 @@ def test(options, main_device):
                 f"{np.mean(true_frequency_binned_class_conditional[label][bin])}, "
                 f"out of {len(true_frequency_binned_class_conditional[label][bin])}")
 
-    print(f"######## Stratified by hard q-bin (CENTROID) ########")
+    print(f"######## Stratified by hard q-bin (LOWER) ########")
     for q in range(constants.default_max_hard_bin):
         for label in range(model.numberOfClasses):
             if len(q_val_rescaled_by_cdf_by_classConditionalAccuracy[q][label]) > 0:
@@ -363,7 +404,7 @@ def test(options, main_device):
                 print(f"hard-q: {q}, label: {label}: prediction conditional accuracy: \t"
                       f"{np.mean(q_val_rescaled_by_cdf_by_predictionConditionalAccuracy[q][label])} "
                       f"out of {len(q_val_rescaled_by_cdf_by_predictionConditionalAccuracy[q][label])})")
-    print(f"######## Stratified by hard q-bin (CENTROID): Additional metrics ########")
+    print(f"######## Stratified by hard q-bin (LOWER): Additional metrics ########")
     for q in range(constants.default_max_hard_bin):
         for label in range(model.numberOfClasses):
             if len(q_val_rescaled_by_cdf_by_predictionConditionalMeanOutputMagnitude[q][label]) > 0:
@@ -395,30 +436,44 @@ def test(options, main_device):
         print_summary(f"Filtered valid marginal, projected to original task labels UPPER:",
                       projected_accuracy_filtered_marginal_original_labels__upper)
     # > end temporary LLM reference comparison
-    print(
-        f"Filtered valid marginal (filtered by valid index conditional) LOWER: "
-        f"{np.mean(marginal_accuracy_filtered__lower)} out of {len(marginal_accuracy_filtered__lower)} "
-        f"({len(marginal_accuracy_filtered__lower)/len(marginal_accuracy)})")
-    print(
-        f"Filtered valid marginal (filtered by valid index conditional) CENTROID: "
-        f"{np.mean(marginal_accuracy_filtered__centroid)} out of {len(marginal_accuracy_filtered__centroid)} "
-        f"({len(marginal_accuracy_filtered__centroid)/len(marginal_accuracy)})")
-    print(
-            f"Filtered valid marginal (filtered by valid index conditional) UPPER: "
-            f"{np.mean(marginal_accuracy_filtered__upper)} out of {len(marginal_accuracy_filtered__upper)} "
-            f"({len(marginal_accuracy_filtered__upper)/len(marginal_accuracy)})")
+    if len(marginal_accuracy) > 0:  # it could be 0 if the eval file only includes OOD or unlabeled
+        print(
+            f"Filtered valid marginal (filtered by valid index conditional) LOWER: "
+            f"{np.mean(marginal_accuracy_filtered__lower)} out of {len(marginal_accuracy_filtered__lower)} "
+            f"({len(marginal_accuracy_filtered__lower)/len(marginal_accuracy)})")
+        print(
+            f"Filtered valid marginal (filtered by valid index conditional) CENTROID: "
+            f"{np.mean(marginal_accuracy_filtered__centroid)} out of {len(marginal_accuracy_filtered__centroid)} "
+            f"({len(marginal_accuracy_filtered__centroid)/len(marginal_accuracy)})")
+        print(
+                f"Filtered valid marginal (filtered by valid index conditional) UPPER: "
+                f"{np.mean(marginal_accuracy_filtered__upper)} out of {len(marginal_accuracy_filtered__upper)} "
+                f"({len(marginal_accuracy_filtered__upper)/len(marginal_accuracy)})")
 
+    print(f"######## OOD/Unlabeled stats ########")
+    print(f"Count of unlabeled labeled (i.e., label=={data_validator.unlabeledLabel}) "
+          f"instances (ignored above): {number_of_unlabeled_labels} out of {test_set_size}")
+    print(f"Count of OOD labeled (i.e., label=={data_validator.oodLabel}) "
+          f"instances (ignored above): {number_of_ood_labels} out of {test_set_size}")
+    print(f"######## ########")
     possible_label_error_json_lines = [y[1] for y in sorted(possible_label_error_json_lines, key=lambda x: x[0],
                                                             reverse=True)]
     if options.label_error_file != "" and len(possible_label_error_json_lines) > 0:
         utils_model.save_json_lines(options.label_error_file, possible_label_error_json_lines)
-        print(f"{len(possible_label_error_json_lines)} candidate label errors saved to {options.label_error_file}")
+        print(f">{len(possible_label_error_json_lines)} candidate label errors saved to {options.label_error_file}")
 
     valid_index_conditional_json_lines = [y[1] for y in sorted(valid_index_conditional_json_lines, key=lambda x: x[0],
                                                             reverse=True)]
     if options.valid_index_conditional_file != "" and len(valid_index_conditional_json_lines) > 0:
         utils_model.save_json_lines(options.valid_index_conditional_file, valid_index_conditional_json_lines)
-        print(f"{len(valid_index_conditional_json_lines)} valid index-conditional predictions saved to {options.valid_index_conditional_file}")
+        print(f">{len(valid_index_conditional_json_lines)} valid index-conditional predictions saved to {options.valid_index_conditional_file}")
+
+    if options.prediction_output_file != "" and len(all_predictions_json_lines) > 0:
+        utils_model.save_json_lines(options.prediction_output_file, all_predictions_json_lines)
+        print(f">The prediction for each document (total: {len(all_predictions_json_lines)}) has been saved to "
+              f"{options.prediction_output_file}")
+
+    assert test_set_size == instance_i + 1, "ERROR: The index is mismatched."
 
 
 def test_gen_ai(options, main_device, gen_ai_model, tokenizer, input_eval_set_file, llmType):

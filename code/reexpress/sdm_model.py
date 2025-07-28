@@ -246,9 +246,38 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         else:
             self.train_trueClass_To_dCDF = {}
 
+    # def construct_support_index(self,
+    #                             support_exemplar_vectors_numpy=None, calibration_exemplar_vectors_numpy=None,
+    #                             k=None):
+    #     # Note that any existing support index will be overwritten
+    #     assert support_exemplar_vectors_numpy is not None
+    #     assert calibration_exemplar_vectors_numpy is not None
+    #     dimensions = self.exemplar_vector_dimension
+    #     assert support_exemplar_vectors_numpy.shape[1] == self.exemplar_vector_dimension
+    #     assert calibration_exemplar_vectors_numpy.shape[1] == self.exemplar_vector_dimension
+    #     if k is None:
+    #         k = self.maxQAvailableFromIndexer
+    #     support_index = faiss.IndexFlatL2(dimensions)  # build the index
+    #     support_index.add(support_exemplar_vectors_numpy)  # add exemplar vectors to the index
+    #     if k > support_index.ntotal:
+    #         k = support_index.ntotal  # indexes will be -1 if exceeds, so hard constraint here
+    #     if constants.USE_GPU_FAISS_INDEX:
+    #         # start move to gpu
+    #         gpu_id = 0
+    #         res = faiss.StandardGpuResources()
+    #         support_index = faiss.index_cpu_to_gpu(res, gpu_id, support_index)
+    #         # end move
+    #     top_k_distances, top_k_distances_idx = support_index.search(calibration_exemplar_vectors_numpy, k)
+    #     self.support_index = support_index
+    #     return support_index, top_k_distances, top_k_distances_idx
     def construct_support_index(self,
                                 support_exemplar_vectors_numpy=None, calibration_exemplar_vectors_numpy=None,
-                                k=None):
+                                k=None,
+                                ood_support_exemplar_vectors_numpy=None,
+                                ood_support_labels=None,
+                                ood_support_predicted_labels=None,
+                                ood_support_document_ids=None
+                                ):
         # Note that any existing support index will be overwritten
         assert support_exemplar_vectors_numpy is not None
         assert calibration_exemplar_vectors_numpy is not None
@@ -259,8 +288,25 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             k = self.maxQAvailableFromIndexer
         support_index = faiss.IndexFlatL2(dimensions)  # build the index
         support_index.add(support_exemplar_vectors_numpy)  # add exemplar vectors to the index
+        if ood_support_exemplar_vectors_numpy is not None and ood_support_labels is not None and \
+            ood_support_predicted_labels is not None and ood_support_document_ids is not None and \
+            len(ood_support_document_ids) > 0:
+            assert ood_support_exemplar_vectors_numpy.shape[1] == self.exemplar_vector_dimension
+            for ood_i, ood_support_document_id in enumerate(ood_support_document_ids):
+                self.add_to_support(label=ood_support_labels[ood_i],
+                                    predicted_label=ood_support_predicted_labels[ood_i],
+                                    document_id=ood_support_document_id,
+                                    exemplar_vector=None)  # exemplar_vector is None, since we batch import in next line
+            support_index.add(ood_support_exemplar_vectors_numpy)
+            print(f">Added {len(ood_support_document_ids)} OOD/additional instances to the training support.<")
         if k > support_index.ntotal:
             k = support_index.ntotal  # indexes will be -1 if exceeds, so hard constraint here
+        if constants.USE_GPU_FAISS_INDEX:
+            # start move to gpu
+            gpu_id = 0
+            res = faiss.StandardGpuResources()
+            support_index = faiss.index_cpu_to_gpu(res, gpu_id, support_index)
+            # end move
         top_k_distances, top_k_distances_idx = support_index.search(calibration_exemplar_vectors_numpy, k)
         self.support_index = support_index
         return support_index, top_k_distances, top_k_distances_idx
@@ -268,10 +314,11 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     def set_support_index(self, support_index):
         self.support_index = support_index
 
-    def add_to_support(self, label: int, predicted_label: int, document_id: str, exemplar_vector):
+    def add_to_support(self, label: int, predicted_label: int, document_id: str, exemplar_vector=None):
         # We assume the caller has checked that d0 != 0
         # exemplar_vector is a numpy array
-        self.support_index.add(exemplar_vector)
+        if exemplar_vector is not None:
+            self.support_index.add(exemplar_vector)
         self.train_labels = np.append(self.train_labels, label)
         self.train_predicted_labels = np.append(self.train_predicted_labels, predicted_label)
         self.train_uuids.append(document_id)
@@ -765,7 +812,8 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
     def single_pass_forward(self, batch_exemplar_vectors, batch_f_positive,
                             min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=None,
-                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=None):
+                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=None,
+                            return_k_nearest_training_idx_in_prediction_metadata=1):
         main_device = batch_exemplar_vectors.device
         with torch.no_grad():
             # get summary stats and run inference all in one pass
@@ -860,6 +908,11 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             # for binary classification). (These types of flips are very rare for valid index conditional
             # estimates, and primarily occur when the prediction-conditional distribution estimate of the predicted
             # class is near 1/|Y|.)
+
+            # 2025-07-23: Adding additional values here for convenience and consistency,
+            # rather than calculating them downstream:
+            hard_qbin_lower = int(soft_qbin__lower[0].item())
+            is_ood_lower = hard_qbin_lower <= self.ood_limit
             return {
                     # raw (i.e., un-rescaled) Similarity value: q:
                     "original_q": original_q,
@@ -902,6 +955,14 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                     "iterated_lower_offset__upper": iterated_lower_offset__upper,
                     # effective sample size across classes: Eq. 12:
                     "cumulative_effective_sample_sizes": cumulative_effective_sample_sizes,
+                    # Added 2025-07-23:
+                    # hard_qbin_lower is an int
+                    "hard_qbin_lower": hard_qbin_lower,
+                    # is_ood_lower is Bool. Note that when an instance is not
+                    #    is_valid_index_conditional__lower, there are two possibilities: It is or isn't
+                    #    is_ood_lower. That is, not all non-index-conditional instances are OOD.
+                    "is_ood_lower": is_ood_lower,
+                    "top_k_distances_idx": top_k_distances_idx[0, 0:max(1, return_k_nearest_training_idx_in_prediction_metadata)]
                     }
 
     def normalize_embeddings(self, embeddings):
@@ -913,7 +974,8 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                 forward_type=constants.FORWARD_TYPE_SENTENCE_LEVEL_PREDICTION, train=False, normalize_embeddings=True,
                 debug=False,
                 min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=None,
-                predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=None):
+                predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=None,
+                return_k_nearest_training_idx_in_prediction_metadata=1):
         # The point-estimate prediction is always determined by batch_f_positive.
 
         if forward_type == constants.FORWARD_TYPE_TRAIN_RESCALER:
@@ -978,13 +1040,17 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                                             min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
                                             min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
                                             predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
-                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin)
+                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin,
+                                            return_k_nearest_training_idx_in_prediction_metadata=
+                                            return_k_nearest_training_idx_in_prediction_metadata)
         elif forward_type == constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR:
             prediction_meta_data = self.single_pass_forward(batch_exemplar_vectors, batch_f_positive,
-                                            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
-                                            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
-                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
-                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin)
+                                                            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
+                                                            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
+                                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
+                                                            predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin,
+                                                            return_k_nearest_training_idx_in_prediction_metadata=
+                                                            return_k_nearest_training_idx_in_prediction_metadata)
             prediction_meta_data["exemplar_vector"] = batch_exemplar_vectors.cpu().detach().numpy()
             return prediction_meta_data
 

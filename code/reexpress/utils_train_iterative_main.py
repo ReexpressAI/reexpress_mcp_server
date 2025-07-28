@@ -1,35 +1,18 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 
 import torch
-import torch.nn as nn
 
 import numpy as np
-import argparse
-import copy
 from pathlib import Path
-import math
-
-from collections import defaultdict
-
-import codecs
 import time
-
-import json
-import copy
 import os
 
 import utils_train_main
-import utils_classification
 import uncertainty_statistics
 import uuid
 import constants
 import utils_model
-import sdm_model
-import utils_gen
-import utils_train_main_gen_ai_router
 import utils_preprocess
-
-from mlx_lm import load
 
 import data_validator
 
@@ -53,6 +36,9 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
 
         max_calibration_balanced_median_q = 0
         max_calibration_balanced_median_q_shuffle_iteration = -1
+
+        min_calibration_balanced_sdm_loss = np.inf
+        min_calibration_balanced_sdm_loss_shuffle_iteration = -1
 
         assert options.number_of_random_shuffles >= 0
         for shuffle_index in range(max(options.number_of_random_shuffles, 1)):
@@ -141,6 +127,7 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                 maxQAvailableFromIndexer = max_training_set_label_cardinality
             print(f"Considering a max q value up to {maxQAvailableFromIndexer}")
             if options.is_gen_ai:
+                import utils_gen
                 if options.init_gen_ai_model:
                     if llmType == utils_gen.llmTypes.phiThreePointFive:
                         train_meta_data["embedding_size"] = 3072
@@ -187,6 +174,7 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                             "train_trueClass_To_dCDF": None
                             }
             one_shuffle_index__max_dev_balanced_acc, one_shuffle_index_max_dev_balanced_median_q, \
+                one_shuffle_index__min_dev_balanced_sdm_loss, \
                 one_shuffle_index__min_valid_qbin_for_class_conditional_accuracy, \
                 predicted_class_to_bin_to_median_output_magnitude = \
                 utils_train_main.train(options, train_embeddings=train_embeddings,
@@ -214,13 +202,24 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                 max_calibration_balanced_median_q_shuffle_iteration = shuffle_index
 
             print(f"Max calibration balanced MEDIAN Q (used to determine shuffle index: "
-                  f"{not options.use_balanced_accuracy}) of {max_calibration_balanced_median_q} at "
+                  f"{options.use_balanced_median_q}) of {max_calibration_balanced_median_q} at "
                   f"shuffle index {max_calibration_balanced_median_q_shuffle_iteration}")
+
+            if one_shuffle_index__min_dev_balanced_sdm_loss <= min_calibration_balanced_sdm_loss:
+                min_calibration_balanced_sdm_loss = one_shuffle_index__min_dev_balanced_sdm_loss
+                min_calibration_balanced_sdm_loss_shuffle_iteration = shuffle_index
+
+            print(f"Min calibration balanced SDM loss (used to determine shuffle index: "
+                  f"{not options.use_balanced_accuracy and not options.use_balanced_median_q}) of "
+                  f"{min_calibration_balanced_sdm_loss} at "
+                  f"shuffle index {min_calibration_balanced_sdm_loss_shuffle_iteration}")
 
             if options.use_balanced_accuracy:
                 save_this_shuffle_index = max_calibration_balanced_accuracy_shuffle_iteration == shuffle_index
-            else:
+            elif options.use_balanced_median_q:
                 save_this_shuffle_index = max_calibration_balanced_median_q_shuffle_iteration == shuffle_index
+            else:
+                save_this_shuffle_index = min_calibration_balanced_sdm_loss_shuffle_iteration == shuffle_index
 
             if save_this_shuffle_index:
                 # load best epoch (still same shuffle index) in order to re-save to the best iteration directory,
