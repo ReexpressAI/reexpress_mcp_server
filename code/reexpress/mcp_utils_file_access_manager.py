@@ -79,7 +79,7 @@ class ExternalFileController:
         file_access_settings_json = None
         dir_path = Path(mcp_server_dir)
         if dir_path.is_dir() and not dir_path.is_symlink():
-            file_access_settings_file = Path(dir_path, constants.MCP_SERVER_SETTINGS_FILENAME)
+            file_access_settings_file = Path(dir_path, "code", "reexpress", constants.MCP_SERVER_SETTINGS_FILENAME)
             if file_access_settings_file.is_file() and not file_access_settings_file.is_symlink():
                 file_access_settings_json = utils_model.read_json_file(str(file_access_settings_file.as_posix()))
         if file_access_settings_json is not None:
