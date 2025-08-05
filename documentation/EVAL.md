@@ -2,7 +2,7 @@
 
 ## Output Predictions and Evaluations
 
-See the model directory `sdm_estimator_alpha0.9_m1000_e250_iter5__over_gpt4.1_o4mini_gemini2.5pro_granite3.3_8b_instruct__2025_07_26/model_details/final_eval_output` for the output predictions (`all_predictions.jsonl`), logs (`version_1.1.0.log.txt`), sorted possible label errors[^1] (`possible_label_errors.jsonl`), and sorted valid index-conditional predictions[^2] (`valid_index_conditional.jsonl`) for each eval split, as well as the model's calibration set. For reference, graphs of the output are saved in the [output_graphs](documentation/model_details/release/v1.1.0/output_graphs) directory in this repo.
+See the model directory `sdm_estimator_alpha0.9_m1000_e250_iter5__over_gpt4.1_o4mini_gemini2.5pro_granite3.3_8b_instruct__2025_07_26/model_details/final_eval_output` for the output predictions (`all_predictions.jsonl`), logs (`version_1.1.0.log.txt`), sorted possible label errors[^1] (`possible_label_errors.jsonl`), and sorted valid index-conditional predictions[^2] (`valid_index_conditional.jsonl`) for each eval split, as well as the model's calibration set. For reference, graphs of the output are saved in the [output_graphs](model_details/release/v1.1.0/output_graphs) directory in this repo.
 
 We provide high-level summary statistics here. This is an evaluation of the underlying SDM estimator used in the MCP Server; Opus 4 (the recommended tool-calling LLM) is not involved. In other words, the arguments to `reexpress(user_question: str, ai_response: str)` are the question and response from the benchmark dataset.
 
