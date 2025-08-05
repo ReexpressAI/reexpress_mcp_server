@@ -192,3 +192,72 @@ echo "Eval log file: "${MODEL_OUTPUT_DIR_WITH_SUBFOLDER}/"eval.${EVAL_LABEL}.ver
 #Valid index-conditional predictions (sorted) file: /home/jupyter/models/v2_sdm_estimator_gemini_ibm_granite8b_e250iter5_pretraining_v1_1_0_llm_0.9_1000/sagemaker/final_eval_output/eval.openthoughts_v4_v5_v6_v7_v8_split1.jsonl.test.5k.valid_index_conditional.jsonl
 #All predictions file: /home/jupyter/models/v2_sdm_estimator_gemini_ibm_granite8b_e250iter5_pretraining_v1_1_0_llm_0.9_1000/sagemaker/final_eval_output/eval.openthoughts_v4_v5_v6_v7_v8_split1.jsonl.test.5k.all_predictions.jsonl
 #Eval log file: /home/jupyter/models/v2_sdm_estimator_gemini_ibm_granite8b_e250iter5_pretraining_v1_1_0_llm_0.9_1000/sagemaker/final_eval_output/eval.openthoughts_v4_v5_v6_v7_v8_split1.jsonl.test.5k.version_1.1.0.log.txt
+
+
+#########################################################################################################
+##################### Analysis -- Graph ouput -- Note: These graphs are also interactive
+#########################################################################################################
+
+########################## Install
+#### This expects matplotlib.__version__ == '3.10.0'
+#### Install via conda:
+#### conda install -c conda-forge matplotlib=3.10.0
+
+########################## Graph and save
+
+cd code/reexpress  # Update with the applicable path
+
+conda activate model2  # conda environment with applicable dependencies (see notes above)
+
+MODEL_OUTPUT_DIR=v2_sdm_estimator_gemini_ibm_granite8b_e250iter5_pretraining_v1_1_0_llm_0.9_1000/ # Update with the applicable path from the github release download
+INPUT_DIR="${MODEL_OUTPUT_DIR}/model_details/final_eval_output" # Update with the applicable path
+
+
+# Choose file to graph/explore
+INPUT_FILE=${INPUT_DIR}/eval.best_iteration_data_calibration.all_predictions.jsonl
+FILE_LABEL="Calibration (not held-out)"
+OUTPUT_FILE_PREFIX="Calibration"
+## Note that in v1.1.1, MMLU-validation is held-out
+#INPUT_FILE=${INPUT_DIR}/eval.mmlu_validation.all_predictions.jsonl
+#FILE_LABEL="MMLU Validation (binary verification)"
+#OUTPUT_FILE_PREFIX="MMLU-Validation"
+#INPUT_FILE=${INPUT_DIR}/eval.openthoughts_v4_v5_v6_v7_v8_split1.jsonl.test.5k.all_predictions.jsonl
+#FILE_LABEL="OpenVerification1 5k Test"
+#OUTPUT_FILE_PREFIX="OpenVerification1-5k-Test"
+#INPUT_FILE=${INPUT_DIR}/eval.gpt4o_mmlu_pro_test_only_letters.all_predictions.jsonl
+#FILE_LABEL="MMLU-Pro-4-QA-GPT4o-Letters"
+#OUTPUT_FILE_PREFIX=${FILE_LABEL}
+#INPUT_FILE=${INPUT_DIR}/eval.gpt4o_mmlu_pro_test_with_explanations.all_predictions.jsonl
+#FILE_LABEL="MMLU-Pro-4-QA-GPT4o-Explanations"
+#OUTPUT_FILE_PREFIX=${FILE_LABEL}
+
+OUTPUT_DIR=output_graphs # Update with an applicable path
+mkdir ${OUTPUT_DIR}
+
+python -u utils_graph_output.py \
+--input_file="${INPUT_FILE}" \
+--class_size=2 \
+--model_dir "${MODEL_OUTPUT_DIR}" \
+--graph_thresholds \
+--data_label=${FILE_LABEL} \
+--model_version_label="v1.1.1" \
+--save_file_prefix=${OUTPUT_DIR}/${OUTPUT_FILE_PREFIX}
+
+python -u utils_graph_output.py \
+--input_file="${INPUT_FILE}" \
+--class_size=2 \
+--model_dir "${MODEL_OUTPUT_DIR}" \
+--graph_all_points \
+--graph_thresholds \
+--data_label=${FILE_LABEL} \
+--model_version_label="v1.1.1" \
+--save_file_prefix=${OUTPUT_DIR}/${OUTPUT_FILE_PREFIX}
+
+# Add this to make the markers for the wrong predictions larger:
+#--emphasize_wrong_predictions
+
+
+# Pro-tips:
+# Click on points to print additional information to the console.
+# These plots are zoomable. Click on the magnifying glass in the plot window.
+# When --graph_all_points is ommitted, only the valid index-conditional points (i.e., the "admitted"/"non-rejected" points) are displayed. Note that the graphs display the output thresholds by the index of the ground-truth label for reference purposes. Wrong but valid index-conditional points can fall under that horizontal line since the applicable threshold would be for another class. (E.g., you are looking at the graph for label=0, but the model predicted class 1 with a sufficiently high confidence for the point to exceed the threshold for class 1, which could still be lower than the threshold for class 0.) Click on a point for additional details. The thresholds for all classes are printed to console on start and appear in the graph legend.

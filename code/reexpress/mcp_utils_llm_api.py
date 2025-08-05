@@ -227,7 +227,7 @@ def get_document_attributes(previous_query_and_response_to_verify_string: str) -
         return verification_dict
 
 
-def get_agreement_model_embedding(document_text: str) -> list[float]:
+def get_agreement_model_embedding(document_text: str): # -> list[float]:
     conv = [{"role": "user",
              "content": document_text}]
     input_ids = tokenizer.apply_chat_template(conv, return_tensors="pt", thinking=False,
