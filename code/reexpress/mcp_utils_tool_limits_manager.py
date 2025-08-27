@@ -37,19 +37,20 @@ class ToolCallLimitController:
     """
 
     def __init__(self, mcp_server_dir: str = ""):
-        self.max_number_of_reexpress_tool_calls_before_required_server_reset = 100
-        self.max_number_of_sequential_reexpress_tool_calls_before_required_user_reset = 10
+        self.max_number_of_reexpress_tool_calls_before_required_server_reset = 200
+        self.max_number_of_sequential_reexpress_tool_calls_before_required_user_reset = 100
 
         file_access_settings_json = None
         dir_path = Path(mcp_server_dir)
         if dir_path.is_dir() and not dir_path.is_symlink():
-            file_access_settings_file = Path(dir_path, constants.MCP_SERVER_SETTINGS_FILENAME)
+            file_access_settings_file = Path(dir_path, "code", "reexpress", constants.MCP_SERVER_SETTINGS_FILENAME)
             if file_access_settings_file.is_file() and not file_access_settings_file.is_symlink():
                 file_access_settings_json = utils_model.read_json_file(str(file_access_settings_file.as_posix()))
         if file_access_settings_json is not None:
             self._parse_file_access_settings(file_access_settings_json)
         self.hard_total_call_counter = self.max_number_of_reexpress_tool_calls_before_required_server_reset
-        self.soft_sequential_limit_counter = self.max_number_of_sequential_reexpress_tool_calls_before_required_user_reset
+        self.soft_sequential_limit_counter = \
+            self.max_number_of_sequential_reexpress_tool_calls_before_required_user_reset
 
     def _parse_file_access_settings(self, file_access_settings_json):
         try:

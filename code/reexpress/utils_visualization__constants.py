@@ -26,7 +26,7 @@ css_style = f"""
             margin-bottom: 20px;
             color: #1a1a1a;
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 10px;
         }}
 
@@ -131,6 +131,13 @@ css_style = f"""
             white-space: pre-wrap;
             word-wrap: break-word;
             color: #212529;
+        }}
+        
+        .mcp-server-version {{
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
         }}
         
         .model-name {{

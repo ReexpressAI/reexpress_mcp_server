@@ -11,7 +11,11 @@ import utils_preprocess
 
 
 def batch_support_update(options, main_device):
-    model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
+    if options.skip_updates_already_in_support:
+        # In this case, we also need to load the calibration set document id's.
+        model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=False)
+    else:
+        model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
     global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(options.model_dir)
 
     min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = \
@@ -34,8 +38,12 @@ def batch_support_update(options, main_device):
 
     assert test_embeddings.shape[0] == test_labels.shape[0]
     print(f"test_embeddings.shape: {test_embeddings.shape}")
-
+    count_already_present_documents = 0
     for test_embedding, test_label, document_id in zip(test_embeddings, test_labels, document_ids):
+        if options.skip_updates_already_in_support:
+            if document_id in model.train_uuids or document_id in model.calibration_uuids:
+                count_already_present_documents += 1
+                continue
         true_test_label = test_label.item()
         prediction_meta_data = \
             model(test_embedding.unsqueeze(0),
@@ -55,4 +63,7 @@ def batch_support_update(options, main_device):
     assert len(model.train_uuids) == support_set_cardinality
     utils_model.save_support_set_updates(model, options.model_dir)
     print(f"Updated support set cardinality: {model.support_index.ntotal}")
+    if options.skip_updates_already_in_support:
+        print(f"Count of skipped document id's already in the support set or calibration set: "
+              f"{count_already_present_documents}")
 

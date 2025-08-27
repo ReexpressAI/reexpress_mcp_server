@@ -113,73 +113,58 @@ class MCPServerStateController:
         if len(attached_documents) > 0:
             attached_document_note = "(Note: I have included additional documents relevant to this discussion within the <attached_file></attached_file> XML tags.) "
         previous_query_and_response_to_verify_string = \
-            f"<question> {attached_documents}{user_question} </question> <ai_response> {ai_response} {attached_document_note}</ai_response>"
-        # currently identical:
-        previous_query_and_response_to_verify_string_reasoning = \
-            f"<question> {attached_documents}{user_question} </question> <ai_response> {ai_response} {attached_document_note}</ai_response>"
+            f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
         # currently identical:
         previous_query_and_response_to_verify_string_gemini = \
-            f"<question> {attached_documents}{user_question} </question> <ai_response> {ai_response} {attached_document_note}</ai_response>"
-        task_configs = [(mcp_utils_llm_api.get_document_attributes,
+            f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
+        task_configs = [(mcp_utils_llm_api.get_document_attributes_from_gpt5,
                          previous_query_and_response_to_verify_string),
-                        (mcp_utils_llm_api.get_document_attributes_from_reasoning,
-                         previous_query_and_response_to_verify_string_reasoning),
                         (mcp_utils_llm_api.get_document_attributes_from_gemini_reasoning,
                          previous_query_and_response_to_verify_string_gemini)
                         ]
         try:
             results = await self._run_tasks_with_taskgroup(task_configs)
-            log_prob_model_verification_dict, \
-                reasoning_model_verification_dict, \
+            gpt5_model_verification_dict, \
                 gemini_model_verification_dict = results
-            llm_api_error = log_prob_model_verification_dict[constants.REEXPRESS_ATTRIBUTES_KEY] is None
+            llm_api_error = gpt5_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
+                            gemini_model_verification_dict[constants.LLM_API_ERROR_KEY]
         except:
             llm_api_error = True
-        # results = await asyncio.gather(
-        #     asyncio.to_thread(mcp_utils_llm_api.get_document_attributes, previous_query_and_response_to_verify_string),
-        #     asyncio.to_thread(mcp_utils_llm_api.get_document_attributes_from_reasoning, previous_query_and_response_to_verify_string)
-        # )
-        # log_prob_model_verification_dict, reasoning_model_verification_dict = results
-        # llm_api_error = log_prob_model_verification_dict[constants.REEXPRESS_ATTRIBUTES_KEY] is None
         formatted_output_string = ""
         partial_reexpression = {}
 
         if not llm_api_error:
             # get embedding over model explanations
-            log_prob_model_classification, log_prob_model_explanation, \
-                reasoning_model_classification, reasoning_model_explanation, \
+            gpt5_model_summary, \
+                gpt5_model_classification, gpt5_model_explanation, \
                 gemini_model_classification, gemini_model_explanation = \
-                mcp_utils_llm_api.get_model_explanations(log_prob_model_verification_dict,
-                                                         reasoning_model_verification_dict,
+                mcp_utils_llm_api.get_model_explanations(gpt5_model_verification_dict,
                                                          gemini_model_verification_dict)
             agreement_model_embedding, agreement_model_classification = \
-                mcp_utils_llm_api.llm_api_controller(log_prob_model_explanation=log_prob_model_explanation,
-                                                     reasoning_model_explanation=reasoning_model_explanation,
+                mcp_utils_llm_api.llm_api_controller(gpt5_model_summary=gpt5_model_summary,
+                                                     gpt5_model_explanation=gpt5_model_explanation,
                                                      gemini_model_explanation=gemini_model_explanation)
             llm_api_error = agreement_model_embedding is None or agreement_model_classification is None
             if not llm_api_error:
-                # log_prob_model_verification_dict[constants.REEXPRESS_EMBEDDING_KEY] = log_prob_model_embedding
-                # reasoning_model_verification_dict[constants.REEXPRESS_EMBEDDING_KEY] = reasoning_model_embedding
                 reexpression_input = mcp_utils_data_format.construct_document_attributes_and_embedding(
-                    log_prob_model_verification_dict, reasoning_model_verification_dict,
+                    gpt5_model_verification_dict,
                     gemini_model_verification_dict, agreement_model_embedding)
                 prediction_meta_data = mcp_utils_test.test(self.main_device, self.model,
                                                            self.global_uncertainty_statistics, reexpression_input)
                 if prediction_meta_data is not None:
                     formatted_output_string = mcp_utils_test.format_sdm_estimator_output_for_mcp_tool(
-                        prediction_meta_data, log_prob_model_explanation, reasoning_model_explanation,
+                        prediction_meta_data, gpt5_model_explanation,
                         gemini_model_explanation,
                         agreement_model_classification)
                     partial_reexpression["reexpression_input"] = reexpression_input
                     partial_reexpression["prediction_meta_data"] = prediction_meta_data
-                    partial_reexpression[constants.REEXPRESS_MODEL1_CLASSIFICATION] = log_prob_model_classification
-                    partial_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION] = reasoning_model_classification
-                    partial_reexpression[constants.REEXPRESS_MODEL3_CLASSIFICATION] = gemini_model_classification
-                    partial_reexpression[constants.REEXPRESS_MODEL1_EXPLANATION] = log_prob_model_explanation
-                    partial_reexpression[constants.REEXPRESS_MODEL2_EXPLANATION] = reasoning_model_explanation
-                    partial_reexpression[constants.REEXPRESS_MODEL3_EXPLANATION] = gemini_model_explanation
+                    partial_reexpression[constants.REEXPRESS_MODEL1_CLASSIFICATION] = gpt5_model_classification
+                    partial_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION] = gemini_model_classification
+                    partial_reexpression[constants.REEXPRESS_MODEL1_EXPLANATION] = gpt5_model_explanation
+                    partial_reexpression[constants.REEXPRESS_MODEL2_EXPLANATION] = gemini_model_explanation
                     partial_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION] = \
                         agreement_model_classification
+                    partial_reexpression[constants.REEXPRESS_MODEL1_TOPIC_SUMMARY] = gpt5_model_summary
                     now = datetime.now()
                     submitted_time = now.strftime("%Y-%m-%d %H:%M:%S")
                     partial_reexpression[constants.REEXPRESS_SUBMITTED_TIME_KEY] = submitted_time
@@ -188,7 +173,6 @@ class MCPServerStateController:
             formatted_output_string = (
                 mcp_utils_test.get_formatted_sdm_estimator_output_string(
                     False, constants.CALIBRATION_RELIABILITY_LABEL_OOD,
-                    constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     agreement_model_classification=False,
@@ -225,7 +209,8 @@ class MCPServerStateController:
             try:
                 nearest_match_meta_data = self.get_nearest_match_meta_data()
                 html_content = utils_visualization.create_html_page(self.current_reexpression,
-                                                                    nearest_match_meta_data=nearest_match_meta_data)
+                                                                    nearest_match_meta_data=nearest_match_meta_data,
+                                                                    nearest_match_meta_data_is_html_escaped=True)
                 html_file_path = Path(self.HTML_VISUALIZATION_FILE)
                 if not html_file_path.exists() or not html_file_path.is_file() \
                         or html_file_path.is_symlink():
@@ -270,18 +255,16 @@ class MCPServerStateController:
                 self.current_reexpression[constants.REEXPRESS_MODEL1_CLASSIFICATION]
             json_for_archive[constants.REEXPRESS_MODEL2_CLASSIFICATION] = \
                 self.current_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION]
-            json_for_archive[constants.REEXPRESS_MODEL3_CLASSIFICATION] = \
-                self.current_reexpression[constants.REEXPRESS_MODEL3_CLASSIFICATION]
 
             json_for_archive[constants.REEXPRESS_MODEL1_EXPLANATION] = \
                 self.current_reexpression[constants.REEXPRESS_MODEL1_EXPLANATION]
             json_for_archive[constants.REEXPRESS_MODEL2_EXPLANATION] = \
                 self.current_reexpression[constants.REEXPRESS_MODEL2_EXPLANATION]
-            json_for_archive[constants.REEXPRESS_MODEL3_EXPLANATION] = \
-                self.current_reexpression[constants.REEXPRESS_MODEL3_EXPLANATION]
 
             json_for_archive[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION] = \
                 self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]
+            json_for_archive[constants.REEXPRESS_MODEL1_TOPIC_SUMMARY] = \
+                self.current_reexpression[constants.REEXPRESS_MODEL1_TOPIC_SUMMARY]
 
             json_for_archive[constants.REEXPRESS_ATTACHED_FILE_NAMES] = \
                 self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES]
@@ -302,13 +285,16 @@ class MCPServerStateController:
             try:
                 success = self.support_db.add_document(
                     document_id=document_id,
+                    model1_summary=self.current_reexpression[constants.REEXPRESS_MODEL1_TOPIC_SUMMARY],
                     model1_explanation=self.current_reexpression[constants.REEXPRESS_MODEL1_EXPLANATION],
                     model2_explanation=self.current_reexpression[constants.REEXPRESS_MODEL2_EXPLANATION],
-                    model3_explanation=self.current_reexpression[constants.REEXPRESS_MODEL3_EXPLANATION],
+                    model3_explanation='',
+                    model4_explanation='',
                     model1_classification_int=int(self.current_reexpression[constants.REEXPRESS_MODEL1_CLASSIFICATION]),
                     model2_classification_int=int(self.current_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION]),
-                    model3_classification_int=int(self.current_reexpression[constants.REEXPRESS_MODEL3_CLASSIFICATION]),
-                    model4_agreement_classification_int=int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]),
+                    model3_classification_int=0,
+                    model4_classification_int=0,
+                    agreement_model_classification_int=int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]),
                     label_int=label,
                     label_was_updated_int=0,
                     document_source="user_added",

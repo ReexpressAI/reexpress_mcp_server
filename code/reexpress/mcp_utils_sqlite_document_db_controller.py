@@ -30,19 +30,30 @@ class DocumentDatabase:
             conn.close()
 
     def create_table(self):
-        """Create the documents table if it doesn't exist."""
+        """
+        Create the documents table if it doesn't exist.
+
+        -- Model field mapping (v1.2.0+):
+        -- model1_* fields: GPT-5 (originally model4)
+        -- model2_* fields: Gemini 2.5 Pro (originally model3)
+        -- model3_* fields: Pre-training model (originally model1)
+        -- model4_* fields: Pre-training model (originally model2)
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS documents (
                     document_id TEXT PRIMARY KEY,
+                    model1_summary TEXT,
                     model1_explanation TEXT,
                     model2_explanation TEXT,
                     model3_explanation TEXT,
+                    model4_explanation TEXT,
                     model1_classification_int INTEGER,
                     model2_classification_int INTEGER,
                     model3_classification_int INTEGER,
-                    model4_agreement_classification_int INTEGER,
+                    model4_classification_int INTEGER,
+                    agreement_model_classification_int INTEGER,
                     label_int INTEGER,
                     label_was_updated_int INTEGER,
                     document_source TEXT,
@@ -71,24 +82,29 @@ class DocumentDatabase:
 
             conn.commit()
 
-    def add_document(self, document_id: str, model1_explanation: str,
+    def add_document(self, document_id: str, model1_summary: str, model1_explanation: str,
                      model2_explanation: str, model3_explanation: str,
+                     model4_explanation: str,
                      model1_classification_int: int, model2_classification_int: int,
-                     model3_classification_int: int, model4_agreement_classification_int: int,
+                     model3_classification_int: int, model4_classification_int: int,
+                     agreement_model_classification_int: int,
                      label_int: int, label_was_updated_int: int, document_source: str, info: str,
                      user_question: str, ai_response: str) -> bool:
         """
-        Add a new document to the database.
+        Add a new document to the database. See create_table() for the model name semantics.
 
         Args:
             document_id: Unique identifier for the document
+            model1_summary: Short summary from model 1
             model1_explanation: Explanation from model 1
             model2_explanation: Explanation from model 2
             model3_explanation: Explanation from model 3
+            model4_explanation: Explanation from model 4
             model1_classification_int: Classification result from model 1
             model2_classification_int: Classification result from model 2
             model3_classification_int: Classification result from model 3
-            model4_agreement_classification_int: Agreement classification from model 4
+            model4_classification_int: Classification result from model 4
+            agreement_model_classification_int: Agreement classification from the agreement model
             label_int: Ground-truth label
             label_was_updated_int: Indicator if label was updated
             document_source: Data source
@@ -104,15 +120,16 @@ class DocumentDatabase:
                 cursor = conn.cursor()
                 cursor.execute('''
                     INSERT INTO documents (
-                        document_id, model1_explanation, model2_explanation,
-                        model3_explanation, model1_classification_int, model2_classification_int,
-                        model3_classification_int, model4_agreement_classification_int,
+                        document_id, model1_summary, model1_explanation, model2_explanation,
+                        model3_explanation, model4_explanation, model1_classification_int, model2_classification_int,
+                        model3_classification_int, model4_classification_int, agreement_model_classification_int,
                         label_int, label_was_updated_int, document_source, info,
                         user_question, ai_response
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (document_id, model1_explanation, model2_explanation,
-                      model3_explanation, model1_classification_int, model2_classification_int,
-                      model3_classification_int, model4_agreement_classification_int, label_int,
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation,
+                      model4_explanation,
+                      model1_classification_int, model2_classification_int,
+                      model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int,
                       label_was_updated_int, document_source, info,
                       user_question, ai_response))
                 conn.commit()
@@ -146,7 +163,8 @@ class DocumentDatabase:
                 for key in row_dict:
                     # Don't escape integer fields
                     if key in ['model1_classification_int', 'model2_classification_int',
-                               'model3_classification_int', 'model4_agreement_classification_int',
+                               'model3_classification_int', 'model4_classification_int',
+                               'agreement_model_classification_int',
                                'label_int', 'label_was_updated_int']:
                         row_dict_for_display[key] = row_dict[key]
                     else:
@@ -167,10 +185,11 @@ class DocumentDatabase:
             True if update was successful, False if document not found
         """
         # Filter out invalid field names
-        valid_fields = {'model1_explanation', 'model2_explanation',
-                        'model3_explanation', 'model1_classification_int',
+        valid_fields = {'model1_summary', 'model1_explanation', 'model2_explanation',
+                        'model3_explanation', 'model4_explanation', 'model1_classification_int',
                         'model2_classification_int', 'model3_classification_int',
-                        'model4_agreement_classification_int', 'label_int', 'label_was_updated_int',
+                        'model4_classification_int',
+                        'agreement_model_classification_int', 'label_int', 'label_was_updated_int',
                         'document_source', 'info', 'user_question', 'ai_response'}
         fields_to_update = {k: v for k, v in kwargs.items() if k in valid_fields}
 
@@ -247,7 +266,8 @@ class DocumentDatabase:
                 for key in row_dict:
                     # Don't escape integer fields
                     if key in ['model1_classification_int', 'model2_classification_int',
-                               'model3_classification_int', 'model4_agreement_classification_int',
+                               'model3_classification_int', 'model4_classification_int',
+                               'agreement_model_classification_int',
                                'label_int', 'label_was_updated_int']:
                         row_dict_for_display[key] = row_dict[key]
                     else:
@@ -282,7 +302,8 @@ class DocumentDatabase:
                 for key in row_dict:
                     # Don't escape integer fields
                     if key in ['model1_classification_int', 'model2_classification_int',
-                               'model3_classification_int', 'model4_agreement_classification_int',
+                               'model3_classification_int', 'model4_classification_int',
+                               'agreement_model_classification_int',
                                'label_int', 'label_was_updated_int']:
                         row_dict_for_display[key] = row_dict[key]
                     else:
@@ -300,13 +321,16 @@ if __name__ == "__main__":
     # Add a document
     success = db.add_document(
         document_id="DOC001",
+        model1_summary="A brief summary from Model 1",
         model1_explanation="Model 1 thinks this is correct",
         model2_explanation="Model 2 agrees with high confidence",
         model3_explanation="Model 3 has some reservations",
+        model4_explanation="Model 4 is unsure",
         model1_classification_int=1,
         model2_classification_int=1,
         model3_classification_int=0,
-        model4_agreement_classification_int=1,
+        model4_classification_int=0,
+        agreement_model_classification_int=1,
         label_int=1,
         label_was_updated_int=0,
         document_source="open source",
@@ -318,13 +342,16 @@ if __name__ == "__main__":
 
     success = db.add_document(
         document_id="DOC002",
+        model1_summary="aA brief summary from Model 1",
         model1_explanation="aModel 1 thinks this is correct",
         model2_explanation="aModel 2 agrees with high confidence",
         model3_explanation="aModel 3 has some reservations",
+        model4_explanation="aModel 4 is unsure",
         model1_classification_int=1,
         model2_classification_int=0,
         model3_classification_int=1,
-        model4_agreement_classification_int=0,
+        model4_classification_int=0,
+        agreement_model_classification_int=0,
         label_int=1,
         label_was_updated_int=1,
         document_source="open source",
@@ -336,13 +363,16 @@ if __name__ == "__main__":
 
     success = db.add_document(
         document_id="DOC003",
+        model1_summary="aA brief summary from Model 1",
         model1_explanation="aModel 1 thinks this is correct",
         model2_explanation="aModel 2 agrees with high confidence",
         model3_explanation="aModel 3 has some reservations",
+        model4_explanation="aModel 4 is unsure",
         model1_classification_int=1,
         model2_classification_int=1,
         model3_classification_int=1,
-        model4_agreement_classification_int=1,
+        model4_classification_int=1,
+        agreement_model_classification_int=1,
         label_int=1,
         label_was_updated_int=0,
         document_source="open source",

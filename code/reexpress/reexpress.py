@@ -188,6 +188,10 @@ def main():
     parser.add_argument("--eval_gen_ai", default=False, action='store_true', help="eval_gen_ai")
     parser.add_argument("--update_support_set_with_eval_data", default=False, action='store_true',
                         help="update_support_set_with_eval_data")
+    parser.add_argument("--skip_updates_already_in_support", default=False, action='store_true',
+                        help="If --update_support_set_with_eval_data is provided, this will exclude any document "
+                             "with the same id already in the support set or the calibration set. If you are sure "
+                             "the documents are not already present, this can be excluded.")
     parser.add_argument("--main_device", default="cpu",
                         help="")
     parser.add_argument("--aux_device", default="cpu",

@@ -16,8 +16,8 @@ def _format_probability_as_string_percentage(valid_probability_float: float) -> 
 
 
 def get_formatted_sdm_estimator_output_string(verification_classification,
-                                              calibration_reliability, log_prob_model_explanation,
-                                              reasoning_model_explanation,
+                                              calibration_reliability,
+                                              gpt5_model_explanation,
                                               gemini_model_explanation,
                                               agreement_model_classification: bool,
                                               non_odd_class_conditional_accuracy: float) -> str:
@@ -33,9 +33,8 @@ def get_formatted_sdm_estimator_output_string(verification_classification,
     formatted_output_string = f"""
         <successfully_verified> {verification_classification} </successfully_verified> \n
         <confidence> {classification_confidence} </confidence> \n
-        <model1_explanation> {log_prob_model_explanation} </model1_explanation> \n
-        <model2_explanation> {reasoning_model_explanation} </model2_explanation> \n
-        <model3_explanation> {gemini_model_explanation} </model3_explanation> \n
+        <model1_explanation> {gpt5_model_explanation} </model1_explanation> \n
+        <model2_explanation> {gemini_model_explanation} </model2_explanation> \n
         <model4_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model4_agreement>
     """
     return formatted_output_string
@@ -76,8 +75,7 @@ def get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_
     return calibration_reliability
 
 
-def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, log_prob_model_explanation,
-                                             reasoning_model_explanation, gemini_model_explanation,
+def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_explanation, gemini_model_explanation,
                                              agreement_model_classification: bool):
     # Starting in v1.1.0, we've streamlined the primary output to the information needed in (and at a
     # default granularity suitable for) typical applications.
@@ -95,8 +93,7 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, log_prob_mode
     formatted_output_string = \
         get_formatted_sdm_estimator_output_string(verification_classification,
                                                   calibration_reliability,
-                                                  log_prob_model_explanation,
-                                                  reasoning_model_explanation,
+                                                  gpt5_model_explanation,
                                                   gemini_model_explanation,
                                                   agreement_model_classification,
                                                   non_odd_class_conditional_accuracy=

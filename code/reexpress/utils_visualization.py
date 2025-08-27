@@ -8,13 +8,13 @@ import constants
 import mcp_utils_test
 import utils_visualization__constants
 
-def create_html_page(current_reexpression, nearest_match_meta_data=None):
+def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest_match_meta_data_is_html_escaped=False):
     """
     Creates a static HTML page from model output dictionary.
 
     Args:
         current_reexpression: Dictionary containing the model output with keys for each field
-
+        nearest_match_meta_data_is_html_escaped: True if the text fields have been processed with html.escape()
     Returns:
         HTML string
     """
@@ -55,31 +55,29 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
                                                         non_odd_class_conditional_accuracy=non_odd_class_conditional_accuracy,
                                                         return_html_class=True)
 
-    model1_name = "gpt-4.1-2025-04-14"
-    model2_name = "o4-mini-2025-04-16-high"
-    model3_name = "gemini-2.5-pro"
-    model4_name = "granite-3.3-8b-instruct"
+    model1_name = "gpt-5-2025-08-07"
+    model2_name = "gemini-2.5-pro"
+    agreement_model_name = "granite-3.3-8b-instruct"
 
     model1_classification = current_reexpression.get(constants.REEXPRESS_MODEL1_CLASSIFICATION, False)
     model2_classification = current_reexpression.get(constants.REEXPRESS_MODEL2_CLASSIFICATION, False)
-    model3_classification = current_reexpression.get(constants.REEXPRESS_MODEL3_CLASSIFICATION, False)
-    model4_agreement_classification = \
+    agreement_model_classification = \
         current_reexpression.get(constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION, False)
 
-    if model4_agreement_classification:
+    if agreement_model_classification:
         agreement_model_classification_string = "Yes"
     else:
         agreement_model_classification_string = "No"
 
     model1_html_class = "positive" if model1_classification else "negative"
     model2_html_class = "positive" if model2_classification else "negative"
-    model3_html_class = "positive" if model3_classification else "negative"
-    model4_html_class = "positive" if model4_agreement_classification else "negative"
+    agreement_model_html_class = "positive" if agreement_model_classification else "negative"
 
     # We escape HTML as it may be contained within the responses themselves
     model1_explanation = html.escape(current_reexpression.get(constants.REEXPRESS_MODEL1_EXPLANATION, ''))
     model2_explanation = html.escape(current_reexpression.get(constants.REEXPRESS_MODEL2_EXPLANATION, ''))
-    model3_explanation = html.escape(current_reexpression.get(constants.REEXPRESS_MODEL3_EXPLANATION, ''))
+
+    model1_summary = html.escape(current_reexpression.get(constants.REEXPRESS_MODEL1_TOPIC_SUMMARY, ''))
 
     files_in_consideration_message = \
         mcp_utils_test.get_files_in_consideration_message(
@@ -89,20 +87,21 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
     # Uncertainty
     try:
         rescaled_prediction_conditional_distribution__lower = \
-            prediction_meta_data["rescaled_prediction_conditional_distribution__lower"].detach().numpy().tolist()
+            prediction_meta_data["rescaled_prediction_conditional_distribution__lower"].detach().cpu().numpy().tolist()
+        # TODO: Move this earlier to avoid duplication:
         is_valid_index_conditional__lower = prediction_meta_data["is_valid_index_conditional__lower"]
         is_valid_index_conditional__lower_html_class = "positive" if is_valid_index_conditional__lower else "negative"
         soft_qbin__lower = prediction_meta_data["soft_qbin__lower"][0].item()
         iterated_lower_offset__lower = prediction_meta_data["iterated_lower_offset__lower"]
         cumulative_effective_sample_sizes = \
-            prediction_meta_data["cumulative_effective_sample_sizes"].detach().numpy().tolist()
+            prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().numpy().tolist()
 
         similarity_q = int(prediction_meta_data["original_q"])
         distance_d = torch.min(prediction_meta_data["distance_quantiles"]).item()
-        magnitude = prediction_meta_data["f"].detach().numpy().tolist()
-
+        magnitude = prediction_meta_data["f"].detach().cpu().numpy().tolist()
     except:
         rescaled_prediction_conditional_distribution__lower = "N/A"
+        is_valid_index_conditional__lower = False
         soft_qbin__lower = "N/A"
         iterated_lower_offset__lower = "N/A"
         is_valid_index_conditional__lower_html_class = "negative"
@@ -120,8 +119,8 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
         nearest_match_html_string = nearest_match_html(nearest_match_meta_data,
                                                        model1_name,
                                                        model2_name,
-                                                       model3_name,
-                                                       model4_name)
+                                                       agreement_model_name,
+                                                       content_is_html_escaped=nearest_match_meta_data_is_html_escaped)
     except:
         nearest_match_html_string = """<div class="section" style="margin-left: 40px;"> The nearest match is not available. </div>"""
 
@@ -138,7 +137,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output
+            Reexpress MCP Server Output <span class="mcp-server-version">(v{constants.REEXPRESS_MCP_SERVER_VERSION})</span>
         </div>
 
         <div class="section">
@@ -157,6 +156,11 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
             </div>
 
             <div class="explanation-box-{model1_html_class}">
+                <div class="explanation-title-{model1_html_class}">Model 1 Summary <span class="model-name">({model1_name})</span></div>
+                <div>{model1_summary}</div>
+            </div>
+            
+            <div class="explanation-box-{model1_html_class}">
                 <div class="explanation-title-{model1_html_class}">Model 1 Explanation <span class="model-name">({model1_name})</span></div>
                 <div>{model1_explanation}</div>
             </div>
@@ -166,14 +170,10 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
                 <div>{model2_explanation}</div>
             </div>
 
-            <div class="explanation-box-{model3_html_class}">
-                <div class="explanation-title-{model3_html_class}">Model 3 Explanation <span class="model-name">({model3_name})</span></div>
-                <div>{model3_explanation}</div>
-            </div>
-            <div class="explanation-box-{model4_html_class}">
-                <div class="explanation-title-{model4_html_class}">Model 4 Agreement <span class="model-name">({model4_name})</span></div>
+            <div class="explanation-box-{agreement_model_html_class}">
+                <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
                 <div>{constants.AGREEMENT_MODEL_USER_FACING_PROMPT}</div>
-                <div><span class="tag tag-{model4_html_class}">{agreement_model_classification_string}</span></div>
+                <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
             </div>
         </div>
         
@@ -319,7 +319,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
         <div class="section">
             <div class="section-title">Legend</div>
             <div class="legend-content">
-                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
                 
                 <div class="legend-items">
                     <div class="legend-item">
@@ -341,12 +341,20 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None):
     return html_content_string
 
 
+def escape_html(content, content_is_html_escaped=False):
+    if content_is_html_escaped:
+        return content
+    else:
+        return html.escape(content)
+
+
 def nearest_match_html(nearest_match_meta_data,
                        model1_name,
                        model2_name,
-                       model3_name,
-                       model4_name):
-
+                       agreement_model_name,
+                       content_is_html_escaped=False):
+    # Use content_is_html_escaped=True when you know the fields have already been escaped with html.escape() (e.g.,
+    # when retrieving from a database)
     predicted_class = nearest_match_meta_data.get("model_train_predicted_label", -1)
     true_label = nearest_match_meta_data.get("model_train_label", -1)
 
@@ -365,34 +373,36 @@ def nearest_match_html(nearest_match_meta_data,
 
     model1_classification = nearest_match_meta_data.get("model1_classification_int", -1) == 1
     model2_classification = nearest_match_meta_data.get("model2_classification_int", -1) == 1
-    model3_classification = nearest_match_meta_data.get("model3_classification_int", -1) == 1
-    model4_agreement_classification = \
-        nearest_match_meta_data.get("model4_agreement_classification_int", -1) == 1
+    agreement_model_classification = \
+        nearest_match_meta_data.get("agreement_model_classification_int", -1) == 1
 
-    if model4_agreement_classification:
+    if agreement_model_classification:
         agreement_model_classification_string = "Yes"
     else:
         agreement_model_classification_string = "No"
 
     model1_html_class = "positive" if model1_classification else "negative"
     model2_html_class = "positive" if model2_classification else "negative"
-    model3_html_class = "positive" if model3_classification else "negative"
-    model4_html_class = "positive" if model4_agreement_classification else "negative"
+    agreement_model_html_class = "positive" if agreement_model_classification else "negative"
 
-    # We escape HTML as it may be contained within the responses themselves
-    model1_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL1_EXPLANATION, ''))
-    model2_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL2_EXPLANATION, ''))
-    model3_explanation = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_MODEL3_EXPLANATION, ''))
+    # Escape HTML, as applicable
+    model1_explanation = escape_html(nearest_match_meta_data.get(constants.REEXPRESS_MODEL1_EXPLANATION, ''),
+                                     content_is_html_escaped=content_is_html_escaped)
+    model2_explanation = escape_html(nearest_match_meta_data.get(constants.REEXPRESS_MODEL2_EXPLANATION, ''),
+                                     content_is_html_escaped=content_is_html_escaped)
 
-    user_question = html.escape(nearest_match_meta_data.get("user_question", ''))
-    ai_response = html.escape(nearest_match_meta_data.get(constants.REEXPRESS_AI_RESPONSE_KEY, ''))
+    model1_summary = escape_html(nearest_match_meta_data.get(constants.REEXPRESS_MODEL1_TOPIC_SUMMARY, ''),
+                                 content_is_html_escaped=content_is_html_escaped)
 
-    document_id = nearest_match_meta_data.get("document_id", "")
-    document_source = nearest_match_meta_data.get("document_source", "")
+    user_question = escape_html(nearest_match_meta_data.get("user_question", ''),
+                                content_is_html_escaped=content_is_html_escaped)
+    ai_response = escape_html(nearest_match_meta_data.get(constants.REEXPRESS_AI_RESPONSE_KEY, ''),
+                              content_is_html_escaped=content_is_html_escaped)
 
-    if document_source != "openthoughts.o4mini_high":
-        # The support documents from version 1.0.0 used a medium thinking budget
-        model2_name = "o4-mini-2025-04-16-medium"
+    document_id = escape_html(nearest_match_meta_data.get("document_id", ""),
+                              content_is_html_escaped=content_is_html_escaped)
+    document_source = escape_html(nearest_match_meta_data.get("document_source", ""),
+                                  content_is_html_escaped=content_is_html_escaped)
 
     nearest_match_html_string = f"""
         <div class="nearest-match-box">
@@ -412,6 +422,11 @@ def nearest_match_html(nearest_match_meta_data,
                         <div class="field-value"><span class="tag tag-{true_class_html_class}">{true_class_string_label}</span></div>
                     </div>
                 </div>
+                
+                <div class="explanation-box-{model1_html_class}">
+                    <div class="explanation-title-{model1_html_class}">Model 1 Summary <span class="model-name">({model1_name})</span></div>
+                    <div>{model1_summary}</div>
+                </div>
                 <div class="explanation-box-{model1_html_class}">
                     <div class="explanation-title-{model1_html_class}">Model 1 Explanation <span class="model-name">({model1_name})</span></div>
                     <div>{model1_explanation}</div>
@@ -421,16 +436,11 @@ def nearest_match_html(nearest_match_meta_data,
                     <div class="explanation-title-{model2_html_class}">Model 2 Explanation <span class="model-name">({model2_name})</span></div>
                     <div>{model2_explanation}</div>
                 </div>
-    
-                <div class="explanation-box-{model3_html_class}">
-                    <div class="explanation-title-{model3_html_class}">Model 3 Explanation <span class="model-name">({model3_name})</span></div>
-                    <div>{model3_explanation}</div>
-                </div>
-                
-                <div class="explanation-box-{model4_html_class}">
-                    <div class="explanation-title-{model4_html_class}">Model 4 Agreement <span class="model-name">({model4_name})</span></div>
+                    
+                <div class="explanation-box-{agreement_model_html_class}">
+                    <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
                     <div>{constants.AGREEMENT_MODEL_USER_FACING_PROMPT}</div>
-                    <div><span class="tag tag-{model4_html_class}">{agreement_model_classification_string}</span></div>
+                    <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
                 </div>
                 
                 <div class="section">
@@ -481,6 +491,7 @@ def main():
 
     # Generate and save the HTML file
     save_html_file({}, {}, filename=options.output_file)
+
 
 if __name__ == "__main__":
     main()

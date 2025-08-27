@@ -2,7 +2,15 @@
 
 The training and calibration data is a subset of the [OpenVerification1](https://huggingface.co/datasets/ReexpressAI/OpenVerification1) dataset available on HuggingFace. The text of the training data appearing in the support set is available in reexpress_mcp_server_db/reexpress_mcp_server_support_documents.db in the model directory. These correspond to the document_id's stored in the class property self.train_uuids of the SimilarityDistanceMagnitudeCalibrator() model (see code/reexpress/sdm_model.py), and the corresponding calibration set document_id's are stored in the class property self.calibration_uuids. The model also stores the corresponding ground-truth labels and predictions for the final training/calibration split. (The SDM estimator is itself trained by iteratively shuffling the data, so the particular final split of the data into training and calibration sets is model-dependent.)
 
-(At 2.4 million examples, the OpenVerification1 dataset is significantly larger than the subset available when training the SDM estimator used in version 1.1.0 of the MCP server. Note: To avoid ID collisions in future data additions, we added an additional UUID suffix to the "id" fields in the data released in the OpenVerification1 dataset.)
+For reference, if you want to pull up the row in OpenVerification1 for a particular document (e.g., when using the interactive graphs), the following can be used:
 
-> [!TIP]
-> The estimator has not been trained or calibrated against the held-out test sets of any LLM benchmarks. As such, you can assess new generative models in the way they will be used: Run the new models against the benchmark, and where appropriate update the SDM estimator with any relevant validation/dev data, and then send the generated output to Claude with the Reexpress tool prompt. The preferred model(s) are those that maximize the proportion of index-conditional calibrated documents (i.e., in this case, those with a probability >= 0.90).
+```python
+from datasets import load_dataset
+dataset = load_dataset("ReexpressAI/OpenVerification1")
+def retrieve_row_by_id(document_id: str):
+    for split_name in ["eval", "validation", "train"]:
+        filtered_dataset = dataset[split_name].filter(lambda x: x['id'] == document_id)
+        if filtered_dataset.num_rows == 1:
+            print(filtered_dataset[0])
+            return filtered_dataset
+``` 

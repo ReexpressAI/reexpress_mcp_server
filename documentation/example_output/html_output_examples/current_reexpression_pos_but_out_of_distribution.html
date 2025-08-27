@@ -31,7 +31,7 @@
             margin-bottom: 20px;
             color: #1a1a1a;
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 10px;
         }
 
@@ -136,6 +136,13 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             color: #212529;
+        }
+        
+        .mcp-server-version {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 300;
         }
         
         .model-name {
@@ -372,7 +379,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output
+            Reexpress MCP Server Output <span class="mcp-server-version">(v1.2.0)</span>
         </div>
 
         <div class="section">
@@ -391,21 +398,22 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
-                <div>The AI response accurately reviews the code for correctness, focusing on the trigger logic, HTML escaping, SQL safety, and duplicate handling. It correctly notes that there are no correctness bugs and that the code functions as intended. The response does not focus on style or documentation, as requested, and all points are supported by the code in the attached file. The only minor caveat is that concurrency and upsert are not implemented, but this does not constitute a correctness bug for the described use case.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
+                <div>User asked how to create, start, and exit a tmux session on Linux and wanted relevant keyboard commands. The AI response listed commands to create a session (tmux new -s name or tmux), attach/start a session (tmux attach -t name), and exit/detach or kill sessions (Ctrl+b d, exit/Ctrl+d, Ctrl+b then :kill-session, and tmux kill-session -t name).</div>
+            </div>
+            
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
+                <div>The response directly and correctly addresses all three requested items: creation, attaching/starting, and exiting, and includes the key keyboard shortcuts (Ctrl+b d, Ctrl+d, and using the tmux command prompt via Ctrl+b :). These are standard, non-subjective tmux commands that are not dependent on recent changes. Based on internal knowledge; not opinion-based and not time-sensitive. Minor nit: saying exit/Ctrl+d &quot;exits completely&quot; depends on whether other panes/windows exist, but overall the guidance is correct and sufficient for the user’s request.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
-                <div>The AI response addresses the user’s request for a correctness-focused code review and correctly identifies that there are no apparent logic or runtime errors in the provided SQLite controller. While it is fairly concise, it covers trigger behavior, SQL parameterization, HTML escaping, and duplicate handling, which aligns with the user’s instruction.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                <div>The AI response accurately provides the standard Linux commands and keyboard shortcuts for creating, starting (attaching to), and exiting (detaching from or killing) a tmux session, directly addressing all parts of the user&#x27;s question.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The AI&#x27;s response correctly analyzes several key aspects of the provided Python code for correctness. It accurately states that: 1) The SQLite trigger for updating timestamps will not cause recursion. 2) The HTML escaping, while applied to non-HTML fields like timestamps, is harmless and does not cause a bug. 3) The `update_document` method safely constructs its SQL query by whitelisting fields, preventing SQL injection. 4) The `add_document` method correctly handles duplicate entries by catching `IntegrityError`. The overall conclusion that the code is free of correctness bugs is well-supported by these points.</div>
-            </div>
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
                 <div>Do the model explanations agree that the response is correct?</div>
                 <div><span class="tag tag-positive">Yes</span></div>
             </div>
@@ -418,12 +426,12 @@
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">File Access</div>
-                    <div class="field-value">The verification model had access to: mcp_utils_sqlite_document_db_controller.py</div>
+                    <div class="field-value">The verification model did not have access to any external files.</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-07-26 15:22:41</div>
+                    <div class="field-value">2025-08-25 20:38:09</div>
                 </div>
                 
             </div>
@@ -433,7 +441,7 @@
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.44798907120576303, 0.5342400437952868]</div>
+                <div class="field-value">[0.3332954446278077, 0.6642194363346766]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
@@ -453,7 +461,7 @@
                     <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
                             (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
                         </span></div>
-                    <div class="field-value">0.40553459903082273</div>
+                    <div class="field-value">0.7342535588779641</div>
                 </div>
                 <div class="field-box">
                     <div class="field-label">Iterated offset_lower (for class 1), 
@@ -465,11 +473,11 @@
                             </span>
                         </span>
                     </div>
-                    <div class="field-value">0.017770884998950177</div>
+                    <div class="field-value">0.002485119037515709</div>
                 </div>
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[2208.0, 2811.0]</div>
+                    <div class="field-value">[8780.0, 10687.0]</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -477,21 +485,21 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">15</div>
+                    <div class="field-value">53</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training (d) Quantile
                     </div>
-                    <div class="field-value">0.10468961298465729</div>
+                    <div class="field-value">0.053604330867528915</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-1.0374560356140137, 0.6888865232467651]</div>
+                    <div class="field-value">[-2.4292399883270264, 1.5850348472595215]</div>
                 </div>
             </div>
         </div>
@@ -514,21 +522,21 @@
                             (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
                         </span>
                     </div>
-                    <div class="field-value">1.0006589859127233</div>
+                    <div class="field-value">1.0003684141164448</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise output thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9284970760345459, 0.9016774892807007]</div>
+                    <div class="field-value">[0.9551128149032593, 0.9338333010673523]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">28227</div>
+                    <div class="field-value">74684</div>
                 </div>
             </div>
         </div>
@@ -536,12 +544,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">The attached file is a controller class for an sqlite database in python. Do a code review. Don&#x27;t focus on documentation or style; only focus on correctness.</div>
+            <div class="prompt-box">Remind me: How do I create a new tmux session on linux and remind me the keyboard commands. I want to know: 1. How to create a session 2. Start the session 3. Exit the session</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, file mcp_utils_sqlite_document_db_controller.py, 1-51]: The UPDATE trigger modifies updated_at using &#x27;UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE document_id = NEW.document_id&#x27; which SQLite handles safely without recursion; Reference [2, file mcp_utils_sqlite_document_db_controller.py, 1-173]: get_document and similar methods apply html.escape(str(row_dict[key])) to all string fields including timestamps, but this doesn&#x27;t break functionality since timestamp strings don&#x27;t contain HTML special characters; Reference [3, file mcp_utils_sqlite_document_db_controller.py, 1-126]: update_document validates fields against a whitelist before SQL construction; Reference [4, file mcp_utils_sqlite_document_db_controller.py, 1-82]: add_document catches IntegrityError and returns False, providing correct behavior for duplicate detection; Answer: After careful analysis, there are no actual correctness bugs in this code that would cause incorrect behavior. The trigger works correctly without recursion, HTML escaping preserves timestamp strings, SQL construction is safe with field validation, and duplicate handling works as designed. While there are potential improvements for concurrent usage (like adding upsert functionality), the existing code functions correctly for its intended single-threaded usage pattern.</div>
+            <div class="document-box">Reference [1, internal knowledge]: tmux new -s session_name creates a new named tmux session from outside tmux; Reference [2, internal knowledge]: tmux or tmux new creates a session with a default numeric name; Reference [3, internal knowledge]: tmux attach -t session_name or tmux a -t session_name attaches to an existing session; Reference [4, internal knowledge]: tmux ls lists all available sessions; Reference [5, internal knowledge]: Ctrl+b then d detaches from a session keeping it running in background; Reference [6, internal knowledge]: exit command or Ctrl+d kills current pane/window and exits completely; Reference [7, internal knowledge]: Ctrl+b then :kill-session kills entire session from within; Reference [8, internal knowledge]: tmux kill-session -t session_name kills a session from outside tmux; Answer: To create a new tmux session use &#x27;tmux new -s session_name&#x27; or just &#x27;tmux&#x27; for a default named session. To start/attach to an existing session use &#x27;tmux attach -t session_name&#x27; or &#x27;tmux a -t session_name&#x27;. To exit a session you can detach with Ctrl+b then d (keeps session running), or completely exit with the exit command, Ctrl+d, or kill the session with Ctrl+b :kill-session from within or &#x27;tmux kill-session -t session_name&#x27; from outside.</div>
         </div>
         
         <div class="separator"></div>
@@ -564,168 +572,59 @@
                         <div class="field-value"><span class="tag tag-positive">Verified</span></div>
                     </div>
                 </div>
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-4.1-2025-04-14)</span></div>
-                    <div>The response correctly implements the Deposit, Contract, and Guarantee classes with all required methods as specified in the user instructions. Each method returns data in a structure that matches the described requirements, and the logic for processing (such as summing balances and counting accounts) is present. The data is simulated, which is appropriate given the lack of a real data source. The only minor limitation is that the data is hardcoded, but this is acceptable for a functional example as requested. No subjective or recent information is involved.</div>
-                </div>
-    
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(o4-mini-2025-04-16-high)</span></div>
-                    <div>The response provides concrete implementations for Deposit, Contract, and Guarantee classes with the required methods, matching the user’s specification. It uses simulated data arrays to demonstrate functionality, which satisfies the instruction to implement the missing methods. Additional real‐world data retrieval details could improve completeness, but all requested methods are present and functional.</div>
-                </div>
-    
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 3 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI response correctly implements all the requested PHP classes (`Deposit`, `Contract`, `Guarantee`) and their specified methods. The code is functional, uses a logical approach with simulated data, and directly addresses every part of the user&amp;#x27;s prompt.</div>
-                </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 4 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
+                    <div>User asked for a psql command to run 01-filter-stops.sql against database VG while passing three variables: stops_input (path to unfiltered-stops.txt), stops_output (path for output), and selected_rs set to 16061. The AI provided a psql command using -d VG, -f 01-filter-stops.sql, and -v to set the three variables, with example file names and a note to adjust paths and username.</div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
+                    <div>The provided command correctly uses psql with -d to select the VG database, -f to execute the specified SQL file, and -v to pass the three variables (stops_input, stops_output, selected_rs) as requested. It meets the user&amp;#x27;s requirements and includes guidance to adjust file paths and username. This is not subjective and does not depend on recent information. Assessment is based on internal knowledge of psql and the user’s provided context.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
+                    <div>The AI response correctly identifies the necessary `psql` command-line flags (`-d` for database, `-f` for file, `-v` for variable) to meet all the user&amp;#x27;s requirements. The constructed command is accurate and follows standard `psql` syntax. The explanation provided is also correct and helpful.</div>
+                </div>
+                    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
                     <div>Do the model explanations agree that the response is correct?</div>
                     <div><span class="tag tag-positive">Yes</span></div>
                 </div>
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">You are tasked with creating a class that manages financial data for a credit union. The given code snippet is part of a method within this class, which retrieves and processes various financial information for a specific member. Your task is to implement the missing methods and classes required to make this code snippet functional.
-
-The `Deposit` class has the following methods:
-- `current($member_id, $fixed_date)`: Retrieves the current deposit information for the given member and fixed date.
-- `getAccount()`: Returns the account data for the current deposit.
-- `getAccountCount()`: Returns the count of accounts for the current deposit.
-- `getBalanceAll()`: Returns the balance for all accounts in the current deposit.
-
-The `Contract` class has the following methods:
-- `current($member_id)`: Retrieves the current contract information for the given member.
-- `get()`: Returns the contract data for the current member.
-- `getATM()`: Returns the ATM data for the current contract.
-
-The `Guarantee` class has the following methods:
-- `current($member_id)`: Retrieves the current guarantee information for the given member.
-- `get()`: Returns the guarantee data for the current member.
-
-You need to implement the missing methods and classes to make the given code snippet functional. Additionally, you need to ensure that the returned data is accurate and properly processed.
-
-Your task is to:
-1. Create the `Deposit` class with the required methods.
-2. Create the `Contract` class with the required methods.
-3. Create the `Guarantee` class with the required methods.
-4. Implement the missing methods within each class to retrieve and process the financial data as per the given code snippet.</div>
+                    <div class="prompt-box">I need to run a PostgreSQL script file using the psql command-line tool. The script file is named &amp;quot;01-filter-stops.sql&amp;quot; and it needs to be executed in the database named &amp;quot;VG&amp;quot;. Additionally, I need to pass in some input parameters to the script: stops_input should be set to the path of the unfiltered-stops.txt file, stops_output should be set to the path where the output should be saved, and selected_rs should be set to the value &amp;quot;16061&amp;quot;. How can I construct the psql command to achieve this?</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">To solve this problem, we need to create three classes: `Deposit`, `Contract`, and `Guarantee`, each with specific methods to retrieve and process financial data for a credit union member. The goal is to ensure that these classes and their methods can be used to fetch and process financial information accurately.
+                    <div class="document-box">To execute the PostgreSQL script &amp;quot;01-filter-stops.sql&amp;quot; with the specified parameters, you can use the following `psql` command:
 
-### Approach
-1. **Deposit Class**: This class will handle deposit-related information. It will retrieve the current deposit data for a member and a specific date, and provide methods to get account details, count of accounts, and the total balance across all accounts.
-2. **Contract Class**: This class will manage contract-related information. It will retrieve the current contract data for a member and provide methods to get the contract details and associated ATM information.
-3. **Guarantee Class**: This class will handle guarantee-related information. It will retrieve the current guarantees for a member and provide a method to get the guarantee details.
-
-Each class will have a `current` method to initialize the relevant data and other methods to retrieve specific parts of this data.
-
-### Solution Code
-```php
-class Deposit {
-    private $currentDeposit;
-
-    public function current($member_id, $fixed_date) {
-        // Simulated data retrieval based on member_id and fixed_date
-        $this-&amp;gt;currentDeposit = [
-            &amp;#x27;accounts&amp;#x27; =&amp;gt; [
-                [&amp;#x27;account_number&amp;#x27; =&amp;gt; &amp;#x27;123456&amp;#x27;, &amp;#x27;balance&amp;#x27; =&amp;gt; 1500.00],
-                [&amp;#x27;account_number&amp;#x27; =&amp;gt; &amp;#x27;789012&amp;#x27;, &amp;#x27;balance&amp;#x27; =&amp;gt; 3000.00]
-            ]
-        ];
-    }
-
-    public function getAccount() {
-        return $this-&amp;gt;currentDeposit[&amp;#x27;accounts&amp;#x27;] ?? [];
-    }
-
-    public function getAccountCount() {
-        return count($this-&amp;gt;getAccount());
-    }
-
-    public function getBalanceAll() {
-        $total = 0.0;
-        foreach ($this-&amp;gt;getAccount() as $account) {
-            $total += $account[&amp;#x27;balance&amp;#x27;];
-        }
-        return $total;
-    }
-}
-
-class Contract {
-    private $currentContract;
-
-    public function current($member_id) {
-        // Simulated data retrieval based on member_id
-        $this-&amp;gt;currentContract = [
-            &amp;#x27;contract_id&amp;#x27; =&amp;gt; &amp;#x27;CTR001&amp;#x27;,
-            &amp;#x27;start_date&amp;#x27; =&amp;gt; &amp;#x27;2023-01-01&amp;#x27;,
-            &amp;#x27;end_date&amp;#x27; =&amp;gt; &amp;#x27;2024-01-01&amp;#x27;,
-            &amp;#x27;atm&amp;#x27; =&amp;gt; [
-                &amp;#x27;card_number&amp;#x27; =&amp;gt; &amp;#x27;4111111111111111&amp;#x27;,
-                &amp;#x27;daily_limit&amp;#x27; =&amp;gt; 500.00
-            ]
-        ];
-    }
-
-    public function get() {
-        return $this-&amp;gt;currentContract;
-    }
-
-    public function getATM() {
-        return $this-&amp;gt;currentContract[&amp;#x27;atm&amp;#x27;] ?? [];
-    }
-}
-
-class Guarantee {
-    private $currentGuarantee;
-
-    public function current($member_id) {
-        // Simulated data retrieval based on member_id
-        $this-&amp;gt;currentGuarantee = [
-            &amp;#x27;guarantees&amp;#x27; =&amp;gt; [
-                [&amp;#x27;id&amp;#x27; =&amp;gt; &amp;#x27;GRT001&amp;#x27;, &amp;#x27;amount&amp;#x27; =&amp;gt; 2000.00],
-                [&amp;#x27;id&amp;#x27; =&amp;gt; &amp;#x27;GRT002&amp;#x27;, &amp;#x27;amount&amp;#x27; =&amp;gt; 3500.00]
-            ]
-        ];
-    }
-
-    public function get() {
-        return $this-&amp;gt;currentGuarantee[&amp;#x27;guarantees&amp;#x27;] ?? [];
-    }
-}
+```bash
+psql -U your_username -d VG -f 01-filter-stops.sql -v stops_input=&amp;#x27;unfiltered-stops.txt&amp;#x27; -v stops_output=&amp;#x27;filtered-stops.txt&amp;#x27; -v selected_rs=&amp;#x27;16061&amp;#x27;
 ```
 
-### Explanation
-1. **Deposit Class**:
-   - `current($member_id, $fixed_date)`: Initializes the deposit data with a simulated array of accounts.
-   - `getAccount()`: Returns the list of accounts.
-   - `getAccountCount()`: Returns the number of accounts.
-   - `getBalanceAll()`: Calculates and returns the total balance across all accounts.
+**Breakdown of the command:**
 
-2. **Contract Class**:
-   - `current($member_id)`: Initializes the contract data, including ATM details.
-   - `get()`: Returns the entire contract data.
-   - `getATM()`: Returns the ATM-specific details from the contract.
+- `-U your_username`: Replace `your_username` with your actual PostgreSQL username.
+- `-d VG`: Connects to the database named &amp;quot;VG&amp;quot;.
+- `-f 01-filter-stops.sql`: Executes the SQL script file named &amp;quot;01-filter-stops.sql&amp;quot;.
+- `-v stops_input=&amp;#x27;unfiltered-stops.txt&amp;#x27;`: Sets the `stops_input` variable to the path of the unfiltered-stops.txt file.
+- `-v stops_output=&amp;#x27;filtered-stops.txt&amp;#x27;`: Sets the `stops_output` variable to the path where the output should be saved.
+- `-v selected_rs=&amp;#x27;16061&amp;#x27;`: Sets the `selected_rs` variable to the value &amp;quot;16061&amp;quot;.
 
-3. **Guarantee Class**:
-   - `current($member_id)`: Initializes the guarantee data with a list of guarantees.
-   - `get()`: Returns the list of guarantees.
-
-These classes are designed to simulate data retrieval and processing, ensuring that the required methods are present and functional. Each method returns appropriate data structures, allowing the financial information to be accurately processed as needed.</div>
+Replace `your_username` with your actual PostgreSQL username, and adjust the file paths as necessary based on their location on your system.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_856914</div>
+                        <div class="field-value">pos_259613_46b003ee-2349-4fdd-96d3-47faff415e71</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
-                        <div class="field-value">openthoughts.o4mini_high</div>
+                        <div class="field-value">OpenVerification1: openthoughts</div>
                     </div>                
                 </div>
             </div>
@@ -737,7 +636,7 @@ These classes are designed to simulate data retrieval and processing, ensuring t
         <div class="section">
             <div class="section-title">Legend</div>
             <div class="legend-content">
-                <p>An ensemble of models 1, 2, 3, and 4 (including the hidden states of model 4) is taken as the input to the SDM estimator that determines the verification classification.</p>
+                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
                 
                 <div class="legend-items">
                     <div class="legend-item">

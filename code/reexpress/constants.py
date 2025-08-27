@@ -206,29 +206,33 @@ REEXPRESS_AI_RESPONSE_KEY = "ai_response"
 REEXPRESS_INFO_KEY = "info"
 REEXPRESS_MODEL1_EXPLANATION = "model1_explanation"
 REEXPRESS_MODEL2_EXPLANATION = "model2_explanation"
-REEXPRESS_MODEL3_EXPLANATION = "model3_explanation"
+# REEXPRESS_MODEL3_EXPLANATION = "model3_explanation"
 REEXPRESS_ATTACHED_FILE_NAMES = "attached_file_names"
 
 REEXPRESS_MODEL1_CLASSIFICATION = "model1_classification"
 REEXPRESS_MODEL2_CLASSIFICATION = "model2_classification"
-REEXPRESS_MODEL3_CLASSIFICATION = "model3_classification"
+# REEXPRESS_MODEL3_CLASSIFICATION = "model3_classification"
 REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION = "agreement_model_classification"
+REEXPRESS_MODEL1_TOPIC_SUMMARY = "model1_summary"
 REEXPRESS_SUBMITTED_TIME_KEY = "submitted_time"
 
 
 
 SLEEP_CONSTANT = 40
+SHORT_SUMMARY_KEY = "short_summary_of_original_question_and_response"
 VERIFICATION_CLASSIFICATION_KEY = "verification_classification"
 CONFIDENCE_IN_CLASSIFICATION_KEY = "confidence_in_classification"
 SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE_KEY = "short_explanation_for_classification_confidence"
 
 SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR = "Unfortunately, I am unable to verify that response. Please consider providing additional clarification and/or additional references, results, or other information that may assist in the verification process."
+LLM_API_ERROR_KEY = "llm_api_error"
 
 # EXPECTED_EMBEDDING_SIZE = 1349
 EXPECTED_EMBEDDING_SIZE = 8194
 EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH = 10
 # see construct_document_attributes_and_embedding():
-EXPECTED_ATTRIBUTES_LENGTH = EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH * 2 + 4 + 2  # New: final 2 for Gemini
+# EXPECTED_ATTRIBUTES_LENGTH = EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH * 2 + 4 + 2  # v1.1.0
+EXPECTED_ATTRIBUTES_LENGTH = 4  # v1.2.0: [GPT-5 class 0; GPT-5 class 1; Gemini class 0; Gemini class 1]
 
 ARBITRARY_NON_INDEX_CONDITIONAL_ESTIMATE_MAX = 0.89  # New: Reflects alpha' >= 0.9. Previous: 0.94  # This is a simple ceiling to apply for LLMs that have no-notion of second-order uncertainty/reliability. This is reasonable when we instruct the LLM to only rely on estimates >= 0.95.
 
@@ -238,6 +242,9 @@ You are a helpful assistant that verifies instruction following. Given one or mo
 
 SYSTEM_MESSAGE_WITH_EXPLANATION = f"{SYSTEM_MESSAGE} Finally, please provide a short explanation for your confidence in your classification. If you are unable to provide a True verification classification with a probability of at least 95%, your short explanation should also briefly indicate what additional information (such as additional references, documentation, or tool output) from the user might be able to improve your confidence in your classification."
 
+GPT_5_SYSTEM_MESSAGE = """
+You are a helpful assistant that verifies instruction following. You classify whether or not the provided AI response correctly and faithfully answers the user's questions or instructions. The user's questions or instructions are contained within the XML tags <question> and </question>, and the LLM outputs are contained within the XML tags <ai_response> and </ai_response>. Additionally, you indicate whether the output is open to opinion, or otherwise subjective, as well as whether the answer may be dependent on more recent information than you currently have access to. The user's instruction may not always be answerable with the provided context and may not be answerable via your internal knowledge, so to help the user understand the reliability of your response, indicate whether your response is based on the context provided by the user, your internal knowledge, or some combination thereof. Think carefully and systematically about each step of your reasoning process. For science, math, programming, and engineering problems, consider multiple approaches to solve the problem and whether those approaches arrive at the same solution. If you are uncertain of your response, please err on the side of predicting the verification is false, rather than providing a classification that you cannot clearly justify based on the context and/or your internal knowledge. Please structure your response using the provided JSON format. Provide a brief summary of the question and AI response. Please provide your binary classification verification where True indicates that you can verify that the response answered the query or instruction, and False indicates you cannot verify that the response answered the query or instruction. Provide a confidence estimate in your verification classification as a probability between 0 and 1, where a probability of 0 indicates no confidence and a probability of 1 indicates 100% confidence in your predicted classification. Finally, please provide a short explanation for your confidence in your classification. If you are unable to provide a True verification classification with a probability of at least 0.95, your short explanation should also briefly indicate what additional information (such as additional references, documentation, or tool output) from the user might be able to improve your confidence in your classification.""".strip()
+
 # Note that the following differs from the exact prompt used for the model:
 AGREEMENT_MODEL_USER_FACING_PROMPT = "Do the model explanations agree that the response is correct?"
 
@@ -246,7 +253,7 @@ MCP_SERVER_VERIFIED_CLASS_LABEL = "Verified"
 
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
-REEXPRESS_MCP_SERVER_VERSION = "1.1.0"
+REEXPRESS_MCP_SERVER_VERSION = "1.2.0"
 
 USE_GPU_FAISS_INDEX = False
 ######

@@ -128,7 +128,7 @@ async def reexpress_view() -> str:
 @mcp.tool()
 async def reexpress(user_question: str, ai_response: str) -> str:
     """
-    The Reexpress tool provides an estimate of whether the AI's response answers the user's question or instruction. This is a binary classification prediction where True indicates that the AI's response has been verified as answering the query or instruction, and False indicates that the AI's response cannot be verified as answering the query or instruction. In-distribution predictions are accompanied by a confidence estimate in the classification. Out-of-distribution predictions are indicated with an out-of-distribution label. Out-of-distribution predictions should be considered unreliable. The tool also provides informal suggestions from four LLMs that may help inform what additional information may be needed if a True verification classification with a confidence of at least 90% is not obtained.
+    The Reexpress tool provides an estimate of whether the AI's response answers the user's question or instruction. This is a binary classification prediction where True indicates that the AI's response has been verified as answering the query or instruction, and False indicates that the AI's response cannot be verified as answering the query or instruction. In-distribution predictions are accompanied by a confidence estimate in the classification. Out-of-distribution predictions are indicated with an out-of-distribution label. Out-of-distribution predictions should be considered unreliable. The tool also provides informal suggestions from three LLMs that may help inform what additional information may be needed if a True verification classification with a confidence of at least 90% is not obtained.
 
     Call this tool if the user says "reexpress" or "Reexpress".
 
@@ -143,8 +143,7 @@ async def reexpress(user_question: str, ai_response: str) -> str:
     <confidence> A range between 0% (no confidence) and 100% (full confidence) </confidence> \n
     <model1_explanation> Brief summary from model 1 </model1_explanation> \n
     <model2_explanation> Brief summary from model 2 </model2_explanation> \n
-    <model3_explanation> Brief summary from model 3 </model3_explanation> \n
-    <model4_agreement> Do the model explanations agree that the response is correct? Yes or No </model4_agreement>
+    <model3_agreement> Do the model explanations agree that the response is correct? Yes or No </model3_agreement>
     """
     tool_is_available, availability_message = mcp_server_state_controller_object.controller_get_tool_availability()
     if tool_is_available:
