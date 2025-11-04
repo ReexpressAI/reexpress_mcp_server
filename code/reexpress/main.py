@@ -1,3 +1,5 @@
+# Copyright Reexpress AI, Inc. All rights reserved.
+
 def main():
     print("Reexpress MCP server")
 

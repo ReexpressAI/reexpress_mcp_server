@@ -55,7 +55,7 @@ def get_metadata_lines_from_json_list(options, json_list, reduce=False, reduce_s
             original_prediction = int(json_obj["original_prediction"])
             original_predictions.append(original_prediction)
         labels.append(label)
-        lines.append(json_obj['document'])
+        lines.append(json_obj.get('document', ''))
         line_ids.append(line_id)
         if concat_embeddings_to_attributes:
             embedding = torch.tensor(json_obj["embedding"] + json_obj["attributes"])
@@ -124,7 +124,7 @@ def get_metadata_lines(options, filepath_with_name, reduce=False, reduce_size=20
             if "original_prediction" in json_obj:
                 original_prediction = int(json_obj["original_prediction"])
                 original_predictions.append(original_prediction)
-            lines.append(json_obj['document'])
+            lines.append(json_obj.get('document', ''))
             line_ids.append(line_id)
             if concat_embeddings_to_attributes:
                 embedding = torch.tensor(json_obj["embedding"] + json_obj["attributes"])

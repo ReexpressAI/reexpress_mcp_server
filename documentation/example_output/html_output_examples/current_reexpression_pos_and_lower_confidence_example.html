@@ -379,7 +379,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v1.2.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.0.0)</span>
         </div>
 
         <div class="section">
@@ -394,22 +394,22 @@
 
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-negative">Out-of-distribution (unreliable)</span></div>
+                <div class="field-value"><span class="tag tag-caution">< 90% (use with caution)</span></div>
             </div>
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>User asked how to create, start, and exit a tmux session on Linux and wanted relevant keyboard commands. The AI response listed commands to create a session (tmux new -s name or tmux), attach/start a session (tmux attach -t name), and exit/detach or kill sessions (Ctrl+b d, exit/Ctrl+d, Ctrl+b then :kill-session, and tmux kill-session -t name).</div>
+                <div>User asked how to create, start, and exit a tmux session on Linux and to be reminded of relevant keyboard commands. The AI response provided commands to create a session (tmux new -s name), attach/start a session (tmux attach -t name / tmux a -t name), exit via detaching (Ctrl+b then d) or by exiting/terminating the session (exit/Ctrl+d or tmux kill-session), noted the tmux prefix key (Ctrl+b), and added related commands (tmux ls, Ctrl+b then s).</div>
             </div>
             
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>The response directly and correctly addresses all three requested items: creation, attaching/starting, and exiting, and includes the key keyboard shortcuts (Ctrl+b d, Ctrl+d, and using the tmux command prompt via Ctrl+b :). These are standard, non-subjective tmux commands that are not dependent on recent changes. Based on internal knowledge; not opinion-based and not time-sensitive. Minor nit: saying exit/Ctrl+d &quot;exits completely&quot; depends on whether other panes/windows exist, but overall the guidance is correct and sufficient for the user’s request.</div>
+                <div>The response directly and accurately covers the three requested items: creating a session, starting/attaching to a session, and exiting (both detaching and killing). It correctly lists key bindings (Ctrl+b prefix, detach with Ctrl+b then d, session switch with Ctrl+b then s) and shell commands. Minor nuance: typing exit/Ctrl+d only terminates the session if it’s the last pane/window running; otherwise it just closes the current shell. Nonetheless, the guidance is standard and sufficient. This is an objective, non-opinion question, not dependent on recent changes, and the verification is based on established tmux usage/internal knowledge.</div>
             </div>
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The AI response accurately provides the standard Linux commands and keyboard shortcuts for creating, starting (attaching to), and exiting (detaching from or killing) a tmux session, directly addressing all parts of the user&#x27;s question.</div>
+                <div>The AI response accurately and completely answers all three parts of the user&#x27;s question regarding how to create, start (attach to), and exit a tmux session, providing the correct command-line and keyboard commands for each action.</div>
             </div>
 
             <div class="explanation-box-positive">
@@ -431,7 +431,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-08-25 20:38:09</div>
+                    <div class="field-value">2025-11-04 14:59:59</div>
                 </div>
                 
             </div>
@@ -440,12 +440,12 @@
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.3332954446278077, 0.6642194363346766]</div>
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">[0.23446054756641388, 0.7655394077301025]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
-                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-label">High-Reliability Region</div>
                     <div class="field-value">
                         <span class="tag tag-negative">False</span>
                     </div>
@@ -454,30 +454,12 @@
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
-                        <span class="tag tag-negative">True</span>
+                        <span class="tag tag-positive">False</span>
                     </div>
                 </div>
                 <div class="field-box">
-                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
-                        </span></div>
-                    <div class="field-value">0.7342535588779641</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Iterated offset_lower (for class 1), 
-                        <span class="math-operator-m">
-                            m
-                            <span class="math-superscript-hat-y">ŷ</span>
-                            <span class="math-subscript-floor">
-                                ⌊<span class="qtilde-small">q</span>⌋
-                            </span>
-                        </span>
-                    </div>
-                    <div class="field-value">0.002485119037515709</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[8780.0, 10687.0]</div>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">38.8072624206543</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -485,51 +467,80 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">53</div>
+                    <div class="field-value">117</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Distance to Training (d) Quantile
+                        Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.053604330867528915</div>
+                    <div class="field-value">0.06052976846694946</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-2.4292399883270264, 1.5850348472595215]</div>
+                    <div class="field-value">[-2.119741678237915, 1.9707467555999756]</div>
                 </div>
             </div>
         </div>
 
+        <div class="section" style="margin-left: 40px;">
+            <div class="section-title">Analysis of the Effective Sample Size</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[0.2755848169326782, 0.7244152426719666]</div>
+            </div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_upper</div>
+                <div class="field-value">[0.1977974772453308, 0.8022025227546692]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[12176.0, 17341.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training Lower Quantile (d_lower)
+                    </div>
+                    <div class="field-value">0.04943842440843582</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training Upper Quantile (d_upper)
+                    </div>
+                    <div class="field-value">0.0716211125254631</div>
+                </div>
+            </div>
+        </div>
         <div class="section">
             <div class="section-title">SDM Estimator (Model-level) Details</div>
             <div class="field-grid">
             
                 <div class="field-box">
                     <div class="field-label">
-                        α'
+                        α
                     </div>
                     <div class="field-value">0.9</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Min valid rescaled q
-                        <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
-                        </span>
+                        Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">1.0003684141164448</div>
+                    <div class="field-value">6.595553398132324</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Class-wise output thresholds (ψ)
+                        Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9551128149032593, 0.9338333010673523]</div>
+                    <div class="field-value">[0.9002129435539246, 0.9067675471305847]</div>
                 </div>
                 
                 <div class="field-box">
@@ -549,7 +560,32 @@
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal knowledge]: tmux new -s session_name creates a new named tmux session from outside tmux; Reference [2, internal knowledge]: tmux or tmux new creates a session with a default numeric name; Reference [3, internal knowledge]: tmux attach -t session_name or tmux a -t session_name attaches to an existing session; Reference [4, internal knowledge]: tmux ls lists all available sessions; Reference [5, internal knowledge]: Ctrl+b then d detaches from a session keeping it running in background; Reference [6, internal knowledge]: exit command or Ctrl+d kills current pane/window and exits completely; Reference [7, internal knowledge]: Ctrl+b then :kill-session kills entire session from within; Reference [8, internal knowledge]: tmux kill-session -t session_name kills a session from outside tmux; Answer: To create a new tmux session use &#x27;tmux new -s session_name&#x27; or just &#x27;tmux&#x27; for a default named session. To start/attach to an existing session use &#x27;tmux attach -t session_name&#x27; or &#x27;tmux a -t session_name&#x27;. To exit a session you can detach with Ctrl+b then d (keeps session running), or completely exit with the exit command, Ctrl+d, or kill the session with Ctrl+b :kill-session from within or &#x27;tmux kill-session -t session_name&#x27; from outside.</div>
+            <div class="document-box">Reference [1, internal knowledge]: tmux is a terminal multiplexer for Unix-like systems that allows multiple terminal sessions to be accessed from a single window. The basic command to create a new named session is &quot;tmux new -s sessionname&quot; where sessionname is replaced with the desired name;
+
+Reference [2, internal knowledge]: To attach to an existing tmux session, the commands are &quot;tmux attach -t sessionname&quot; or the shorter form &quot;tmux a -t sessionname&quot; where sessionname is the name of the session to attach to;
+
+Reference [3, internal knowledge]: There are two main ways to exit a tmux session - detaching (which keeps the session running in the background) is done by pressing Ctrl+b followed by d, while killing the session (terminating it) can be done by typing &quot;exit&quot; or pressing Ctrl+d from inside the session;
+
+Reference [4, internal knowledge]: Ctrl+b is tmux&#x27;s prefix key that must be pressed before any tmux keyboard command;
+
+Reference [5, internal knowledge]: Additional useful commands include &quot;tmux ls&quot; to list all sessions, &quot;tmux kill-session -t sessionname&quot; to kill a specific session, and Ctrl+b then s to switch between sessions;
+
+Answer: Here&#x27;s a quick guide to tmux sessions:
+
+1. Create a new session: tmux new -s mysession (Replace &quot;mysession&quot; with whatever name you want)
+
+2. Start/attach to a session: If you&#x27;re outside tmux and want to attach to an existing session use &quot;tmux attach -t mysession&quot; or just &quot;tmux a -t mysession&quot;
+
+3. Exit the session - Two ways:
+   - Detach (keeps session running in background): Press Ctrl+b then d
+   - Kill the session (terminates it): Type exit or press Ctrl+d from inside the session
+
+Bonus useful commands:
+- List all sessions: tmux ls
+- Kill a specific session: tmux kill-session -t mysession
+- Switch between sessions: Ctrl+b then s (shows session list)
+
+The key thing to remember is that Ctrl+b is tmux&#x27;s &quot;prefix key&quot; - you press it before any tmux command.</div>
         </div>
         
         <div class="separator"></div>
@@ -575,16 +611,16 @@
                 
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>User asked for a psql command to run 01-filter-stops.sql against database VG while passing three variables: stops_input (path to unfiltered-stops.txt), stops_output (path for output), and selected_rs set to 16061. The AI provided a psql command using -d VG, -f 01-filter-stops.sql, and -v to set the three variables, with example file names and a note to adjust paths and username.</div>
+                    <div>The question asks for the ratio of areas [ABC] : [A&#x27;B&#x27;C&#x27;] given that the midpoints of AA&#x27;, BB&#x27;, CC&#x27; are B&#x27;, C&#x27;, A&#x27; respectively. The AI response sets up vector midpoint equations, solves for A&#x27;, B&#x27;, C&#x27; in terms of A, B, C, expresses edge vectors u&#x27; and v&#x27; in terms of u=B−A and v=C−A, computes the cross product to find the area scaling factor 1/7, and concludes the ratio is 7:1 (i.e., [ABC]/[A&#x27;B&#x27;C&#x27;] = 7).</div>
                 </div>
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The provided command correctly uses psql with -d to select the VG database, -f to execute the specified SQL file, and -v to pass the three variables (stops_input, stops_output, selected_rs) as requested. It meets the user&amp;#x27;s requirements and includes guidance to adjust file paths and username. This is not subjective and does not depend on recent information. Assessment is based on internal knowledge of psql and the user’s provided context.</div>
+                    <div>The response correctly formulates and solves the linear midpoint relations, derives u&#x27; = (-u − 2v)/7 and v&#x27; = (2u − 3v)/7, and computes u&#x27; × v&#x27; = (1/7)(u × v), implying [A&#x27;B&#x27;C&#x27;] = (1/7)[ABC]. Therefore the ratio [ABC] : [A&#x27;B&#x27;C&#x27;] is 7. I independently verified the algebra and with a coordinate check; the result is objective and does not depend on recency. Based on the given context and standard geometry, the answer is correct.</div>
                 </div>
     
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI response correctly identifies the necessary `psql` command-line flags (`-d` for database, `-f` for file, `-v` for variable) to meet all the user&amp;#x27;s requirements. The constructed command is accurate and follows standard `psql` syntax. The explanation provided is also correct and helpful.</div>
+                    <div>The AI&#x27;s response correctly solves the mathematical problem. I have verified each step of the vector algebra calculation, including setting up the initial equations from the midpoint definitions, solving the system of linear equations for the new vertices, expressing the new triangle&#x27;s side vectors in terms of the original&#x27;s, and calculating the ratio of the areas using the cross product. The final answer of 7 is correct.</div>
                 </div>
                     
                 <div class="explanation-box-positive">
@@ -595,32 +631,43 @@
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">I need to run a PostgreSQL script file using the psql command-line tool. The script file is named &amp;quot;01-filter-stops.sql&amp;quot; and it needs to be executed in the database named &amp;quot;VG&amp;quot;. Additionally, I need to pass in some input parameters to the script: stops_input should be set to the path of the unfiltered-stops.txt file, stops_output should be set to the path where the output should be saved, and selected_rs should be set to the value &amp;quot;16061&amp;quot;. How can I construct the psql command to achieve this?</div>
+                    <div class="prompt-box">Find the ratio of the area of triangle $A B C$ to the area of triangle $A^{\prime} B^{\prime} C^{\prime}$, if the midpoints of segments $A A^{\prime}, B B^{\prime}, C C^{\prime}$ are $B^{\prime}, C^{\prime}, A^{\prime}$ respectively?</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">To execute the PostgreSQL script &amp;quot;01-filter-stops.sql&amp;quot; with the specified parameters, you can use the following `psql` command:
+                    <div class="document-box">Given the problem of finding the ratio of the area of triangle \(ABC\) to the area of triangle \(A&#x27;B&#x27;C&#x27;\), where the midpoints of segments \(AA&#x27;\), \(BB&#x27;\), and \(CC&#x27;\) are \(B&#x27;\), \(C&#x27;\), and \(A&#x27;\) respectively, we proceed as follows:
 
-```bash
-psql -U your_username -d VG -f 01-filter-stops.sql -v stops_input=&amp;#x27;unfiltered-stops.txt&amp;#x27; -v stops_output=&amp;#x27;filtered-stops.txt&amp;#x27; -v selected_rs=&amp;#x27;16061&amp;#x27;
-```
+1. **Equations for Midpoints**:
+   - The midpoint of \(AA&#x27;\) is \(B&#x27;\): \(\frac{A + A&#x27;}{2} = B&#x27; \implies A + A&#x27; = 2B&#x27;\)
+   - The midpoint of \(BB&#x27;\) is \(C&#x27;\): \(\frac{B + B&#x27;}{2} = C&#x27; \implies B + B&#x27; = 2C&#x27;\)
+   - The midpoint of \(CC&#x27;\) is \(A&#x27;\): \(\frac{C + C&#x27;}{2} = A&#x27; \implies C + C&#x27; = 2A&#x27;\)
 
-**Breakdown of the command:**
+2. **Solving for \(A&#x27;\), \(B&#x27;\), \(C&#x27;\)**:
+   - From the equations, we derive:
+     - \(A&#x27; = \frac{A + 2B + 4C}{7}\)
+     - \(B&#x27; = \frac{4A + B + 2C}{7}\)
+     - \(C&#x27; = \frac{2A + 4B + C}{7}\)
 
-- `-U your_username`: Replace `your_username` with your actual PostgreSQL username.
-- `-d VG`: Connects to the database named &amp;quot;VG&amp;quot;.
-- `-f 01-filter-stops.sql`: Executes the SQL script file named &amp;quot;01-filter-stops.sql&amp;quot;.
-- `-v stops_input=&amp;#x27;unfiltered-stops.txt&amp;#x27;`: Sets the `stops_input` variable to the path of the unfiltered-stops.txt file.
-- `-v stops_output=&amp;#x27;filtered-stops.txt&amp;#x27;`: Sets the `stops_output` variable to the path where the output should be saved.
-- `-v selected_rs=&amp;#x27;16061&amp;#x27;`: Sets the `selected_rs` variable to the value &amp;quot;16061&amp;quot;.
+3. **Vectors for Area Calculation**:
+   - Express vectors \(\mathbf{u&#x27;} = B&#x27; - A&#x27;\) and \(\mathbf{v&#x27;} = C&#x27; - A&#x27;\) in terms of \(\mathbf{u} = B - A\) and \(\mathbf{v} = C - A\):
+     - \(\mathbf{u&#x27;} = \frac{-\mathbf{u} - 2\mathbf{v}}{7}\)
+     - \(\mathbf{v&#x27;} = \frac{2\mathbf{u} - 3\mathbf{v}}{7}\)
 
-Replace `your_username` with your actual PostgreSQL username, and adjust the file paths as necessary based on their location on your system.</div>
+4. **Cross Product and Area Ratio**:
+   - Compute the cross product \(\mathbf{u&#x27;} \times \mathbf{v&#x27;}\):
+     - \(\mathbf{u&#x27;} \times \mathbf{v&#x27;} = \frac{1}{49} (-\mathbf{u} - 2\mathbf{v}) \times (2\mathbf{u} - 3\mathbf{v}) = \frac{1}{7} (\mathbf{u} \times \mathbf{v})\)
+   - The area of triangle \(A&#x27;B&#x27;C&#x27;\) is \(\frac{1}{7}\) of the area of triangle \(ABC\).
+
+5. **Verification with Specific Coordinates**:
+   - Assign coordinates to \(ABC\) and compute areas explicitly using the shoelace formula, confirming the ratio is \(7:1\).
+
+Thus, the ratio of the area of triangle \(ABC\) to the area of triangle \(A&#x27;B&#x27;C&#x27;\) is \(\boxed{7}\).</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_259613_46b003ee-2349-4fdd-96d3-47faff415e71</div>
+                        <div class="field-value">pos_676295_fbca2c95-9d90-45ef-8a18-f48d48814691</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
@@ -637,7 +684,8 @@ Replace `your_username` with your actual PostgreSQL username, and adjust the fil
             <div class="section-title">Legend</div>
             <div class="legend-content">
                 <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                
+                <p>The classification is in the High-Reliability region when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

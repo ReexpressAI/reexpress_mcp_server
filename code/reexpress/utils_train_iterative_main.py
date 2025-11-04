@@ -2,7 +2,6 @@
 
 import torch
 
-import numpy as np
 from pathlib import Path
 import time
 import os
@@ -17,27 +16,29 @@ import utils_preprocess
 import data_validator
 
 
-def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_model=None, tokenizer=None, main_device=None):
+def train_iterative_main(options, rng, main_device=None):
     start_time = time.time()
+
+    if options.batch_size == options.eval_batch_size:
+        print(f"Note: The eval batch size is the same as the training batch size. "
+              f"Consider increasing the eval batch size for improved efficiency during training.")
 
     global_uncertainty_statistics = \
         uncertainty_statistics.UncertaintyStatistics(
             globalUncertaintyModelUUID=str(uuid.uuid4()),
             numberOfClasses=options.class_size,
-            min_valid_qbin_across_iterations=None,
-            predicted_class_to_bin_to_median_output_magnitude_of_iteration=None,
-            cauchy_quantile=options.alpha
+            min_rescaled_similarity_across_iterations=None
         )
 
-    if not options.eval_only and not options.train_rescaler:
+    if not options.eval_only:
         best_shuffle_index = 0
         max_calibration_balanced_accuracy = 0
         max_calibration_balanced_accuracy_shuffle_iteration = -1
 
-        max_calibration_balanced_median_q = 0
-        max_calibration_balanced_median_q_shuffle_iteration = -1
+        max_calibration_balanced_mean_q = 0
+        max_calibration_balanced_mean_q_shuffle_iteration = -1
 
-        min_calibration_balanced_sdm_loss = np.inf
+        min_calibration_balanced_sdm_loss = torch.inf
         min_calibration_balanced_sdm_loss_shuffle_iteration = -1
 
         assert options.number_of_random_shuffles >= 0
@@ -95,10 +96,10 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                                                            concat_embeddings_to_attributes=options.concat_embeddings_to_attributes,
                                                            calculate_summary_stats=False, is_training=False)
 
-            train_embeddings = train_meta_data["embeddings"].to(main_device)
-            calibration_embeddings = calibration_meta_data["embeddings"].to(main_device)
-            train_labels = torch.tensor(train_meta_data["labels"]).to(main_device)
-            calibration_labels = torch.tensor(calibration_meta_data["labels"]).to(main_device)
+            train_embeddings = train_meta_data["embeddings"]
+            calibration_embeddings = calibration_meta_data["embeddings"]
+            train_labels = torch.tensor(train_meta_data["labels"])
+            calibration_labels = torch.tensor(calibration_meta_data["labels"])
 
             assert train_embeddings.shape[0] == train_labels.shape[0], f"{train_embeddings.shape[0]}, {train_labels.shape[0]}"
             assert calibration_embeddings.shape[0] == calibration_labels.shape[0], f"{calibration_embeddings.shape[0]}, {calibration_labels.shape[0]}"
@@ -126,100 +127,76 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                         max_training_set_label_cardinality = label_set_cardinality[label]
                 maxQAvailableFromIndexer = max_training_set_label_cardinality
             print(f"Considering a max q value up to {maxQAvailableFromIndexer}")
-            if options.is_gen_ai:
-                import utils_gen
-                if options.init_gen_ai_model:
-                    if llmType == utils_gen.llmTypes.phiThreePointFive:
-                        train_meta_data["embedding_size"] = 3072
-                        train_meta_data["global_embedding_size"] = 3072
-                        train_meta_data["composition_attributes_size"] = options.composition_attributes_size #options.top_logits_k * 2 * 2
-                    else:
-                        assert False, "Not implemented"
-                gen_ai_model_lm_head_weights = \
-                    utils_gen.get_gen_ai_model_lm_head_weights_file(options.gen_ai_model_lm_head_weights_file)
-            else:
-                gen_ai_model_lm_head_weights = None
             model_params = {"version": constants.ProgramIdentifiers_version,
                             "uncertaintyModelUUID": str(uuid.uuid4()),
                             "numberOfClasses": options.class_size,
                             "embedding_size": train_meta_data["embedding_size"] if "embedding_size" in train_meta_data else train_embeddings.shape[1],
-                            "train_labels": train_labels.cpu().detach().numpy(),
+                            "train_labels": train_labels.cpu(),
                             "train_predicted_labels": None,
                             "train_uuids": train_meta_data["uuids"],
                             "cdfThresholdTolerance": constants.defaultCdfThresholdTolerance,
                             "exemplar_vector_dimension": options.exemplar_vector_dimension,
                             "trueClass_To_dCDF": None,
                             "trueClass_To_qCumulativeSampleSizeArray": None,
-                            "trueClass_To_unrescaledOutputCDF": None,
-                            "non_odd_thresholds": None,
-                            "non_odd_class_conditional_accuracy": 0.0,
+                            "hr_output_thresholds": None,
+                            "hr_class_conditional_accuracy": 0.0,
                             "alpha": options.alpha,
                             "maxQAvailableFromIndexer": maxQAvailableFromIndexer,
                             "calibration_training_stage": 0,
-                            "min_valid_qbin_for_class_conditional_accuracy": np.inf, #constants.min_valid_qbin_for_class_conditional_accuracy,
+                            "min_rescaled_similarity_to_determine_high_reliability_region": torch.inf,
                             "training_embedding_summary_stats": training_embedding_summary_stats,
                             # the following can all be None at test-time to save memory, if desired:
                             "calibration_labels": calibration_labels,  # torch tensor
                             "calibration_predicted_labels": None,
                             "calibration_uuids": calibration_meta_data["uuids"],
-                            "calibration_unrescaled_CDFquantiles": None,
-                            "calibration_soft_qbins": None,
+                            "calibration_sdm_outputs": None,
+                            "calibration_rescaled_similarity_values": None,
                             "calibration_is_ood_indicators": None,
-                            "gen_ai_model_lm_head_weights": gen_ai_model_lm_head_weights,
-                            "is_gen_ai": options.is_gen_ai,
-                            "gen_ai_vocab": options.gen_ai_vocab,
-                            "global_embedding_size": train_meta_data["global_embedding_size"] if "global_embedding_size" in train_meta_data else 0,
-                            "composition_attributes_size": train_meta_data["composition_attributes_size"] if "composition_attributes_size" in train_meta_data else 0,
-                            "top_logits_k": options.top_logits_k,
+                            "is_sdm_network_verification_layer": options.is_sdm_network_verification_layer,
                             "train_trueClass_To_dCDF": None
                             }
-            one_shuffle_index__max_dev_balanced_acc, one_shuffle_index_max_dev_balanced_median_q, \
+            one_shuffle_index__max_dev_balanced_acc, one_shuffle_index_max_dev_balanced_mean_q, \
                 one_shuffle_index__min_dev_balanced_sdm_loss, \
-                one_shuffle_index__min_valid_qbin_for_class_conditional_accuracy, \
-                predicted_class_to_bin_to_median_output_magnitude = \
+                one_shuffle_index__min_rescaled_similarity_to_determine_high_reliability_region = \
                 utils_train_main.train(options, train_embeddings=train_embeddings,
                                        calibration_embeddings=calibration_embeddings,
                                        train_labels=train_labels,
                                        calibration_labels=calibration_labels,
                                        model_params=model_params,
-                                       use_balanced_accuracy=options.use_balanced_accuracy, main_device=main_device,
-                                       model_dir=shuffle_index_model_dir, model=model)
+                                       main_device=main_device,
+                                       model_dir=shuffle_index_model_dir, model=model,
+                                       shuffle_index=shuffle_index)
 
-            global_uncertainty_statistics.update_min_valid_qbin(
-                min_valid_qbin=one_shuffle_index__min_valid_qbin_for_class_conditional_accuracy)
-            global_uncertainty_statistics.update_output_magnitudes_for_bin(
-                predicted_class_to_bin_to_median_output_magnitude)
+            global_uncertainty_statistics.update_min_rescaled_similarity_to_determine_high_reliability_region(
+                min_rescaled_similarity_to_determine_high_reliability_region=
+                one_shuffle_index__min_rescaled_similarity_to_determine_high_reliability_region)
             if one_shuffle_index__max_dev_balanced_acc >= max_calibration_balanced_accuracy:
                 max_calibration_balanced_accuracy = one_shuffle_index__max_dev_balanced_acc
                 max_calibration_balanced_accuracy_shuffle_iteration = shuffle_index
 
+            print(f"///////////////Training shuffle iteration {shuffle_index} summary///////////////")
             print(f"Max calibration balanced accuracy (used to determine shuffle index: "
-                  f"{options.use_balanced_accuracy}) of {max_calibration_balanced_accuracy} at "
+                  f"{False}) of {max_calibration_balanced_accuracy} at "
                   f"shuffle index {max_calibration_balanced_accuracy_shuffle_iteration}")
 
-            if one_shuffle_index_max_dev_balanced_median_q >= max_calibration_balanced_median_q:
-                max_calibration_balanced_median_q = one_shuffle_index_max_dev_balanced_median_q
-                max_calibration_balanced_median_q_shuffle_iteration = shuffle_index
+            if one_shuffle_index_max_dev_balanced_mean_q >= max_calibration_balanced_mean_q:
+                max_calibration_balanced_mean_q = one_shuffle_index_max_dev_balanced_mean_q
+                max_calibration_balanced_mean_q_shuffle_iteration = shuffle_index
 
-            print(f"Max calibration balanced MEDIAN Q (used to determine shuffle index: "
-                  f"{options.use_balanced_median_q}) of {max_calibration_balanced_median_q} at "
-                  f"shuffle index {max_calibration_balanced_median_q_shuffle_iteration}")
+            print(f"Max calibration balanced mean q (used to determine shuffle index: "
+                  f"{False}) of {max_calibration_balanced_mean_q} at "
+                  f"shuffle index {max_calibration_balanced_mean_q_shuffle_iteration}")
 
             if one_shuffle_index__min_dev_balanced_sdm_loss <= min_calibration_balanced_sdm_loss:
                 min_calibration_balanced_sdm_loss = one_shuffle_index__min_dev_balanced_sdm_loss
                 min_calibration_balanced_sdm_loss_shuffle_iteration = shuffle_index
 
             print(f"Min calibration balanced SDM loss (used to determine shuffle index: "
-                  f"{not options.use_balanced_accuracy and not options.use_balanced_median_q}) of "
+                  f"{True}) of "
                   f"{min_calibration_balanced_sdm_loss} at "
                   f"shuffle index {min_calibration_balanced_sdm_loss_shuffle_iteration}")
 
-            if options.use_balanced_accuracy:
-                save_this_shuffle_index = max_calibration_balanced_accuracy_shuffle_iteration == shuffle_index
-            elif options.use_balanced_median_q:
-                save_this_shuffle_index = max_calibration_balanced_median_q_shuffle_iteration == shuffle_index
-            else:
-                save_this_shuffle_index = min_calibration_balanced_sdm_loss_shuffle_iteration == shuffle_index
+            save_this_shuffle_index = min_calibration_balanced_sdm_loss_shuffle_iteration == shuffle_index
 
             if save_this_shuffle_index:
                 # load best epoch (still same shuffle index) in order to re-save to the best iteration directory,
@@ -227,11 +204,14 @@ def train_iterative_main(options, rng, taskCategory=None, llmType=None, gen_ai_m
                 best_shuffle_index = shuffle_index
                 model = utils_model.load_model_torch(shuffle_index_model_dir, torch.device("cpu"))
                 utils_model.save_model(model, options.model_dir)
-                print(f"Saved current index ({shuffle_index}) as the best shuffle iteration in the parent directory: {options.model_dir}")
+                print(f"Saved current index ({shuffle_index}) as the best shuffle iteration in the parent directory: "
+                      f"{options.model_dir}")
 
                 if not options.do_not_shuffle_data and not options.do_not_resave_shuffled_data:
-                    utils_model.save_json_lines(os.path.join(best_iteration_data_dir, "train.jsonl"), train_data_json_list)
-                    utils_model.save_json_lines(os.path.join(best_iteration_data_dir, "calibration.jsonl"), calibration_data_json_list)
+                    utils_model.save_json_lines(os.path.join(best_iteration_data_dir, "train.jsonl"),
+                                                train_data_json_list)
+                    utils_model.save_json_lines(os.path.join(best_iteration_data_dir, "calibration.jsonl"),
+                                                calibration_data_json_list)
             # the running global uncertainty statistics are saved in the main directory after every iteration:
             utils_model.save_global_uncertainty_statistics(global_uncertainty_statistics, options.model_dir)
 

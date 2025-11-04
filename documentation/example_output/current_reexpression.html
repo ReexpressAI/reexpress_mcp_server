@@ -379,7 +379,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v1.2.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.0.0)</span>
         </div>
 
         <div class="section">
@@ -399,17 +399,17 @@
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>Question: What is the derivative of ln(x)? AI response: The derivative is 1/x, defined for x &gt; 0.</div>
+                <div>Question: What is the derivative of ln(x)? AI Response: States the derivative is 1/x, notes it’s valid for x &gt; 0, and mentions proofs via derivative definition and inverse function relationship with e^x.</div>
             </div>
             
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>The response correctly gives d/dx ln(x) = 1/x with the appropriate domain x &gt; 0. This is an objective, standard calculus result, not a matter of opinion and not time-sensitive. Multiple derivations (via the limit definition or inverse function rule for exp) agree. Verification is based on stable internal mathematical knowledge, not on user-provided context.</div>
+                <div>The response directly and correctly answers the question: d/dx[ln(x)] = 1/x for x &gt; 0. This is a standard, non-subjective calculus fact, not dependent on recent information. Multiple approaches (limit definition, inverse functions) consistently yield 1/x. Verification is based on internal mathematical knowledge and the given context.</div>
             </div>
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The AI&#x27;s response correctly identifies the derivative of the natural logarithm function, ln(x), as 1/x. This is a fundamental and well-established rule in differential calculus.</div>
+                <div>The AI response correctly identifies the derivative of ln(x) as 1/x, which is a fundamental and verifiable fact in calculus.</div>
             </div>
 
             <div class="explanation-box-positive">
@@ -431,7 +431,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-08-25 19:17:46</div>
+                    <div class="field-value">2025-11-04 14:27:53</div>
                 </div>
                 
             </div>
@@ -440,12 +440,12 @@
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.00637540368055234, 0.9936213860453533]</div>
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">[0.002092266222462058, 0.9979077577590942]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
-                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-label">High-Reliability Region</div>
                     <div class="field-value">
                         <span class="tag tag-positive">True</span>
                     </div>
@@ -458,26 +458,8 @@
                     </div>
                 </div>
                 <div class="field-box">
-                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
-                        </span></div>
-                    <div class="field-value">2.2818913309070847</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Iterated offset_lower (for class 1), 
-                        <span class="math-operator-m">
-                            m
-                            <span class="math-superscript-hat-y">ŷ</span>
-                            <span class="math-subscript-floor">
-                                ⌊<span class="qtilde-small">q</span>⌋
-                            </span>
-                        </span>
-                    </div>
-                    <div class="field-value">3.210274094376977e-06</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[17172.0, 20688.0]</div>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">185.9515380859375</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -485,51 +467,80 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">40</div>
+                    <div class="field-value">186</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Distance to Training (d) Quantile
+                        Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.3010709285736084</div>
+                    <div class="field-value">0.17898619174957275</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-4.72243595123291, 3.3480544090270996]</div>
+                    <div class="field-value">[-3.524892807006836, 3.0554299354553223]</div>
                 </div>
             </div>
         </div>
 
+        <div class="section" style="margin-left: 40px;">
+            <div class="section-title">Analysis of the Effective Sample Size</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">[0.0028268219903111458, 0.9971731901168823]</div>
+            </div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_upper</div>
+                <div class="field-value">[0.0015482910675927997, 0.9984517097473145]</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">[19546.0, 28829.0]</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training Lower Quantile (d_lower)
+                    </div>
+                    <div class="field-value">0.17023217678070068</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        Distance to Training Upper Quantile (d_upper)
+                    </div>
+                    <div class="field-value">0.18774020671844482</div>
+                </div>
+            </div>
+        </div>
         <div class="section">
             <div class="section-title">SDM Estimator (Model-level) Details</div>
             <div class="field-grid">
             
                 <div class="field-box">
                     <div class="field-label">
-                        α'
+                        α
                     </div>
                     <div class="field-value">0.9</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Min valid rescaled q
-                        <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
-                        </span>
+                        Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">1.0003684141164448</div>
+                    <div class="field-value">6.595553398132324</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Class-wise output thresholds (ψ)
+                        Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9551128149032593, 0.9338333010673523]</div>
+                    <div class="field-value">[0.9002129435539246, 0.9067675471305847]</div>
                 </div>
                 
                 <div class="field-box">
@@ -549,7 +560,7 @@
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal knowledge]: The derivative of the natural logarithm function ln(x) with respect to x is 1/x, which is a fundamental result in calculus; Answer: The derivative of ln(x) is 1/x, defined for all x &gt; 0.</div>
+            <div class="document-box">Reference [1, internal knowledge]: The derivative of ln(x) with respect to x is 1/x, which is a fundamental calculus formula; Reference [2, internal reasoning]: This can be proven using the definition of the derivative or by recognizing that ln(x) and e^x are inverse functions; Reference [3, internal knowledge]: This derivative is valid for x &gt; 0 since the natural logarithm is only defined for positive real numbers; Answer: The derivative of ln(x) is 1/x.</div>
         </div>
         
         <div class="separator"></div>
@@ -575,16 +586,16 @@
                 
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>Question: Find the imaginary part of (1 - i)(2 + 4i). AI Response: Multiplied to get 6 + 2i and concluded the imaginary part is 2.</div>
+                    <div>Question: Find the perimeter of an isosceles triangle if two sides are 5 and 10. AI Response: Considered both possibilities for the equal sides. Rejected 5,5,10 as invalid (degenerate) and accepted 10,10,5 as valid by triangle inequality, giving perimeter 25.</div>
                 </div>
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The AI correctly applied complex multiplication: (1 - i)(2 + 4i) = 2 + 4i - 2i - 4i^2 = 6 + 2i, so the imaginary part is 2. The response directly answers the question. This is an objective math problem with no dependence on recent information. Verification is based on the user-provided values and standard complex arithmetic (internal knowledge).</div>
+                    <div>The response correctly applies the definition of an isosceles triangle and the triangle inequality, identifying the only valid side lengths as 10,10,5 and computing the perimeter as 25. This is an objective math problem, not opinion-based and not time-sensitive. The verification is based on the given problem context and standard internal mathematical knowledge.</div>
                 </div>
     
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI correctly calculates the product of the two complex numbers and accurately identifies the imaginary part of the resulting complex number. The step-by-step calculation is flawless.</div>
+                    <div>The AI correctly identifies the two possible cases for the side lengths of the isosceles triangle. It then correctly applies the triangle inequality theorem to eliminate the invalid case (5, 5, 10) and confirm the valid case (10, 10, 5). The final perimeter calculation is accurate.</div>
                 </div>
                     
                 <div class="explanation-box-positive">
@@ -595,48 +606,38 @@
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">If the complex numbers $z_1 = 1 - i$ and $z_2 = 2 + 4i$, where $i$ is the imaginary unit, then the imaginary part of the complex number $z_1z_2$ is.</div>
+                    <div class="prompt-box">In an isosceles triangle, if the lengths of the two sides are $5$ and $10$, then the perimeter of the triangle is ______.</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">To find the imaginary part of the complex number \( z_1 z_2 \) where \( z_1 = 1 - i \) and \( z_2 = 2 + 4i \), we use the formula for multiplying complex numbers. 
+                    <div class="document-box">Given an isosceles triangle with two sides of lengths 5 and 10, we need to determine the perimeter. 
 
-First, we use the distributive property (FOIL method) to expand the product:
+An isosceles triangle has two equal sides. We need to check both possibilities for the equal sides and ensure they satisfy the triangle inequality theorem, which states that the sum of the lengths of any two sides must be greater than the length of the remaining side.
+
+1. **Case 1: The two equal sides are 5 each.**
+   - The sides would be 5, 5, and 10.
+   - Check the triangle inequality: \(5 + 5 = 10\), which is not greater than 10. This case is invalid as it does not form a valid triangle.
+
+2. **Case 2: The two equal sides are 10 each.**
+   - The sides would be 10, 10, and 5.
+   - Check the triangle inequalities:
+     - \(10 + 10 &gt; 5\) (True)
+     - \(10 + 5 &gt; 10\) (True)
+     - \(10 + 5 &gt; 10\) (True)
+   - All inequalities are satisfied, so this case is valid.
+
+The valid sides of the triangle are 10, 10, and 5. Therefore, the perimeter is:
 \[
-(1 - i)(2 + 4i)
-\]
-Expanding each term:
-\[
-= 1 \cdot 2 + 1 \cdot 4i - i \cdot 2 - i \cdot 4i
-\]
-Calculating each term:
-\[
-= 2 + 4i - 2i - 4i^2
-\]
-Combine like terms and simplify, noting that \( i^2 = -1 \):
-\[
-= 2 + (4i - 2i) - 4(-1)
-\]
-\[
-= 2 + 2i + 4
-\]
-Combine the real parts:
-\[
-= (2 + 4) + 2i
-\]
-\[
-= 6 + 2i
+10 + 10 + 5 = 25
 \]
 
-The imaginary part of the complex number \( z_1 z_2 \) is the coefficient of \( i \), which is 2.
-
-Thus, the imaginary part of the complex number \( z_1 z_2 \) is \(\boxed{2}\).</div>
+The perimeter of the triangle is \(\boxed{25}\).</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_253709_da37d774-190d-48db-a53c-90b464046869</div>
+                        <div class="field-value">pos_811148_7b257942-e3e0-4a33-a7ae-df9e2ea7acf5</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
@@ -653,7 +654,8 @@ Thus, the imaginary part of the complex number \( z_1 z_2 \) is \(\boxed{2}\).</
             <div class="section-title">Legend</div>
             <div class="legend-content">
                 <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                
+                <p>The classification is in the High-Reliability region when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

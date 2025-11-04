@@ -20,12 +20,12 @@ def get_formatted_sdm_estimator_output_string(verification_classification,
                                               gpt5_model_explanation,
                                               gemini_model_explanation,
                                               agreement_model_classification: bool,
-                                              non_odd_class_conditional_accuracy: float) -> str:
+                                              hr_class_conditional_accuracy: float) -> str:
     # If this changes, the docstring in reexpress_mcp_server.reexpress() should also be updated to avoid confusing
     # the downstream LLMs/agents.
     classification_confidence = \
         get_calibration_confidence_label(calibration_reliability=calibration_reliability,
-                                         non_odd_class_conditional_accuracy=non_odd_class_conditional_accuracy)
+                                         hr_class_conditional_accuracy=hr_class_conditional_accuracy)
     if agreement_model_classification:
         agreement_model_classification_string = "Yes"
     else:
@@ -49,7 +49,7 @@ def get_files_in_consideration_message(attached_files_names_list):
     return files_in_consideration_message
 
 
-def get_calibration_confidence_label(calibration_reliability: str, non_odd_class_conditional_accuracy: float,
+def get_calibration_confidence_label(calibration_reliability: str, hr_class_conditional_accuracy: float,
                                      return_html_class=False) -> str:
 
     if calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_OOD:
@@ -57,38 +57,37 @@ def get_calibration_confidence_label(calibration_reliability: str, non_odd_class
         classification_confidence = "Out-of-distribution (unreliable)"
     elif calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST:
         classification_confidence_html_class = "positive"
-        classification_confidence = f">= {_format_probability_as_string_percentage(valid_probability_float=non_odd_class_conditional_accuracy)}"
+        classification_confidence = f">= {_format_probability_as_string_percentage(valid_probability_float=hr_class_conditional_accuracy)}"
     else:
         classification_confidence_html_class = "caution"
-        classification_confidence = f"< {_format_probability_as_string_percentage(valid_probability_float=non_odd_class_conditional_accuracy)} (use with caution)"
+        classification_confidence = f"< {_format_probability_as_string_percentage(valid_probability_float=hr_class_conditional_accuracy)} (use with caution)"
     if return_html_class:
         return classification_confidence, classification_confidence_html_class
     return classification_confidence
 
 
-def get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_lower):
+def get_calibration_reliability_label(is_high_reliability_region, is_ood):
     calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_LOW
-    if is_valid_index_conditional__lower:
+    if is_high_reliability_region:
         calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST
-    elif is_ood_lower:
+    elif is_ood:
         calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
     return calibration_reliability
 
 
 def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_explanation, gemini_model_explanation,
                                              agreement_model_classification: bool):
-    # Starting in v1.1.0, we've streamlined the primary output to the information needed in (and at a
-    # default granularity suitable for) typical applications.
+
     predicted_class = prediction_meta_data["prediction"]
 
     # prediction_conditional_distribution__lower = \
     #     prediction_meta_data["rescaled_prediction_conditional_distribution__lower"]
 
     verification_classification = predicted_class == 1
-    is_valid_index_conditional__lower = prediction_meta_data["is_valid_index_conditional__lower"]
-    is_ood_lower = prediction_meta_data["is_ood_lower"]
+    is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
+    is_ood = prediction_meta_data["is_ood"]
     calibration_reliability = \
-        get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_lower)
+        get_calibration_reliability_label(is_high_reliability_region, is_ood)
 
     formatted_output_string = \
         get_formatted_sdm_estimator_output_string(verification_classification,
@@ -96,38 +95,27 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_ex
                                                   gpt5_model_explanation,
                                                   gemini_model_explanation,
                                                   agreement_model_classification,
-                                                  non_odd_class_conditional_accuracy=
-                                                  prediction_meta_data["non_odd_class_conditional_accuracy"])
+                                                  hr_class_conditional_accuracy=
+                                                  prediction_meta_data["hr_class_conditional_accuracy"])
     return formatted_output_string
 
 
-def test(main_device, model, global_uncertainty_statistics, reexpression_input):
+def test(main_device, model, reexpression_input):
     try:
         assert main_device.type == "cpu"
-        min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = \
-            global_uncertainty_statistics.get_min_valid_qbin_with_bounded_error(
-                model.min_valid_qbin_for_class_conditional_accuracy)
-
-        predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin = \
-            global_uncertainty_statistics.get_summarized_output_magnitude_structure_with_bounded_error_lower_offset_by_bin()
 
         prediction_meta_data = \
             model(reexpression_input,
                   forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR,
-                  min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
-                  min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
-                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
-                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin,
                   return_k_nearest_training_idx_in_prediction_metadata=1)
-        nearest_training_idx = int(prediction_meta_data["top_k_distances_idx"][0])
         # We defer retrieving the training instance from the database, since it is not needed if the
         # visualization is turned off:
-        prediction_meta_data["nearest_training_idx"] = nearest_training_idx
+        prediction_meta_data["nearest_training_idx"] = prediction_meta_data["top_distance_idx"]
         # add the following model-level values for convenience
-        prediction_meta_data["min_valid_qbin_for_class_conditional_accuracy_with_bounded_error"] = \
-            min_valid_qbin_for_class_conditional_accuracy_with_bounded_error
-        prediction_meta_data["non_odd_thresholds"] = model.non_odd_thresholds.tolist()
-        prediction_meta_data["non_odd_class_conditional_accuracy"] = model.non_odd_class_conditional_accuracy
+        prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"] = \
+            model.min_rescaled_similarity_to_determine_high_reliability_region
+        prediction_meta_data["hr_output_thresholds"] = model.hr_output_thresholds.detach().cpu().tolist()
+        prediction_meta_data["hr_class_conditional_accuracy"] = model.hr_class_conditional_accuracy
         prediction_meta_data["support_index_ntotal"] = model.support_index.ntotal
         return prediction_meta_data
     except:

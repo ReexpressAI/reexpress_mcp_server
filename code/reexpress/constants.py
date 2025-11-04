@@ -31,15 +31,13 @@ FORWARD_TYPE_GENERATE_EXEMPLAR_GLOBAL_AND_LOCAL_VECTORS_BINARY_TOKEN_DECOMPOSITI
 
 ##### Error Messages
 ERROR_MESSAGES_NO_THRESHOLD_FOUND = \
-    "WARNING: Unable to find a suitable bin threshold to achieve the target class-conditional accuracy."
+    "WARNING: Unable to find a suitable threshold to achieve the target class-conditional accuracy."
 ERROR_MESSAGES_UNCERTAINTY_STATS_JSON_MALFORMED = \
     "WARNING: The archive for the UncertaintyStatistics class appears to be malformed."
 
 ##### SDM constants
 q_rescale_offset: int = 2  # This typically should not change.
 ood_limit: int = 0  # This typically should not change.
-#min_valid_qbin_for_class_conditional_accuracy: int = 1  # typically only this value or higher should be considered
-# minReliableCumulativePartitionSize: int = 1000
 maxQAvailableFromIndexer: int = 1000 # 150  # This is the max k indexed. Note that this corresponds to the raw q value. Ignored if --use_training_set_max_label_size_as_max_q is used
 default_max_hard_bin = 20  # arbitrarily large to handle q up to np.exp(20) = 485165195; i.e., max hard bin is int(np.log(int(np.exp(20))))
 ##### SDM generation model constants
@@ -73,16 +71,16 @@ def floatProbToDisplaySignificantDigits(floatProb: float) -> str:
 
 
 ##### ProgramIdentifiers
-ProgramIdentifiers_mainProgramName = "Reexpress connect"
-ProgramIdentifiers_mainProgramNameShort = "connect"
-ProgramIdentifiers_version = "25a_sdm_streamlined"
+ProgramIdentifiers_mainProgramName = "Reexpress"
+ProgramIdentifiers_mainProgramNameShort = "Reexpress"
+ProgramIdentifiers_version = "2.0.0"
 
 
 ##### Storage keys
 STORAGE_KEY_version = "version"
 STORAGE_KEY_uncertaintyModelUUID = "uncertaintyModelUUID"
 STORAGE_KEY_alpha = "alpha"
-STORAGE_KEY_non_odd_class_conditional_accuracy = "non_odd_class_conditional_accuracy"
+STORAGE_KEY_hr_class_conditional_accuracy = "hr_class_conditional_accuracy"
 STORAGE_KEY_cdfThresholdTolerance = "cdfThresholdTolerance"
 STORAGE_KEY_maxQAvailableFromIndexer = "maxQAvailableFromIndexer"
 STORAGE_KEY_minReliableCumulativePartitionSize = "minReliableCumulativePartitionSize"
@@ -94,44 +92,50 @@ STORAGE_KEY_exemplar_vector_dimension = "exemplar_vector_dimension"
 STORAGE_KEY_embedding_size = "embedding_size"
 STORAGE_KEY_calibration_training_stage = "calibration_training_stage"
 STORAGE_KEY_calibration_is_ood_indicators = "calibration_is_ood_indicators"
-STORAGE_KEY_min_valid_qbin_for_class_conditional_accuracy = "min_valid_qbin_for_class_conditional_accuracy"
+STORAGE_KEY_min_rescaled_similarity_to_determine_high_reliability_region = \
+    "min_rescaled_similarity_to_determine_high_reliability_region"
 
-STORAGE_KEY_non_odd_thresholds = "non_odd_thresholds"
+# STORAGE_KEY_non_odd_thresholds = "non_odd_thresholds"  # now saving as tensor
 STORAGE_KEY_trueClass_To_dCDF = "trueClass_To_dCDF"
 STORAGE_KEY_train_trueClass_To_dCDF = "train_trueClass_To_dCDF"
 STORAGE_KEY_trueClass_To_unrescaledOutputCDF = "trueClass_To_unrescaledOutputCDF"
 STORAGE_KEY_trueClass_To_qCumulativeSampleSizeArray = "trueClass_To_qCumulativeSampleSizeArray"
 # STORAGE_KEY_trueClass_To_normalized_OutputCDF_non_ood = "trueClass_To_normalized_OutputCDF_non_ood"
 
-STORAGE_KEY_is_gen_ai = "is_gen_ai"
-STORAGE_KEY_gen_ai_vocab = "gen_ai_vocab"
-STORAGE_KEY_global_embedding_size = "global_embedding_size"
-STORAGE_KEY_composition_attributes_size = "composition_attributes_size"
-STORAGE_KEY_top_logits_k = "top_logits_k"
-
+# STORAGE_KEY_is_gen_ai = "is_gen_ai"
+# STORAGE_KEY_gen_ai_vocab = "gen_ai_vocab"
+# STORAGE_KEY_global_embedding_size = "global_embedding_size"
+# STORAGE_KEY_composition_attributes_size = "composition_attributes_size"
+# STORAGE_KEY_top_logits_k = "top_logits_k"
+STORAGE_KEY_is_sdm_network_verification_layer = "is_sdm_network_verification_layer"
 
 # input embedding summary stats
 STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_summary_stats = "training_embedding_summary_stats"
 STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_mean = "training_embedding_mean"
 STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_std = "training_embedding_std"
 
-STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType = "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType"
+STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType = \
+    "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType"
 STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_class_AND_predictionConditionalIndicatorCount = "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_class_AND_predictionConditionalIndicatorCount"
-STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_predictionConditionalIndicatorCount = "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_predictionConditionalIndicatorCount"
-STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_classConditionalIndicatorCount = "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_classConditionalIndicatorCount"
-STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_acceptanceIterationN = "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_acceptanceIterationN"
+STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_predictionConditionalIndicatorCount = \
+    "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_predictionConditionalIndicatorCount"
+STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_classConditionalIndicatorCount = \
+    "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_classConditionalIndicatorCount"
+STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_acceptanceIterationN = \
+    "qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_acceptanceIterationN"
 
 # global summary statistics:
 STORAGE_KEY_globalUncertaintyModelUUID = "globalUncertaintyModelUUID"
-STORAGE_KEY_min_valid_qbin_across_iterations = "min_valid_qbin_across_iterations"
-STORAGE_KEY_predicted_class_to_bin_to_median_output_magnitude_of_iteration = "predicted_class_to_bin_to_median_output_magnitude_of_iteration"
-STORAGE_KEY_cauchy_quantile = "cauchy_quantile"
+STORAGE_KEY_min_rescaled_similarity_across_iterations = "min_rescaled_similarity_across_iterations"
+# STORAGE_KEY_predicted_class_to_bin_to_median_output_magnitude_of_iteration = \
+#     "predicted_class_to_bin_to_median_output_magnitude_of_iteration"
+# STORAGE_KEY_cauchy_quantile = "cauchy_quantile"
 
 FILENAME_UNCERTAINTY_STATISTICS = "meta.json"
 FILENAME_UNCERTAINTY_STATISTICS_AGGREGATE = "meta_aggregate.json"
-FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS = "support_labels.npy"
-FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED = "support_predicted.npy"
-FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LOGITS = "support_logits.npy"
+FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS = "support_labels.pt"
+FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED = "support_predicted.pt"
+# FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LOGITS = "support_logits.pt"
 STORAGE_KEY_UNCERTAINTY_STATISTICS_SUPPORT_UUID = "support_ids"
 FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_UUID = "support_ids.json"
 FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_INDEX = "support.npy"
@@ -144,8 +148,12 @@ FILENAME_UNCERTAINTY_STATISTICS_calibration_labels_TENSOR = "calibration_labels.
 FILENAME_UNCERTAINTY_STATISTICS_calibration_predicted_labels = "calibration_predicted_labels.pt"
 STORAGE_KEY_UNCERTAINTY_STATISTICS_calibration_uuids = "calibration_uuids"
 FILENAME_UNCERTAINTY_STATISTICS_calibration_uuids = "calibration_uuids.json"
-FILENAME_UNCERTAINTY_STATISTICS_calibration_unrescaled_CDFquantiles = "calibration_unrescaled_CDFquantiles.pt"
-FILENAME_UNCERTAINTY_STATISTICS_calibration_soft_qbins = "calibration_soft_qbins.pt"
+# FILENAME_UNCERTAINTY_STATISTICS_calibration_unrescaled_CDFquantiles = "calibration_unrescaled_CDFquantiles.pt"
+# FILENAME_UNCERTAINTY_STATISTICS_calibration_soft_qbins = "calibration_soft_qbins.pt"
+FILENAME_UNCERTAINTY_STATISTICS_calibration_sdm_outputs = "calibration_sdm_outputs.pt"
+FILENAME_UNCERTAINTY_STATISTICS_calibration_rescaled_similarity_values = "calibration_rescaled_similarity_values.pt"
+
+FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds = "hr_output_thresholds.pt"
 
 FILENAME_GLOBAL_UNCERTAINTY_STATISTICS_JSON = "global_uncertainty_statistics.json"
 
@@ -162,6 +170,13 @@ dFull = "Distance to Training (d)"
 fFull = "Magnitude"
 sizeFull = "Partition Size (in Calibration)"
 
+dQuantileFull = "Distance to Training Quantile (d)"
+dQuantileLowerFull = "Distance to Training Lower Quantile (d_lower)"
+dQuantileUpperFull = "Distance to Training Upper Quantile (d_upper)"
+
+CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL = "High-Reliability Region"
+CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE = "High-Reliability region"
+CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_SHORT_ABBREVIATED = "HR"
 # qShort = "Similarity"
 # qVar = "q" # this should rarely be used
 # dShort = "Distance"
@@ -253,9 +268,9 @@ MCP_SERVER_VERIFIED_CLASS_LABEL = "Verified"
 
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
-REEXPRESS_MCP_SERVER_VERSION = "1.2.0"
+REEXPRESS_MCP_SERVER_VERSION = "2.0.0"  # see also ProgramIdentifiers_version for the classifier
 
-USE_GPU_FAISS_INDEX = False
+# USE_GPU_FAISS_INDEX = False  # this is now determined automatically by main_device
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,
 # since future versions will enable additional operations on user-added documents, where the distinction from

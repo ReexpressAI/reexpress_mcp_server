@@ -109,15 +109,16 @@ class InteractiveScatter:
                 print(f"Label == Prediction: {self.data_rows[idx]['label'] == self.data_rows[idx]['prediction']}")
                 print(f"Label: {self.data_rows[idx]['label']}")
                 print(f"Prediction: {self.data_rows[idx]['prediction']}")
-                print(f"p(y|x)_lower: {self.data_rows[idx]['prediction_probability__lower']}")
-                print(f"Valid index conditional (lower): {self.data_rows[idx]['valid_index__lower']}")
-                print(f"soft_qbin__lower: {self.data_rows[idx]['soft_qbin__lower']}")
-                print(f"is_ood: {self.data_rows[idx]['is_ood']}")
-                print(f"Effective sample size: {self.data_rows[idx]['n']}")
+                print(f"p(y|x): {self.data_rows[idx]['sdm_output']}")
+                print(f"High reliability region: {self.data_rows[idx]['is_high_reliability_region']}")
+                print(f"Rescaled Similarity (q'): {self.data_rows[idx]['rescaled_similarity']}")
+                print(f"OOD: {self.data_rows[idx]['is_ood']}")
+                print(f"Effective sample size: {self.data_rows[idx]['cumulative_effective_sample_sizes']}")
                 separator_text = ", "
-                print(f"q: {self.data_rows[idx]['q']}{separator_text} "
-                      f"d: {self.data_rows[idx]['d']}{separator_text} "
-                      f"f: {self.data_rows[idx]['f']}")
+                print(f"Similarity (q): {self.data_rows[idx]['q']}{separator_text} "
+                      f"Distance quantile (d): {self.data_rows[idx]['d']}{separator_text} "
+                      f"Magnitude (f): {self.data_rows[idx]['f']}")
+                print(f"d_nearest: {self.data_rows[idx]['d0']}")
                 print(f"Document: {self.data_rows[idx]['document']}")
                 print(f"{'=' * 40}\n")
 
@@ -166,13 +167,13 @@ class InteractiveScatter:
 
 
 def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
-                               min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=None,
-                               non_odd_thresholds=None,
-                               non_odd_class_conditional_accuracy=None,
+                               min_rescaled_similarity_to_determine_high_reliability_region=None,
+                               hr_output_thresholds=None,
+                               hr_class_conditional_accuracy=None,
                                model=None):
     assert true_label_to_graph is not None
     ood_color = "darkviolet"
-    min_valid_qbin_for_class_conditional_accuracy_with_bounded_error_color = "darkblue"
+    min_rescaled_similarity_to_determine_high_reliability_region_error_color = "darkblue"
     latex_approx_symbol = r'$\approx$'
 
     x_filtered = []
@@ -188,43 +189,31 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
     for document in json_lines:
 
         document_id = document["id"]
-        hard_qbin_lower = document["hard_qbin_lower"]
-        soft_qbin__lower = document["soft_qbin__lower"]
+        floor_rescaled_similarity = document["floor_rescaled_similarity"]
+        rescaled_similarity = document["rescaled_similarity"]
         q = document["q"]
         d = document["d"]
-        prediction_probability__lower = document["prediction_probability__lower"]
-        softmax_predicted = torch.softmax(torch.tensor(document["f"]), dim=0)[document["prediction"]]  # reference
-        distance_quantile_per_class = torch.zeros(1, options.class_size) + d
-        # The current version does not save the output from the SDM activation,
-        # so we recalculate here to provide for reference:
-        unrescaled_sdm = model.soft_sdm_max(torch.tensor([document["f"]]), torch.tensor([[q]]),
-                                            distance_quantile_per_class=distance_quantile_per_class,
-                                            log=False, change_of_base=True)
-        unrescaled_sdm_predicted = unrescaled_sdm[0, document["prediction"]].item()
-        document["unrescaled_sdm"] = [float(x) for x in unrescaled_sdm[0, :].detach().numpy().tolist()]
-        # if False:
-        #     if prediction_probability__lower == 0:
-        #         print(f'{document_id}, q: {q}, d: {d}, f: {document["f"]}, p(y|x)_lower: {prediction_probability__lower}, '
-        #               f'unrescaled_sdm: {unrescaled_sdm}, soft_qbin__lower: {soft_qbin__lower}')
+        prediction_probability = document["sdm_output"][document["prediction"]]
+        # softmax_predicted = torch.softmax(torch.tensor(document["f"]), dim=0)[document["prediction"]]  # reference
 
         if options.graph_all_points:
             filter_condition = True
         else:
-            filter_condition = document["valid_index__lower"]
+            filter_condition = document["is_high_reliability_region"]
         label = document["label"]
         if true_label_to_graph is not None:
             filter_condition = filter_condition and label == true_label_to_graph
             # can use these to verify the bin distribution alignment, which must match with the x and y-axis:
-            # and 0.0 <= soft_qbin__lower <= 2.5
-            # and 0.7 <= prediction_probability__lower <= 0.8
+            # and 0.0 <= rescaled_similarity <= 2.5
+            # and 0.7 <= prediction_probability <= 0.8
 
         if filter_condition:
             document_ids_filtered.append(document_id)
             is_correct = document["prediction"] == label
             accuracy_filtered.append(is_correct)
             is_correct_filtered.append(is_correct)
-            x_filtered.append(soft_qbin__lower)
-            y_filtered.append(prediction_probability__lower)
+            x_filtered.append(rescaled_similarity)
+            y_filtered.append(prediction_probability)
             data_rows_filtered.append(document)
             if is_correct:
                 colors_filtered.append("green")
@@ -262,53 +251,34 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
                                      colors_filtered=colors_filtered, linewidth=0.5, point_sizes=point_sizes,
                                      ids=document_ids_filtered, data_rows=data_rows_filtered, ax=ax_main)
 
-    ax_main.set_xlabel(r'$\tilde{q}_{\mathrm{lower}}$')
-    ax_main.set_ylabel(r'$\hat{p}(y \mid \mathbf{x})_{\mathrm{lower}}$')
+    ax_main.set_xlabel(r"$q'$")
+    # ax_main.set_ylabel(r'$\hat{p}(y \mid \mathbf{x})$')
+    ax_main.set_ylabel(r"$\rm{sdm}(\mathbf{z'})_{\hat{y}}$")
 
     if true_label_to_graph is not None:
         if options.graph_all_points:
             latex_string = r'$\alpha$'
             fig.suptitle(
-                f"SDM Estimator Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}'={non_odd_class_conditional_accuracy} (rejections are also graphed)",
+                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}={hr_class_conditional_accuracy} (rejections are also graphed)",
                 y=0.98)
         else:
-            latex_string = r'$\hat{p}(y \mid \mathbf{x})_{\mathrm{lower}} \neq \bot, \alpha$'
+            latex_string = r'$\hat{p}(y \mid \mathbf{x}) \neq \bot, \alpha$'
             fig.suptitle(
-                f"SDM Estimator Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}'={non_odd_class_conditional_accuracy}",
+                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}={hr_class_conditional_accuracy}",
                 y=0.98)
         if options.graph_thresholds:
             latex_threshold_label = r'Class-wise thresholds ($\psi$)'
-            output_thresholds_hline = ax_main.axhline(y=non_odd_thresholds[true_label_to_graph],
+            output_thresholds_hline = ax_main.axhline(y=hr_output_thresholds[true_label_to_graph],
                                                       color='orange', linestyle=':', linewidth=2,
-                                                      label=f"{latex_threshold_label}, index {true_label_to_graph}{latex_approx_symbol}{non_odd_thresholds[true_label_to_graph]:.4f}")
-
-    if options.graph_all_points:  # OOD indicator
-        y_offset = -0.1  # Adjust this to position OOD bracket below x-axis
-
-        ax_main.annotate('', xy=(0, y_offset), xytext=(1, y_offset),
-                         xycoords=('data', 'axes fraction'),
-                         arrowprops=dict(arrowstyle='-', color=ood_color, lw=2))
-
-        # Add bracket ends
-        ax_main.annotate('', xy=(0, y_offset - 0.02), xytext=(0, y_offset + 0.02),
-                         xycoords=('data', 'axes fraction'),
-                         arrowprops=dict(arrowstyle='-', color=ood_color, lw=2))
-        ax_main.annotate('', xy=(1, y_offset - 0.02), xytext=(1, y_offset + 0.02),
-                         xycoords=('data', 'axes fraction'),
-                         arrowprops=dict(arrowstyle='-', color=ood_color, lw=2))
-
-        # Create an invisible line for the legend entry
-        ood_label_latex = r'$\mathrm{floor}(\tilde{q}_{\mathrm{lower}})=0$'
-        ood_bracket_line = \
-            ax_main.plot([], [], color=ood_color, linewidth=2, label=f'{ood_label_latex} (Out-of-distribution)')[0]
+                                                      label=f"{latex_threshold_label}, index {true_label_to_graph}{latex_approx_symbol}{hr_output_thresholds[true_label_to_graph]:.4f}")
 
     if options.graph_thresholds:
-        latex_min_valid_qbin = r'$\tilde{q}^{~\gamma}_{\mathrm{min}}$'
+        latex_min_valid_qbin = r"${q'}_{\mathrm{min}}$"
         model_level_q_threshold_line = \
-            ax_main.axvline(x=min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
-                            color=min_valid_qbin_for_class_conditional_accuracy_with_bounded_error_color,
+            ax_main.axvline(x=min_rescaled_similarity_to_determine_high_reliability_region,
+                            color=min_rescaled_similarity_to_determine_high_reliability_region_error_color,
                             linestyle='--', linewidth=2,
-                            label=f"{latex_min_valid_qbin}{latex_approx_symbol}{min_valid_qbin_for_class_conditional_accuracy_with_bounded_error:.2f}")
+                            label=f"{latex_min_valid_qbin}{latex_approx_symbol}{min_rescaled_similarity_to_determine_high_reliability_region:.2f}")
         # Fixed: Center the legend horizontally by using loc='upper center' with bbox_to_anchor at x=0.5
         # ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=1)
 
@@ -328,19 +298,20 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
     # These counts are to ensure the histogram axes are the same (for quick comparisons of the relative densities)
     top_counts = None
     right_counts = None
-    # Create top histogram (x-axis distribution) with fixed bin width of 0.5
+    # Create top histogram (x-axis distribution) with configurable bin width
     if len(x_filtered) > 0:
         # Get x-axis limits from the main plot
         x_min, x_max = np.min(x_filtered), np.max(x_filtered)
         # x_min, x_max = ax_main.get_xlim()
 
-        # Create bins with width of 0.5
-        # Start from the floor of x_min (rounded down to nearest 0.5)
-        x_bin_start = np.floor(x_min / 0.5) * 0.5
-        # End at the ceiling of x_max (rounded up to nearest 0.5)
-        x_bin_end = np.ceil(x_max / 0.5) * 0.5
+        # Create bins with configurable width
+        x_bin_width = options.x_axis_histogram_width
+        # Start from the floor of x_min (rounded down to nearest bin width)
+        x_bin_start = np.floor(x_min / x_bin_width) * x_bin_width
+        # End at the ceiling of x_max (rounded up to nearest bin width)
+        x_bin_end = np.ceil(x_max / x_bin_width) * x_bin_width
         # Create bin edges
-        x_bins = np.arange(x_bin_start, x_bin_end + 0.5, 0.5)
+        x_bins = np.arange(x_bin_start, x_bin_end + x_bin_width, x_bin_width)
 
         # Separate correct and incorrect predictions
         x_correct = x_filtered[is_correct_filtered]
@@ -356,7 +327,7 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         ax_top.set_xlim(ax_main.get_xlim())
         # ax_top.set_xlim(x_min, x_max)
 
-    # Create right histogram (y-axis distribution) with fixed bin width of 0.05
+    # Create right histogram (y-axis distribution) with configurable bin width
     if len(y_filtered) > 0:
         # Get y-axis limits from the main plot
         y_min, y_max = np.min(y_filtered), np.max(y_filtered)
@@ -367,13 +338,14 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
             y_padding = (y_max - y_min) * 0.05  # 5% padding
             # Set tight limits with minimal padding
             ax_main.set_ylim(y_min - y_padding, y_max + y_padding)
-        # Create bins with width of 0.05
-        # Start from the floor of y_min (rounded down to nearest 0.05)
-        y_bin_start = np.floor(y_min / 0.05) * 0.05
-        # End at the ceiling of y_max (rounded up to nearest 0.05)
-        y_bin_end = np.ceil(y_max / 0.05) * 0.05
+        # Create bins with configurable width
+        y_bin_width = options.y_axis_histogram_width
+        # Start from the floor of y_min (rounded down to nearest bin width)
+        y_bin_start = np.floor(y_min / y_bin_width) * y_bin_width
+        # End at the ceiling of y_max (rounded up to nearest bin width)
+        y_bin_end = np.ceil(y_max / y_bin_width) * y_bin_width
         # Create bin edges
-        y_bins = np.arange(y_bin_start, y_bin_end + 0.05, 0.05)
+        y_bins = np.arange(y_bin_start, y_bin_end + y_bin_width, y_bin_width)
 
         # Separate correct and incorrect predictions
         y_correct = y_filtered[is_correct_filtered]
@@ -413,7 +385,8 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         fig.text(text_x + 0.06, 0.09, f"Data: {options.data_label}; Model: {options.model_version_label}",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
-        fig.text(text_x + 0.06, 0.06, f"(x-axis bins: width 0.5; y-axis bins: width 0.05)",
+        fig.text(text_x + 0.06, 0.06,
+                 f"(x-axis bins: width {options.x_axis_histogram_width}; y-axis bins: width {options.y_axis_histogram_width})",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -424,7 +397,8 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         fig.text(0.5, 0.19, f"Data: {options.data_label}; Model: {options.model_version_label}",
                  ha='center', va='top',
                  fontsize=9, style='italic', color='gray')
-        fig.text(0.5, 0.16, f"(x-axis bins: width 0.5; y-axis bins: width 0.05)",
+        fig.text(0.5, 0.16,
+                 f"(x-axis bins: width {options.x_axis_histogram_width}; y-axis bins: width {options.y_axis_histogram_width})",
                  ha='center', va='top',
                  fontsize=9, style='italic', color='gray')
         # Add timestamp centered under the filename
@@ -455,7 +429,7 @@ def main():
                         help="If provided, all points are graphed. "
                              "The default is to only graph the valid index-conditional points.")
     parser.add_argument("--graph_thresholds", default=False, action='store_true',
-                        help="If provided, the threshold on soft_qbin__lower and the class-wise thresholds are "
+                        help="If provided, the threshold on rescaled_similarity and the class-wise thresholds are "
                              "included in the graph.")
     parser.add_argument("--emphasize_wrong_predictions", default=False, action='store_true',
                         help="If provided, the size of incorrect predictions (red points) are "
@@ -466,9 +440,15 @@ def main():
                         help="This is printed at the bottom right of the graph.")
     parser.add_argument("--constant_histogram_count_axis", default=False, action='store_true',
                         help="If this is provided, the histograms have the same visible max for the count axis.")
+    parser.add_argument("--x_axis_histogram_width", default=10, type=float,
+                        help="Width of histogram bins for the x-axis (default: 10)")
+    parser.add_argument("--y_axis_histogram_width", default=0.05, type=float,
+                        help="Width of histogram bins for the y-axis (default: 0.05)")
     parser.add_argument("--save_file_prefix", default="",
                         help="If provided, the image will be saved at this location with the suffix "
                              "'__class_label_X_only_admitted.png' or '__class_label_X_all_points.png'")
+    parser.add_argument("--exclude_graph_labels", default=False, action='store_true',
+                        help="For use when adding graphs to LaTeX documents.")
 
     options = parser.parse_args()
     # Set higher-resolution for saving
@@ -483,29 +463,24 @@ def main():
           f"Click on a point in the graph to print details (including document text, if available) to the console.")
     start_time = time.time()
     model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
-    global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(options.model_dir)
-
-    min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = \
-        global_uncertainty_statistics.get_min_valid_qbin_with_bounded_error(
-            model.min_valid_qbin_for_class_conditional_accuracy)
-    non_odd_thresholds = model.non_odd_thresholds.tolist()
-    non_odd_class_conditional_accuracy = model.non_odd_class_conditional_accuracy
-    # predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin = \
-    #     global_uncertainty_statistics.get_summarized_output_magnitude_structure_with_bounded_error_lower_offset_by_bin()
+    min_rescaled_similarity_to_determine_high_reliability_region = model.min_rescaled_similarity_to_determine_high_reliability_region
+    hr_output_thresholds = model.hr_output_thresholds.detach().cpu().tolist()
+    hr_class_conditional_accuracy = model.hr_class_conditional_accuracy
 
     print(f"Current support set cardinality (Note: May differ from that used to generate "
           f"--prediction_output_file if the model has subsequently been updated): {model.support_index.ntotal}")
-    print(f"alpha' = {non_odd_class_conditional_accuracy}")
-    print(f"thresholds = {non_odd_thresholds}")
-    print(f"min_valid_qbin_for_class_conditional_accuracy_with_bounded_error: "
-          f"{min_valid_qbin_for_class_conditional_accuracy_with_bounded_error}")
+    print(f"alpha = {hr_class_conditional_accuracy}")
+    print(f"thresholds = {hr_output_thresholds}")
+    print(f"q'_min: "
+          f"{min_rescaled_similarity_to_determine_high_reliability_region}")
     json_lines = utils_model.read_jsons_lines_file(options.input_file)
 
     for true_label_to_graph in range(options.class_size):
         graph_sdm_estimator_output(options, json_lines, true_label_to_graph=true_label_to_graph,
-                                   min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
-                                   non_odd_thresholds=non_odd_thresholds,
-                                   non_odd_class_conditional_accuracy=non_odd_class_conditional_accuracy,
+                                   min_rescaled_similarity_to_determine_high_reliability_region=
+                                   min_rescaled_similarity_to_determine_high_reliability_region,
+                                   hr_output_thresholds=hr_output_thresholds,
+                                   hr_class_conditional_accuracy=hr_class_conditional_accuracy,
                                    model=model)
     cumulative_time = time.time() - start_time
     print(f"Cumulative running time: {cumulative_time}")

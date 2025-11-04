@@ -1,6 +1,6 @@
 
 # Installation Instructions for the Reexpress Model-Context-Protocol (MCP) Server
-### For tool-calling LLMs (e.g., Claude Opus 4.1 or Sonnet 4) and MCP clients running on Linux or macOS (Sequoia 15 on Apple silicon)
+### For tool-calling LLMs (e.g., Claude Opus 4.1 or Sonnet 4.5) and MCP clients running on macOS (Sequoia 15 or later on Apple silicon) or Linux
 
 The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following.
 
@@ -44,8 +44,8 @@ Run the following lines from the Terminal.
 
 ```bash
 # Create the Conda environment for the MCP server
-conda create -n re_mcp_v120 python=3.12
-conda activate re_mcp_v120
+conda create -n re_mcp_v200 python=3.12
+conda activate re_mcp_v200
 pip install torch==2.7.1 transformers==4.53.0 accelerate==1.8.1 numpy==1.26.4
 conda install -c pytorch faiss-cpu=1.9.0
 pip install "mcp[cli]==1.6.0"
@@ -54,7 +54,7 @@ pip install google-genai==1.25.0
 conda install -c conda-forge matplotlib=3.10.0
 ```
 
-This will create an environment "re_mcp_v120" with the required dependencies for macOS 15 and Apple silicon.
+This will create an environment "re_mcp_v200" with the required dependencies for macOS 15 and Apple silicon.
 
 ## 5. Configure environment variables and LLM API keys
 
@@ -108,7 +108,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate re_mcp_v120 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
+                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate re_mcp_v200 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -138,7 +138,7 @@ the file would be the following:
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate re_mcp_v120 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
+                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate re_mcp_v200 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -157,9 +157,13 @@ See [CONFIG.md](CONFIG.md).
 ## Troubleshooting
 
 If you run into issues, the first things to check are:
-- Verify you are using macOS 15 on Apple silicon and have installed Claude Desktop.
+- Verify you are using macOS 15 on Apple silicon and have installed Claude Desktop. (In principle, the above instructions should also work on macOS Tahoe without changes, and on linux distributions using alternative MCP clients available for linux. Let us know if you run into issues.)
 - You used absolute paths in all of the above.
 - You supplied valid API keys in llm_api_setup.sh, and if using Azure, your deployments are properly configured.
 - Your Mac needs to be able to run "ibm-granite/granite-3.3-8b-instruct" locally. Try a simple example from the model page at [https://huggingface.co/ibm-granite/granite-3.3-8b-instruct](https://huggingface.co/ibm-granite/granite-3.3-8b-instruct).
 - Check that there isn't something wrong with your Claude Desktop install. Try walking through the weather MCP server demo at [https://modelcontextprotocol.io/quickstart/server](https://modelcontextprotocol.io/quickstart/server). If that does not work, then other MCP servers are unlikely to work.
-- Verify you are using the dependencies noted above. The underlying SDM estimator code is dependent on these versions of Faiss, NumPy, and PyTorch.
+- Verify you are using the dependencies noted above.
+
+## Developer tip
+
+The MCP server code is a lightweight wrapper around the SDM estimator code, making it easy to call SDM estimators for verification using existing IDEs and MCP clients. For your own client applications, you can also just call the async functions in `reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py` directly. That can be useful for building more complex test-time search strategies, with additional control over the test-time branching actions.

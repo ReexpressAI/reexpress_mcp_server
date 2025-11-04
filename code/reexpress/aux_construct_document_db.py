@@ -140,6 +140,7 @@ if __name__ == "__main__":
     options = parser.parse_args()
 
     start_time = time.time()
+    print(f"This assumes the agreement model's classification is encoded in the input embedding.")
     if options.load_hf_dataset_from_disk:
         ds = load_from_disk(options.input_datasets_file)
         print(f"Successfully loaded {options.input_datasets_file} from disk.")

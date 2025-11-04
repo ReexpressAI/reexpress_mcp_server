@@ -38,71 +38,6 @@ def read_jsons_lines_file(filename_with_path):
     return json_list
 
 
-def save_llm_weights_for_mlx_generation(options, model, save_as_final_llm_weights=True):
-    if not save_as_final_llm_weights:
-        llm_weights_directory_data_path = Path(options.model_dir, constants.DIRNAME_RUNNING_LLM_WEIGHTS_DIR)
-        llm_weights_directory_data_path.mkdir(parents=False, exist_ok=True)
-        llm_weights_dir = str(llm_weights_directory_data_path.as_posix())
-        print(f"Saving LLM weights to {constants.DIRNAME_RUNNING_LLM_WEIGHTS_DIR} for "
-              f"conversion to mlx before running generation. "
-              f"Any existing weights will be overwritten.")
-    else:
-        print(f"Saving LLM weights for conversion to mlx to the main directory before running generation. "
-              f"Any existing weights will be overwritten.")
-        llm_weights_dir = options.model_dir
-    torch.save(model.conv.weight.data, f"{path.join(llm_weights_dir, 'exemplar_conv_weight.pt')}")
-    torch.save(model.conv.bias.data, f"{path.join(llm_weights_dir, 'exemplar_conv_bias.pt')}")
-    torch.save(model.fc.weight.data, f"{path.join(llm_weights_dir, 'exemplar_fc_weight.pt')}")
-    torch.save(model.fc.bias.data, f"{path.join(llm_weights_dir, 'exemplar_fc_bias.pt')}")
-
-    torch.save(model.fc_original.weight.data, f"{path.join(llm_weights_dir, 'ai_fc_original_weight.pt')}")
-    torch.save(model.fc_negative.weight.data, f"{path.join(llm_weights_dir, 'ai_fc_negative_weight.pt')}")
-    if model.fc_negative.bias:
-        torch.save(model.fc_negative.bias.data, f"{path.join(llm_weights_dir, 'ai_fc_negative_bias.pt')}")
-    torch.save(model.fc_positive.weight.data, f"{path.join(llm_weights_dir, 'ai_fc_positive_weight.pt')}")
-    if model.fc_positive.bias:
-        torch.save(model.fc_positive.bias.data, f"{path.join(llm_weights_dir, 'ai_fc_positive_bias.pt')}")
-
-
-def save_generated_lines(generation_directory, eval_file, generated_lines, uuids, taskCategoryInts,
-                         reliability_indicators, probability_of_acceptances,
-                         generation_output_label,
-                         task_predictions,
-                         original_task_labels,
-                         correct_task_predictions
-                         ):
-    try:
-        generation_directory_data_path = Path(generation_directory)
-        generation_directory_data_path.mkdir(parents=False, exist_ok=True)
-        generation_directory_data_path_data_dir = str(generation_directory_data_path.as_posix())
-
-        eval_file_filename = f"{generation_output_label}_{Path(eval_file).name}"
-        filename_save_path_as_string = str(Path(generation_directory_data_path_data_dir, eval_file_filename).as_posix())
-        json_lines = []
-        for document_id, generated_output, taskCategory, reliability_indicator, probability_of_acceptance, \
-            task_prediction, original_task_label, correct_task_prediction in \
-                zip(uuids, generated_lines, taskCategoryInts, reliability_indicators, probability_of_acceptances,
-                    task_predictions,
-                    original_task_labels,
-                    correct_task_predictions
-                    ):
-            json_obj = {
-                "id": document_id,
-                "taskCategory": taskCategory,
-                "task_label": original_task_label,
-                "task_prediction": task_prediction,
-                "correct_task_prediction": correct_task_prediction,
-                "reliable_estimate": reliability_indicator,
-                "probability_of_acceptance": probability_of_acceptance,
-                "generated_output": generated_output
-            }
-            json_lines.append(json_obj)
-        save_json_lines(filename_save_path_as_string, json_lines)
-        print(f"Generated output saved to {filename_save_path_as_string}")
-    except:
-        print(f"Unable to save the generated output to {generation_directory}")
-
-
 def save_by_appending_json_lines(filename_with_path, json_list):
     with codecs.open(filename_with_path, "a", encoding="utf-8") as f:
         for json_dict in json_list:
@@ -153,18 +88,16 @@ def save_support_set_updates(model, model_dir):
     #
     save_index(model.support_index, model_dir)
     # save support arrays
-    np.save(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS), model.train_labels,
-            allow_pickle=False)
-    np.save(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED), model.train_predicted_labels,
-            allow_pickle=False)
-
+    torch.save(model.train_labels,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS))
+    torch.save(model.train_predicted_labels,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED))
     with codecs.open(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_UUID), "w", encoding="utf-8") as f:
         f.write(json.dumps({constants.STORAGE_KEY_UNCERTAINTY_STATISTICS_SUPPORT_UUID: model.train_uuids}, ensure_ascii=True))
 
 
-def save_model(model, model_dir, optimizer=None):  #, retain_support_index_after_archiving=True):
+def save_model(model, model_dir, optimizer=None):
     # Note that the caller is responsible for maintaining the state of the LLM weights via
-    # save_llm_weights_for_mlx_generation()
     support_index = model.support_index
     model.support_index = None  # set to None to avoid saving in main weights file
     save_index(support_index, model_dir)
@@ -173,24 +106,16 @@ def save_model(model, model_dir, optimizer=None):  #, retain_support_index_after
     torch.save(model.state_dict(), model_statedict_output_file)
     # re-set support index
     model.support_index = support_index
-    # if retain_support_index_after_archiving:  # re-set support index
-    #     model.support_index = support_index
-    # else:
-    #     print(f"WARNING: The support index has been set to None. This is an option for legacy code and "
-    #           f"typically not what you want for further "
-    #           f"use of the model without a re-load. "
-    #           f"Re-load the model, and in the future, use retain_support_index_after_archiving=True.")
-    #     exit()
 
 
 def load_model_torch(model_dir, main_device, load_for_inference=False):
     try:
-        support_index = load_index(model_dir)
+        support_index = load_index(model_dir, main_device)
         model_statedict_output_file = path.join(model_dir, constants.FILENAME_LOCALIZER)
         model_params, json_dict = load_uncertainty_statistics_from_disk(model_dir,
                                                                         load_for_inference=load_for_inference)
 
-        model = SimilarityDistanceMagnitudeCalibrator(**model_params).to(main_device)
+        model = SimilarityDistanceMagnitudeCalibrator(**model_params).to(torch.device("cpu"))
         state_dict = torch.load(model_statedict_output_file, weights_only=True, map_location=torch.device("cpu"))
         model.load_state_dict(state_dict)
 
@@ -202,31 +127,32 @@ def load_model_torch(model_dir, main_device, load_for_inference=False):
 
         model.eval()
         print(f"Model loaded successfully, set to eval() mode.")
-        return model
+        return model.to(main_device)
     except:
         print(f"ERROR: The model file is missing or incomplete. Exiting.")
         exit()
 
+
 def save_index(index, model_dir):
     index_output_file = path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_INDEX)
-    if constants.USE_GPU_FAISS_INDEX:
+    # if isinstance(index, faiss.GpuIndex): # this is not present in older versions (e.g., 1.8.0)
+    if "Gpu" in type(index).__name__:
         index = faiss.index_gpu_to_cpu(index)
     serialized_index = faiss.serialize_index(index)
     np.save(index_output_file, serialized_index, allow_pickle=False)
-    # faiss.write_index(index, index_output_file)
 
 
-def load_index(model_dir):
+def load_index(model_dir, main_device):
     index_output_file = path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_INDEX)
     loaded_index = np.load(index_output_file, allow_pickle=False)
-    if constants.USE_GPU_FAISS_INDEX:
+    if main_device.type == 'cuda':
         loaded_index = faiss.deserialize_index(loaded_index)
-        gpu_id = 0
+        gpu_id = main_device.index
         res = faiss.StandardGpuResources()
+        print(f"Model is on a CUDA device, so the loaded FAISS index has been moved to cuda:{gpu_id}.")
         return faiss.index_cpu_to_gpu(res, gpu_id, loaded_index)
     else:
         return faiss.deserialize_index(loaded_index)
-    # return faiss.read_index(index_output_file)
 
 
 def save_global_uncertainty_statistics(global_uncertainty_statistics_object, model_dir):
@@ -250,12 +176,9 @@ def load_global_uncertainty_statistics_from_disk(model_dir):
                 uncertainty_statistics.UncertaintyStatistics(
                     globalUncertaintyModelUUID=str(json_dict[constants.STORAGE_KEY_globalUncertaintyModelUUID]),
                     numberOfClasses=int(json_dict[constants.STORAGE_KEY_numberOfClasses]),
-                    min_valid_qbin_across_iterations= \
-                        [float(x) for x in json_dict[constants.STORAGE_KEY_min_valid_qbin_across_iterations]],
-                    predicted_class_to_bin_to_median_output_magnitude_of_iteration=None,
-                    cauchy_quantile=float(json_dict[constants.STORAGE_KEY_cauchy_quantile])
+                    min_rescaled_similarity_across_iterations= \
+                        [float(x) for x in json_dict[constants.STORAGE_KEY_min_rescaled_similarity_across_iterations]]
                 )
-            global_uncertainty_statistics.import_properties_from_dict(json_dict)
             print(f"Global uncertainty statistics have been loaded.")
             return global_uncertainty_statistics
         else:
@@ -272,11 +195,11 @@ def save_uncertainty_metadata(model, model_dir):
     with codecs.open(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS), "w", encoding="utf-8") as f:
         f.write(json.dumps(json_dict, ensure_ascii=True))
 
-    # save support arrays
-    np.save(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS), model.train_labels,
-            allow_pickle=False)
-    np.save(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED), model.train_predicted_labels,
-            allow_pickle=False)
+    # save support tensors
+    torch.save(model.train_labels,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS))
+    torch.save(model.train_predicted_labels,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED))
 
     with codecs.open(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_UUID), "w", encoding="utf-8") as f:
         f.write(json.dumps({constants.STORAGE_KEY_UNCERTAINTY_STATISTICS_SUPPORT_UUID: model.train_uuids}, ensure_ascii=True))
@@ -290,17 +213,26 @@ def save_uncertainty_metadata(model, model_dir):
                path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_labels_TENSOR))
     torch.save(model.calibration_predicted_labels,
                path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_predicted_labels))
-    torch.save(model.calibration_unrescaled_CDFquantiles,
-               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_unrescaled_CDFquantiles))
-    torch.save(model.calibration_soft_qbins,
-               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_soft_qbins))
+    torch.save(model.calibration_sdm_outputs,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_sdm_outputs))
+    torch.save(model.calibration_rescaled_similarity_values,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_rescaled_similarity_values))
+
+    torch.save(model.hr_output_thresholds,
+               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds))
 
 
 def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
-    train_labels = np.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS),
-            allow_pickle=False)
-    train_predicted_labels = np.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED),
-            allow_pickle=False)
+    train_labels = torch.load(
+        path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_LABELS),
+        weights_only=True, map_location=torch.device("cpu"))
+    train_predicted_labels = torch.load(
+        path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED),
+        weights_only=True, map_location=torch.device("cpu"))
+
+    hr_output_thresholds = torch.load(
+        path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds),
+        weights_only=True, map_location=torch.device("cpu"))
 
     train_uuids = []
     with codecs.open(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_UUID), encoding="utf-8") as f:
@@ -313,8 +245,8 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
         calibration_labels = None
         calibration_predicted_labels = None
         calibration_uuids = None
-        calibration_unrescaled_CDFquantiles = None
-        calibration_soft_qbins = None
+        calibration_sdm_outputs = None
+        calibration_rescaled_similarity_values = None
         calibration_is_ood_indicators = []
     else:  # calibration_is_ood_indicators is loaded later, since it is part of the JSON dictionary
         calibration_uuids = []
@@ -328,9 +260,9 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
                                         weights_only=True, map_location=torch.device("cpu"))
         calibration_predicted_labels = torch.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_predicted_labels),
                    weights_only=True, map_location=torch.device("cpu"))
-        calibration_unrescaled_CDFquantiles = torch.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_unrescaled_CDFquantiles),
+        calibration_sdm_outputs = torch.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_sdm_outputs),
                    weights_only=True, map_location=torch.device("cpu"))
-        calibration_soft_qbins = torch.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_soft_qbins),
+        calibration_rescaled_similarity_values = torch.load(path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_rescaled_similarity_values),
                    weights_only=True, map_location=torch.device("cpu"))
 
     json_dict = {}
@@ -354,39 +286,31 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
                         "exemplar_vector_dimension": int(json_dict[constants.STORAGE_KEY_exemplar_vector_dimension]),
                         "trueClass_To_dCDF": None,
                         "trueClass_To_qCumulativeSampleSizeArray": None,
-                        "trueClass_To_unrescaledOutputCDF": None,
-                        "non_odd_thresholds": np.array(json_dict[constants.STORAGE_KEY_non_odd_thresholds]),
-                        "non_odd_class_conditional_accuracy": float(json_dict[constants.STORAGE_KEY_non_odd_class_conditional_accuracy]),
+                        "hr_output_thresholds": hr_output_thresholds,
+                        "hr_class_conditional_accuracy": float(json_dict[constants.STORAGE_KEY_hr_class_conditional_accuracy]),
                         "alpha": float(json_dict[constants.STORAGE_KEY_alpha]),
                         "maxQAvailableFromIndexer": int(json_dict[constants.STORAGE_KEY_maxQAvailableFromIndexer]),
                         "calibration_training_stage": int(json_dict[constants.STORAGE_KEY_calibration_training_stage]),
-                        "min_valid_qbin_for_class_conditional_accuracy": float(json_dict[constants.STORAGE_KEY_min_valid_qbin_for_class_conditional_accuracy]),
+                        "min_rescaled_similarity_to_determine_high_reliability_region": float(json_dict[constants.STORAGE_KEY_min_rescaled_similarity_to_determine_high_reliability_region]),
                         "training_embedding_summary_stats":
                             json_dict[constants.STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_summary_stats],
 
-                        "is_gen_ai": bool(json_dict[constants.STORAGE_KEY_is_gen_ai]),
-                        "gen_ai_vocab": int(json_dict[constants.STORAGE_KEY_gen_ai_vocab]),
-                        "global_embedding_size": int(json_dict[constants.STORAGE_KEY_global_embedding_size]),
-                        "composition_attributes_size": int(json_dict[constants.STORAGE_KEY_composition_attributes_size]),
-                        "top_logits_k": int(json_dict[constants.STORAGE_KEY_top_logits_k]),
+                        "is_sdm_network_verification_layer":
+                            bool(json_dict[constants.STORAGE_KEY_is_sdm_network_verification_layer]),
 
                         "calibration_labels": calibration_labels,  # torch tensor
                         "calibration_predicted_labels": calibration_predicted_labels,
                         "calibration_uuids": calibration_uuids,
-                        "calibration_unrescaled_CDFquantiles": calibration_unrescaled_CDFquantiles,
-                        "calibration_soft_qbins": calibration_soft_qbins,
+                        "calibration_sdm_outputs": calibration_sdm_outputs,
+                        "calibration_rescaled_similarity_values": calibration_rescaled_similarity_values,
                         "calibration_is_ood_indicators": calibration_is_ood_indicators,
-
-                        "gen_ai_model_lm_head_weights": None,
                         "train_trueClass_To_dCDF": None
                         }
         # the following are added after class init:
         # self.q_rescale_offset,
         # self.ood_limit
         # self.trueClass_To_dCDF
-        # self.trueClass_To_unrescaledOutputCDF
-        # self.train_trueClass_To_dCDF, if is_gen_ai
+        # self.train_trueClass_To_dCDF, if is_sdm_network_verification_layer
         return model_params, json_dict
 
     return None, None
-

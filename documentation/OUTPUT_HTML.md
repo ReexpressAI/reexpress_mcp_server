@@ -21,5 +21,5 @@ See the description of the `reexpress()` tool in [HOW_TO_USE.md](HOW_TO_USE.md#t
 
 Examples:
 - [Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_pos_example.html)
-- [Verified but out-of-distribution](example_output/html_output_examples/current_reexpression_pos_but_out_of_distribution.html)
-- [NOT Verified and confidence `< 90%`](example_output/html_output_examples/current_reexpression_neg_and_lower_confidence_example.html)
+- [Verified but confidence `< 90%`](example_output/current_reexpression_pos_and_lower_confidence_example.html)
+- [NOT Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_neg_example.html)

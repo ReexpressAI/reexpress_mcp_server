@@ -60,7 +60,7 @@ class MCPServerStateController:
         # load model
         self.main_device = torch.device("cpu")
         self.model = utils_model.load_model_torch(self.MODEL_DIR, torch.device("cpu"), load_for_inference=True)
-        self.global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(self.MODEL_DIR)
+        # self.global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(self.MODEL_DIR)
         # Data Access Manager: Controls file access and content sent directly to the verification LLMs
         self.mcp_file_access_manager_object = \
             mcp_utils_file_access_manager.ExternalFileController(mcp_server_dir=REEXPRESS_MCP_SERVER_REPO_DIR)
@@ -149,8 +149,7 @@ class MCPServerStateController:
                 reexpression_input = mcp_utils_data_format.construct_document_attributes_and_embedding(
                     gpt5_model_verification_dict,
                     gemini_model_verification_dict, agreement_model_embedding)
-                prediction_meta_data = mcp_utils_test.test(self.main_device, self.model,
-                                                           self.global_uncertainty_statistics, reexpression_input)
+                prediction_meta_data = mcp_utils_test.test(self.main_device, self.model, reexpression_input)
                 if prediction_meta_data is not None:
                     formatted_output_string = mcp_utils_test.format_sdm_estimator_output_for_mcp_tool(
                         prediction_meta_data, gpt5_model_explanation,
@@ -176,7 +175,7 @@ class MCPServerStateController:
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     agreement_model_classification=False,
-                    non_odd_class_conditional_accuracy=self.model.non_odd_class_conditional_accuracy))
+                    hr_class_conditional_accuracy=self.model.hr_class_conditional_accuracy))
             self.current_reexpression = None
         else:
             partial_reexpression["formatted_output_string"] = formatted_output_string
@@ -191,7 +190,7 @@ class MCPServerStateController:
 
     def get_nearest_match_meta_data(self):
         try:
-            nearest_support_idx = self.current_reexpression["prediction_meta_data"]["top_k_distances_idx"][0]
+            nearest_support_idx = self.current_reexpression["prediction_meta_data"]["nearest_training_idx"]
             nearest_support_document_id = self.model.train_uuids[nearest_support_idx]
             nearest_match_meta_data = self.support_db.get_document(nearest_support_document_id)
             # also add true labels and predictions
@@ -241,7 +240,7 @@ class MCPServerStateController:
 
             json_for_archive = {}
             reexpression_input = self.current_reexpression["reexpression_input"]
-            embedding = [float(x) for x in reexpression_input.squeeze().detach().numpy().tolist()]
+            embedding = [float(x) for x in reexpression_input.squeeze().detach().cpu().tolist()]
             json_for_archive[constants.REEXPRESS_ID_KEY] = document_id
             json_for_archive[constants.REEXPRESS_DOCUMENT_KEY] = ""
             json_for_archive[constants.REEXPRESS_LABEL_KEY] = label
@@ -275,11 +274,12 @@ class MCPServerStateController:
             # in such failures, or when a change to an adaptation is needed, it is always possible to reset to the original
             # database in the repo and then batch add (after any needed changes to the JSON) the file DATA_UPDATE_FILE,
             # and then restart the server. See the documentation.
+            print("entering add to support")
             self.model.add_to_support(label=label, predicted_label=prediction_meta_data["prediction"],
                                       document_id=document_id, exemplar_vector=exemplar_vector)
             message = "ERROR: Unable to save changes to the training set database. The cache has been cleared."
             utils_model.save_support_set_updates(self.model, self.MODEL_DIR)
-
+            print("did save support")
             # add to document database
             add_to_support_db_message = ""
             try:
@@ -294,7 +294,8 @@ class MCPServerStateController:
                     model2_classification_int=int(self.current_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION]),
                     model3_classification_int=0,
                     model4_classification_int=0,
-                    agreement_model_classification_int=int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]),
+                    agreement_model_classification_int=
+                    int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]),
                     label_int=label,
                     label_was_updated_int=0,
                     document_source="user_added",
@@ -336,15 +337,14 @@ class MCPServerStateController:
             mcp_utils_test.get_files_in_consideration_message(self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES])
         formatted_output_string = f"""
             {constants.predictedFull}: {constants.MCP_SERVER_VERIFIED_CLASS_LABEL if prediction_meta_data["prediction"] == 1 else constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL}\n
-            Out-of-distribution: {prediction_meta_data["is_ood_lower"]}\n
-            {constants.qFull}: {int(prediction_meta_data["original_q"])}\n
-            {constants.dFull} Quantile: {torch.min(prediction_meta_data["distance_quantiles"]).item()}\n
-            {constants.fFull}: {prediction_meta_data["f"].detach().numpy().tolist()}\n
-            Valid index-conditional estimate (at alpha'={prediction_meta_data["non_odd_class_conditional_accuracy"]}, min_valid_rescaled_q={prediction_meta_data["min_valid_qbin_for_class_conditional_accuracy_with_bounded_error"]}, class-wise output thresholds={prediction_meta_data["non_odd_thresholds"]}): {prediction_meta_data["is_valid_index_conditional__lower"]}\n
-            p(y | x)_lower: {prediction_meta_data["rescaled_prediction_conditional_distribution__lower"].detach().numpy().tolist()}\n
-            Rescaled q_lower: {prediction_meta_data["soft_qbin__lower"][0].item()}\n
-            Iterated offset_lower (for class {prediction_meta_data["prediction"]}): {prediction_meta_data["iterated_lower_offset__lower"]}\n
-            Effective sample size (by class): {prediction_meta_data["cumulative_effective_sample_sizes"].detach().numpy().tolist()}\n
+            Out-of-distribution: {prediction_meta_data["is_ood"]}\n
+            {constants.qFull}: {int(prediction_meta_data["q"])}\n
+            {constants.dFull} Quantile: {prediction_meta_data["d"]}\n
+            {constants.fFull}: {prediction_meta_data["f"].detach().cpu().tolist()}\n
+            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL} (at alpha={prediction_meta_data["hr_class_conditional_accuracy"]}, q'_min={prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]}, class-wise output thresholds={prediction_meta_data["hr_output_thresholds"]}): {prediction_meta_data["is_high_reliability_region"]}\n
+            p(y | x): {prediction_meta_data["sdm_output"].detach().cpu().tolist()}\n
+            q': {prediction_meta_data["rescaled_similarity"]}\n
+            Effective sample size (by class): {prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().tolist()}\n
             {files_in_consideration_message}
             ---------------\n
             {self.current_reexpression["formatted_output_string"]}

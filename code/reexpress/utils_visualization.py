@@ -30,29 +30,29 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         successfully_verified_html_class = "positive"
     else:
         successfully_verified_html_class = "negative"
-    is_valid_index_conditional__lower = prediction_meta_data.get("is_valid_index_conditional__lower", False)
-    is_ood_lower = prediction_meta_data.get("is_ood_lower", True)
-    is_ood_lower_html_class = "positive" if not is_ood_lower else "negative"
+    is_high_reliability_region = prediction_meta_data.get("is_high_reliability_region", False)
+    is_ood = prediction_meta_data.get("is_ood", True)
+    is_ood_html_class = "positive" if not is_ood else "negative"
     calibration_reliability = \
-        mcp_utils_test.get_calibration_reliability_label(is_valid_index_conditional__lower, is_ood_lower)
+        mcp_utils_test.get_calibration_reliability_label(is_high_reliability_region, is_ood)
 
     # Model Level
     try:
-        non_odd_class_conditional_accuracy = prediction_meta_data["non_odd_class_conditional_accuracy"]
-        min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = \
-            prediction_meta_data["min_valid_qbin_for_class_conditional_accuracy_with_bounded_error"]
-        non_odd_thresholds = \
-            prediction_meta_data["non_odd_thresholds"]
+        hr_class_conditional_accuracy = prediction_meta_data["hr_class_conditional_accuracy"]
+        min_rescaled_similarity_to_determine_high_reliability_region = \
+            prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]
+        hr_output_thresholds = \
+            prediction_meta_data["hr_output_thresholds"]
         support_index_ntotal = prediction_meta_data["support_index_ntotal"]
     except:
-        non_odd_class_conditional_accuracy = 0.0
-        min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = "N/A"
-        non_odd_thresholds = "N/A"
+        hr_class_conditional_accuracy = 0.0
+        min_rescaled_similarity_to_determine_high_reliability_region = "N/A"
+        hr_output_thresholds = "N/A"
         support_index_ntotal = "N/A"
 
     classification_confidence, classification_confidence_html_class = \
         mcp_utils_test.get_calibration_confidence_label(calibration_reliability=calibration_reliability,
-                                                        non_odd_class_conditional_accuracy=non_odd_class_conditional_accuracy,
+                                                        hr_class_conditional_accuracy=hr_class_conditional_accuracy,
                                                         return_html_class=True)
 
     model1_name = "gpt-5-2025-08-07"
@@ -86,29 +86,37 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
     # Uncertainty
     try:
-        rescaled_prediction_conditional_distribution__lower = \
-            prediction_meta_data["rescaled_prediction_conditional_distribution__lower"].detach().cpu().numpy().tolist()
+        sdm_output = \
+            prediction_meta_data["sdm_output"].detach().cpu().tolist()
         # TODO: Move this earlier to avoid duplication:
-        is_valid_index_conditional__lower = prediction_meta_data["is_valid_index_conditional__lower"]
-        is_valid_index_conditional__lower_html_class = "positive" if is_valid_index_conditional__lower else "negative"
-        soft_qbin__lower = prediction_meta_data["soft_qbin__lower"][0].item()
-        iterated_lower_offset__lower = prediction_meta_data["iterated_lower_offset__lower"]
+        is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
+        is_high_reliability_region_html_class = "positive" if is_high_reliability_region else "negative"
+        rescaled_similarity = prediction_meta_data["rescaled_similarity"]
         cumulative_effective_sample_sizes = \
-            prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().numpy().tolist()
+            prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().tolist()
 
-        similarity_q = int(prediction_meta_data["original_q"])
-        distance_d = torch.min(prediction_meta_data["distance_quantiles"]).item()
-        magnitude = prediction_meta_data["f"].detach().cpu().numpy().tolist()
+        similarity_q = int(prediction_meta_data["q"])
+        distance_d = prediction_meta_data["d"]
+        magnitude = prediction_meta_data["f"].detach().cpu().tolist()
+        # analysis of the effective sample size:
+        distance_d_lower = prediction_meta_data["d_lower"]
+        distance_d_upper = prediction_meta_data["d_upper"]
+        sdm_output_d_lower = prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()
+        sdm_output_d_upper = prediction_meta_data["sdm_output_d_upper"].detach().cpu().tolist()
     except:
-        rescaled_prediction_conditional_distribution__lower = "N/A"
-        is_valid_index_conditional__lower = False
-        soft_qbin__lower = "N/A"
-        iterated_lower_offset__lower = "N/A"
-        is_valid_index_conditional__lower_html_class = "negative"
+        sdm_output = "N/A"
+        is_high_reliability_region = False
+        rescaled_similarity = "N/A"
+        is_high_reliability_region_html_class = "negative"
         cumulative_effective_sample_sizes = "N/A"
         similarity_q = "N/A"
         distance_d = "N/A"
         magnitude = "N/A"
+        # analysis of the effective sample size:
+        distance_d_lower = "N/A"
+        distance_d_upper = "N/A"
+        sdm_output_d_lower = "N/A"
+        sdm_output_d_upper = "N/A"
 
     user_question = html.escape(current_reexpression.get(constants.REEXPRESS_QUESTION_KEY, ''))
     ai_response = html.escape(current_reexpression.get(constants.REEXPRESS_AI_RESPONSE_KEY, ''))
@@ -198,44 +206,26 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">{rescaled_prediction_conditional_distribution__lower}</div>
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">{sdm_output}</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
-                    <div class="field-label">Valid Index-Conditional Estimate</div>
+                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}</div>
                     <div class="field-value">
-                        <span class="tag tag-{is_valid_index_conditional__lower_html_class}">{is_valid_index_conditional__lower}</span>
+                        <span class="tag tag-{is_high_reliability_region_html_class}">{is_high_reliability_region}</span>
                     </div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
-                        <span class="tag tag-{is_ood_lower_html_class}">{is_ood_lower}</span>
+                        <span class="tag tag-{is_ood_html_class}">{is_ood}</span>
                     </div>
                 </div>
                 <div class="field-box">
-                    <div class="field-label">Rescaled q_lower, <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sub style="font-size: 0.7em;">lower</sub>)
-                        </span></div>
-                    <div class="field-value">{soft_qbin__lower}</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Iterated offset_lower (for class {predicted_class}), 
-                        <span class="math-operator-m">
-                            m
-                            <span class="math-superscript-hat-y">ŷ</span>
-                            <span class="math-subscript-floor">
-                                ⌊<span class="qtilde-small">q</span>⌋
-                            </span>
-                        </span>
-                    </div>
-                    <div class="field-value">{iterated_lower_offset__lower}</div>
-                </div>
-                <div class="field-box">
-                    <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">{cumulative_effective_sample_sizes}</div>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">{rescaled_similarity}</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -248,7 +238,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
                 <div class="field-box">
                     <div class="field-label">
-                        {constants.dFull} Quantile
+                        {constants.dQuantileFull}
                     </div>
                     <div class="field-value">{distance_d}</div>
                 </div>
@@ -262,32 +252,61 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
             </div>
         </div>
 
+        <div class="section" style="margin-left: 40px;">
+            <div class="section-title">Analysis of the Effective Sample Size</div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_lower</div>
+                <div class="field-value">{sdm_output_d_lower}</div>
+            </div>
+            <div class="field-box" style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)_upper</div>
+                <div class="field-value">{sdm_output_d_upper}</div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">Effective Sample Size (by class)</div>
+                    <div class="field-value">{cumulative_effective_sample_sizes}</div>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        {constants.dQuantileLowerFull}
+                    </div>
+                    <div class="field-value">{distance_d_lower}</div>
+                </div>
+
+                <div class="field-box">
+                    <div class="field-label">
+                        {constants.dQuantileUpperFull}
+                    </div>
+                    <div class="field-value">{distance_d_upper}</div>
+                </div>
+            </div>
+        </div>
         <div class="section">
             <div class="section-title">SDM Estimator (Model-level) Details</div>
             <div class="field-grid">
             
                 <div class="field-box">
                     <div class="field-label">
-                        α'
+                        α
                     </div>
-                    <div class="field-value">{non_odd_class_conditional_accuracy}</div>
+                    <div class="field-value">{hr_class_conditional_accuracy}</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Min valid rescaled q
-                        <span style="font-family: 'Times New Roman', serif;">
-                            (<span class="math-qtilde">q</span><sup style="font-size: 0.7em;">γ</sup><sub style="font-size: 0.7em;">min</sub>)
-                        </span>
+                        Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">{min_valid_qbin_for_class_conditional_accuracy_with_bounded_error}</div>
+                    <div class="field-value">{min_rescaled_similarity_to_determine_high_reliability_region}</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
-                        Class-wise output thresholds (ψ)
+                        Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">{non_odd_thresholds}</div>
+                    <div class="field-value">{hr_output_thresholds}</div>
                 </div>
                 
                 <div class="field-box">
@@ -320,7 +339,8 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
             <div class="section-title">Legend</div>
             <div class="legend-content">
                 <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                
+                <p>The classification is in the {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE} when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

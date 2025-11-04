@@ -13,17 +13,9 @@ import utils_preprocess
 def batch_support_update(options, main_device):
     if options.skip_updates_already_in_support:
         # In this case, we also need to load the calibration set document id's.
-        model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=False)
+        model = utils_model.load_model_torch(options.model_dir, main_device, load_for_inference=False)
     else:
-        model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
-    global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(options.model_dir)
-
-    min_valid_qbin_for_class_conditional_accuracy_with_bounded_error = \
-        global_uncertainty_statistics.get_min_valid_qbin_with_bounded_error(
-            model.min_valid_qbin_for_class_conditional_accuracy)
-
-    predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin = \
-        global_uncertainty_statistics.get_summarized_output_magnitude_structure_with_bounded_error_lower_offset_by_bin()
+        model = utils_model.load_model_torch(options.model_dir, main_device, load_for_inference=True)
 
     print(f"Current support set cardinality: {model.support_index.ntotal}")
     test_meta_data, _ = \
@@ -32,8 +24,8 @@ def batch_support_update(options, main_device):
                                             use_embeddings=options.use_embeddings,
                                             concat_embeddings_to_attributes=options.concat_embeddings_to_attributes,
                                             calculate_summary_stats=False, is_training=False)
-    test_embeddings = test_meta_data["embeddings"].to(main_device)
-    test_labels = torch.tensor(test_meta_data["labels"]).to(main_device)
+    test_embeddings = test_meta_data["embeddings"]
+    test_labels = torch.tensor(test_meta_data["labels"])
     document_ids = test_meta_data["uuids"]
 
     assert test_embeddings.shape[0] == test_labels.shape[0]
@@ -46,14 +38,10 @@ def batch_support_update(options, main_device):
                 continue
         true_test_label = test_label.item()
         prediction_meta_data = \
-            model(test_embedding.unsqueeze(0),
-                  forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR,
-                  min_valid_qbin_for_class_conditional_accuracy_with_bounded_error=
-                  min_valid_qbin_for_class_conditional_accuracy_with_bounded_error,
-                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin=
-                  predicted_class_to_bin_to_output_magnitude_with_bounded_error_lower_offset_by_bin)
+            model(test_embedding.unsqueeze(0).to(main_device),
+                  forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR)
 
-        exemplar_vector = prediction_meta_data["exemplar_vector"]
+        exemplar_vector = prediction_meta_data["exemplar_vector"].detach().cpu().numpy()
         model.add_to_support(label=true_test_label, predicted_label=prediction_meta_data["prediction"],
                              document_id=document_id, exemplar_vector=exemplar_vector)
 
@@ -63,6 +51,8 @@ def batch_support_update(options, main_device):
     assert len(model.train_uuids) == support_set_cardinality
     utils_model.save_support_set_updates(model, options.model_dir)
     print(f"Updated support set cardinality: {model.support_index.ntotal}")
+    print(f"Note that this does not update the distance quantiles, nor the thresholds on the HR region. "
+          f"This is intended for small, local changes. For more substantive changes, retrain the model.")
     if options.skip_updates_already_in_support:
         print(f"Count of skipped document id's already in the support set or calibration set: "
               f"{count_already_present_documents}")

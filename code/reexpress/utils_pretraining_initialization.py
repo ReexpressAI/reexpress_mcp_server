@@ -22,26 +22,38 @@ def load_pretraining_initialization_tensors(pretraining_initialization_tensors_f
 
 def pretrain(options, model=None, model_dir=None,
              held_out_embeddings=None,
-             held_out_labels=None):
-    # currently this runs on options.aux_device
-    current_device = torch.device(options.aux_device)
-    total_epochs = options.pretraining_initialization_epochs
-    print(f"Pretraining initialization for {total_epochs} epochs on {current_device}")
+             held_out_labels=None,
+             train_embeddings=None,
+             train_labels=None,
+             pretraining_learning_rate=None,
+             return_min_held_out_balanced_loss=False, main_device=None, use_main_device=False):
+    device_label = "main_device"
+    if use_main_device:
+        assert main_device is not None
+        current_device = main_device
+    else:
+        device_label = "aux_device"
+        current_device = torch.device(options.aux_device)
+    if options.is_baseline_adaptor:
+        total_epochs = options.epoch
+        print(f"Training baseline CNN adaptor for {total_epochs} epochs on {current_device} ({device_label})")
+    else:
+        total_epochs = options.pretraining_initialization_epochs
+        print(f"Pretraining initialization for {total_epochs} epochs on {current_device} ({device_label})")
     assert model is not None
     model = model.to(current_device)
-    if model.is_gen_ai:
-        print(f"FREEZING LLM DISTRIBUTION WEIGHTS")
-        model.fc_negative.weight.requires_grad = False
-        model.fc_positive.weight.requires_grad = False
-        model.fc_original.weight.requires_grad = False
 
-    train_embeddings, train_labels = \
-        load_pretraining_initialization_tensors(options.pretraining_initialization_tensors_file)
+    if train_embeddings is None:
+        train_embeddings, train_labels = \
+            load_pretraining_initialization_tensors(options.pretraining_initialization_tensors_file)
     train_size = train_embeddings.shape[0]
 
-    print(f"Starting pretraining over {train_size} instances")
+    if pretraining_learning_rate is None:
+        pretraining_learning_rate = options.pretraining_learning_rate
+
+    print(f"Starting pretraining over {train_size} instances with LR={pretraining_learning_rate}")
     parameters = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = optim.Adam(parameters, lr=options.pretraining_learning_rate, betas=(0.9, 0.999), eps=1e-08)
+    optimizer = optim.Adam(parameters, lr=pretraining_learning_rate, betas=(0.9, 0.999), eps=1e-08)
 
     criterion = nn.NLLLoss()
     all_epoch_cumulative_losses = []
@@ -127,16 +139,22 @@ def pretrain(options, model=None, model_dir=None,
         model.conv.bias = nn.Parameter(best_model_conv_bias)
         model.fc.weight = nn.Parameter(best_model_fc_weight)
         model.fc.bias = nn.Parameter(best_model_fc_bias)
-    return model
+    if return_min_held_out_balanced_loss:
+        return model, min_held_out_balanced_loss, min_held_out_balanced_loss_epoch
+    else:
+        return model
 
 
 def get_loss_over_heldout_data(options, model,
                                held_out_embeddings,
                                held_out_labels,
                                current_device):
-    if current_device == torch.device('mps'):
+    transfer_to_cpu = current_device == torch.device('mps')
+    if transfer_to_cpu:
         # The scatter operations are not currently implemented on mps, so we need to move to cpu for the time being:
+        original_current_device = current_device
         current_device = torch.device('cpu')
+        model = model.to(torch.device('cpu'))
     criterion = nn.NLLLoss(reduction="none")
     batch_size = options.batch_size
     default_training_q_values = torch.zeros(held_out_embeddings.shape[0], 1) + (np.e - model.q_rescale_offset)
@@ -182,4 +200,6 @@ def get_loss_over_heldout_data(options, model,
                                 running_loss_sum_by_class / running_class_counts,
                                 torch.zeros_like(running_loss_sum_by_class, device=current_device))
     balanced_loss = per_class_avg.mean()
+    if transfer_to_cpu:
+        model = model.to(original_current_device)
     return [float(x) for x in per_class_avg.detach().cpu().numpy().tolist()], balanced_loss.item()
