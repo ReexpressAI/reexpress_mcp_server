@@ -143,7 +143,7 @@ def main():
 
     if options.recalibrate_with_updated_alpha:
         print(f"Reloading best model to calibrate based on the provided alpha value.")
-        _, _ = utils_calibrate.calibrate_to_determine_high_reliability_region(options, model_dir=options.model_dir)
+        utils_calibrate.calibrate_to_determine_high_reliability_region(options, model_dir=options.model_dir)
 
     if options.is_baseline_adaptor:
         import baseline_utils_test
