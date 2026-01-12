@@ -94,11 +94,17 @@ css_style = f"""
             color: #155724;
             border: 1px solid #c3e6cb;
         }}
-        
+                
         .tag-caution {{
             background-color: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
+        }}
+
+        .tag-near-random-chance {{
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }}
         
         .tag-negative {{

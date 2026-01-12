@@ -189,6 +189,8 @@ CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_SHORT_ABBREVIATED = "HR"
 
 CALIBRATION_RELIABILITY_LABEL_HIGHEST = "Highest"  # valid index-conditional
 CALIBRATION_RELIABILITY_LABEL_LOW = "Low"
+CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE = "Near Chance"
+CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE_THRESHOLD = 0.6
 CALIBRATION_RELIABILITY_LABEL_OOD = "Lowest"  # (Out-of-distribution)
 
 # JSON keys
@@ -268,9 +270,16 @@ MCP_SERVER_VERIFIED_CLASS_LABEL = "Verified"
 
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
-REEXPRESS_MCP_SERVER_VERSION = "2.0.0"  # see also ProgramIdentifiers_version for the classifier
+MCP_SERVER_MODEL1_NAME = "gpt-5.2-2025-12-11"
+MCP_SERVER_MODEL2_NAME = "gemini-3-pro-preview"
+MCP_SERVER_AGREEMENT_MODEL_NAME = "granite-3.3-8b-instruct"
+# The following two variables are fallbacks for use in mcp_utils_llm_api.py if the corresponding environment variables
+# (MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH and MCP_SERVER_AGREEMENT_MODEL_DEVICE) are not set:
+MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
+MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
-# USE_GPU_FAISS_INDEX = False  # this is now determined automatically by main_device
+REEXPRESS_MCP_SERVER_VERSION = "2.1.0"  # see also ProgramIdentifiers_version for the classifier
+
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,
 # since future versions will enable additional operations on user-added documents, where the distinction from

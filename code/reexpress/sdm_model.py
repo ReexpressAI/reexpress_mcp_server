@@ -74,7 +74,7 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
         self.version = version
         self.uncertaintyModelUUID = uncertaintyModelUUID
-        self.cdfThresholdTolerance = cdfThresholdTolerance
+        self.cdfThresholdTolerance = cdfThresholdTolerance  # TODO: This is no longer used.
         self.numberOfClasses = numberOfClasses
 
         # If shuffled, all must be shuffled together.
@@ -146,10 +146,6 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         self.support_index = None
 
         self.calibration_training_stage = calibration_training_stage
-
-        # self.kEPS = 1e-12  # Apple M2 Ultra;
-        # adjust as applicable for platform; conservatively can use, for example, torch.finfo(torch.float32).eps
-        self.kEPS = torch.finfo(torch.float32).eps
 
     @property
     def device(self):
@@ -290,13 +286,20 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         q_factor = self.q_rescale_offset + q
         return q_factor ** batch_input
 
-    def soft_sdm_max(self, batch_input, q, distance_quantile_per_class=None, log=False, change_of_base=True):
+    def soft_sdm_max(self, batch_input, q, distance_quantile_per_class=None, log=False,
+                     change_of_base=True):
         """
-        Instead of softmax e^val/sum(e^val), we normalize via q^(val_y*(1-CDF(d)_y))/sum(q^(val_y*(1-CDF(d)_y)),
+        Instead of standard softmax e^val/sum(e^val), this normalizes via
+        q^(val_y*(1-CDF(d_nearest)_y))/sum(q^(val_y*(1-CDF(d_nearest)_y)),
         increasing the relative amplification/sharpness of the distribution for higher Similarity (q) values
-        and lower distances (d). distance_quantile_per_class is assumed to be the same across classes; in this way,
-        the argmax does not change relative to argmax(batch_input, dim=1). In practice, it typically is
-        recommended to take the min across classes as the distance quantile and use the same value across classes.
+        and larger Distance quantiles (d). Each column of distance_quantile_per_class for a given row must be the same
+        value; in the canonical SDM activation, each value is the min distance quantile across classes for a given
+        instance.
+
+        In this version, as a best practice, we avoid reimplementing numerical stability code and
+        instead use standard softmax in Pytorch
+        by using the relation (2+q)^(z'*d) == e^(z'*d*log_e(2+q)), given that 2+q > 0. The change of base is
+        achieved by multiplying by the factor 1/log_e(2+q) prior to calculating the loss.
 
         Parameters
         ----------
@@ -310,7 +313,8 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             is typical), use q=torch.tensor([[torch.e-2],...]).
         distance_quantile_per_class
             torch.tensor, or None
-            If not None, shape == [batch size, self.numberOfClasses], with each quantile in [0,1].
+            If not None, shape == [batch size, self.numberOfClasses], with each quantile in [0,1]. Each column of
+            a given row must contain the same value.
         log
             If True, take the log (useful for training)
         change_of_base
@@ -331,22 +335,19 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         if distance_quantile_per_class is not None:
             assert batch_input.shape == distance_quantile_per_class.shape
         q_factor = self.q_rescale_offset + q
-        batch_input = batch_input - torch.amax(batch_input, dim=1, keepdim=True)  # for numerical stability
+        log_q_factor = torch.log(q_factor)
         if distance_quantile_per_class is not None:
-            rescaled_distribution = q_factor ** (batch_input * distance_quantile_per_class)
+            scaled_logits = batch_input * distance_quantile_per_class * log_q_factor
         else:
-            rescaled_distribution = q_factor ** batch_input
-        if log:  # log_base{q}
-            # self.kEPS  # for numerical stability
-            rescaled_distribution = torch.log(rescaled_distribution+self.kEPS) - \
-                                    torch.log(torch.sum(rescaled_distribution, dim=1)+self.kEPS).unsqueeze(1)
+            scaled_logits = batch_input * log_q_factor
+        if log:
+            log_probs = torch.nn.functional.log_softmax(scaled_logits, dim=-1)  # log_softmax for numerical stability
             if change_of_base:
-                # q_factor is always at least self.q_rescale_offset = 2
-                return rescaled_distribution / torch.log(q_factor)
+                return log_probs / log_q_factor
             else:
-                return rescaled_distribution
+                return log_probs
         else:
-            return rescaled_distribution / torch.sum(rescaled_distribution, dim=1).unsqueeze(1)
+            return torch.softmax(scaled_logits, dim=-1)
 
     def get_quantile(self, float_list, quantileProportion: float):
         quantileIndex = min(int(quantileProportion * len(float_list)), len(float_list) - 1)
@@ -1168,9 +1169,13 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             self.train_trueClass_To_dCDF = {}
 
 # Internal notes: When re-implementing in other languages, here are some things to remember to check:
-# - Always use true class for the main CDF structures when collecting the original statistics over the calibration set;
-# - Remember to properly address prediction flips (which can happen when the model goes to parity)
-# - Don't forget to sort cdf structures;
-# - Properly handle the boundaries of determining the quantiles
+# - Always use the ground-truth class for the main CDF structures when collecting the original statistics over
+#   the calibration set.
+# - Remember to properly address prediction flips, which can happen when the SDM output goes to parity when d=0. This
+#   is straightforward to address: As in the original paper, the predicted class is always determined by the
+#   argmax over z'.
+# - Don't forget to sort the CDF structures.
+# - Properly handle the boundaries when determining the distance quantiles. See the note in the appendix of the
+#   original paper.
 # - Currently we are inconsistent with variable casing, as a consequence of simplifying conversions
 #    between the Swift and Python codebases. (Swift and Python use different conventions.)

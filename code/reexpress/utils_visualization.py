@@ -31,10 +31,17 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
     else:
         successfully_verified_html_class = "negative"
     is_high_reliability_region = prediction_meta_data.get("is_high_reliability_region", False)
-    is_ood = prediction_meta_data.get("is_ood", True)
+    # 2026-01-10: Added prediction_meta_data["d"] == 0.0. (See note in mcp_utils_test.py.)
+    # is_ood = prediction_meta_data.get("is_ood", True)
+    is_ood = prediction_meta_data.get("is_ood", True) or prediction_meta_data.get("d", 0.0) == 0.0
     is_ood_html_class = "positive" if not is_ood else "negative"
+
+    sdm_output_for_predicted_class = \
+        prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
+
     calibration_reliability = \
-        mcp_utils_test.get_calibration_reliability_label(is_high_reliability_region, is_ood)
+        mcp_utils_test.get_calibration_reliability_label(is_high_reliability_region, is_ood,
+                                                         sdm_output_for_predicted_class=sdm_output_for_predicted_class)
 
     # Model Level
     try:
@@ -55,9 +62,9 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
                                                         hr_class_conditional_accuracy=hr_class_conditional_accuracy,
                                                         return_html_class=True)
 
-    model1_name = "gpt-5-2025-08-07"
-    model2_name = "gemini-2.5-pro"
-    agreement_model_name = "granite-3.3-8b-instruct"
+    model1_name = html.escape(constants.MCP_SERVER_MODEL1_NAME)
+    model2_name = html.escape(constants.MCP_SERVER_MODEL2_NAME)
+    agreement_model_name = html.escape(constants.MCP_SERVER_AGREEMENT_MODEL_NAME)
 
     model1_classification = current_reexpression.get(constants.REEXPRESS_MODEL1_CLASSIFICATION, False)
     model2_classification = current_reexpression.get(constants.REEXPRESS_MODEL2_CLASSIFICATION, False)
@@ -125,8 +132,6 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
     try:
         assert nearest_match_meta_data is not None
         nearest_match_html_string = nearest_match_html(nearest_match_meta_data,
-                                                       model1_name,
-                                                       model2_name,
                                                        agreement_model_name,
                                                        content_is_html_escaped=nearest_match_meta_data_is_html_escaped)
     except:
@@ -154,7 +159,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Successfully Verified (Prediction)</div>
                 <div class="field-value">
-                    <div class="field-value"><span class="tag tag-{successfully_verified_html_class}">{successfully_verified}</span></div>
+                    <span class="tag tag-{successfully_verified_html_class}">{successfully_verified}</span>
                 </div>
             </div>
 
@@ -180,7 +185,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
             <div class="explanation-box-{agreement_model_html_class}">
                 <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
-                <div>{constants.AGREEMENT_MODEL_USER_FACING_PROMPT}</div>
+                <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
                 <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
             </div>
         </div>
@@ -369,8 +374,6 @@ def escape_html(content, content_is_html_escaped=False):
 
 
 def nearest_match_html(nearest_match_meta_data,
-                       model1_name,
-                       model2_name,
                        agreement_model_name,
                        content_is_html_escaped=False):
     # Use content_is_html_escaped=True when you know the fields have already been escaped with html.escape() (e.g.,
@@ -385,11 +388,19 @@ def nearest_match_html(nearest_match_meta_data,
         successfully_verified_html_class = "negative"
 
     if true_label == 1:
-        true_class_string_label = constants.MCP_SERVER_VERIFIED_CLASS_LABEL
+        true_class_string_label = html.escape(constants.MCP_SERVER_VERIFIED_CLASS_LABEL)
         true_class_html_class = "positive"
     else:
-        true_class_string_label = constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL
+        true_class_string_label = html.escape(constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL)
         true_class_html_class = "negative"
+
+    try:
+        model_names_list = nearest_match_meta_data.get("info", "unavailable,unavailable").strip().split(",")
+        model1_name = html.escape(model_names_list[0].strip())
+        model2_name = html.escape(model_names_list[1].strip())
+    except:
+        model1_name = "unavailable"
+        model2_name = "unavailable"
 
     model1_classification = nearest_match_meta_data.get("model1_classification_int", -1) == 1
     model2_classification = nearest_match_meta_data.get("model2_classification_int", -1) == 1
@@ -433,7 +444,7 @@ def nearest_match_html(nearest_match_meta_data,
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Successfully Verified (Prediction)</div>
                         <div class="field-value">
-                            <div class="field-value"><span class="tag tag-{successfully_verified_html_class}">{successfully_verified}</span></div>
+                            <span class="tag tag-{successfully_verified_html_class}">{successfully_verified}</span>
                         </div>
                     </div>
         
@@ -459,7 +470,7 @@ def nearest_match_html(nearest_match_meta_data,
                     
                 <div class="explanation-box-{agreement_model_html_class}">
                     <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
-                    <div>{constants.AGREEMENT_MODEL_USER_FACING_PROMPT}</div>
+                    <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
                     <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
                 </div>
                 

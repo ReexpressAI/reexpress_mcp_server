@@ -1,5 +1,18 @@
 # Changelog: Reexpress Model-Context-Protocol (MCP) Server
 
+## What's new in version 2.1.0
+
+Version 2.1.0 uses gpt-5.2-2025-12-11 and gemini-3-pro-preview as the model ensemble, replacing gpt-5-2025-08-07 and gemini-2.5-pro. 
+
+We have refined the coarse-grained confidence labels to the following:
+
+- ` >= 90% `
+- ` <= 89% (use with caution) `
+- ` < 60% (approaching random chance, so use with caution) `
+- ` Out-of-distribution (unreliable) `
+
+In particular, sometimes tool-calling LLMs would misinterpret the previous `< 90%` as ~"at least ninety percent". The coarse labels are intended to simplify interpretation by the tool-calling LLMs; the estimate of p(y|x) without any rounding is always available via ReexpressView and in the HTML output. (Test-time search strategies that need to access the Pytorch vector directly can use the "sdm_output" key, along with "is_high_reliability_region" and "prediction", in the results dictionary from the underlying SDM estimator. If you need help with this, let us know!)
+
 ## What's new in version 2.0.0
 
 Version 2.0.0 introduces our updated formulation of the SDM estimator. The SDM activation function remains the same, but the calibration method for the SDM estimator is simplified while retaining the desirable properties of the earlier version that had an additional rescaling transform. You can read about this version in our publications (see the citations included in README.md). Moving forward, the convention is to refer to this version as the canonical "SDM estimator".

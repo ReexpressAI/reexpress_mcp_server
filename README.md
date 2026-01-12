@@ -1,5 +1,5 @@
 # Reexpress Model-Context-Protocol (MCP) Server
-### For tool-calling LLMs (e.g., Claude Opus 4.1 or Sonnet 4.5) and MCP clients running on macOS (Sequoia 15 or later on Apple silicon) or Linux
+### For tool-calling LLMs (e.g., Claude Opus 4.5 or Sonnet 4.5) and MCP clients running on macOS (Sequoia 15 or later on Apple silicon) or Linux
 
 ### Video overview[^1]: [Here](https://youtu.be/PaWrTFPJv2M)
 
@@ -11,18 +11,16 @@
 
 Reexpress MCP Server is a drop-in solution to add state-of-the-art statistical verification to your complex LLM pipelines, as well as your everyday use of LLMs for search and QA for **software development and data science settings**. It's the first reliable, statistically robust AI second opinion for your AI workflows.
 
-Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. The tool-calling LLM (e.g., Anthropic's LLM model Claude Opus 4.1) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-5-2025-08-07, gemini-2.5-pro, and granite-3.3-8b-instruct (run locally), along with the output from the tool-calling LLM, and calculates a robust estimate of the predictive uncertainty against a database of training and calibration examples from the OpenVerification1 dataset. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability. We also include the training scripts for the model, so that you can run a full retraining when more substantive changes are needed, or you want to use alternative underlying LLMs.
+Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. The tool-calling LLM (e.g., Anthropic's LLM model Claude Opus 4.5) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-5.2-2025-12-11, gemini-3-pro-preview, and granite-3.3-8b-instruct (run locally), along with the output from the tool-calling LLM, and calculates a robust estimate of the predictive uncertainty against a database of training and calibration examples from the OpenVerification1 dataset. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability. We also include the training scripts for the model, so that you can run a full retraining when more substantive changes are needed, or you want to use alternative underlying LLMs.
 
 > [!NOTE]
 > In addition to providing you (the user) with a principled estimate of confidence in the output given your instructions, the tool-calling LLM itself can use the verification output to progressively refine its answer, determine if it needs additional outside resources or tools, or has reached an impasse and needs to ask you for further clarification or information. That's what we call **reasoning with SDM verification** --- an entirely new capability in the AI toolkit that we think will open up a much broader range of use-cases for LLMs and LLM agents, for both individuals and enterprises.
 
-Data is only sent via standard LLM API calls to Azure/OpenAI and Google; all of the processing for the SDM estimator is done locally on your computer. (Optionally, we recommend providing access to web search via your MCP client, such as via Claude Desktop or a web-search MCP server, or for closed-domain settings, access to domain-specific retrieval.) Reexpress MCP has a simple and conservative, but effective, file access system: You control which additional files (if any) get sent to the LLM APIs by explicitly specifying files via the file-access tools ReexpressDirectorySet() and ReexpressFileSet().
+Data is only sent via standard LLM API calls to Azure/OpenAI and Google, with the gemini-3-pro-preview calls given standard web search access through the API; all of the processing for the SDM estimator is done locally on your computer. Reexpress MCP has a simple and conservative, but effective, file access system: You control which additional files (if any) get sent to the LLM APIs by explicitly specifying files via the file-access tools ReexpressDirectorySet() and ReexpressFileSet().
 
-## What's new in version 2.0.0
+## What's new in version 2.1.0
 
-Version 2.0.0 introduces our updated formulation of the SDM estimator. The SDM activation function remains the same, but the calibration method for the SDM estimator is simplified while retaining the desirable properties of the earlier version that had an additional rescaling transform. You can read about this version in our publications [below](#citation). Moving forward, the convention is to refer to this version as the canonical "SDM estimator".
-
-Separately, we have also refactored and rewritten the code to dramatically improve efficiency, enabling scaling to much larger datasets and training SDM language models, the code for which is also included here (see our paper below and the separate research [repo](https://github.com/ReexpressAI/sdm_activations) for details). 
+Version 2.1.0 uses gpt-5.2-2025-12-11 and gemini-3-pro-preview as the model ensemble, replacing gpt-5-2025-08-07 and gemini-2.5-pro. Additional notes in [changelog.md](changelog.md). 
 
 ## System Requirements
 
@@ -92,4 +90,4 @@ If you find this software useful, consider citing the following papers:
 }
 ```
 
-[^1]: The output format has changed since v1.0.0 used in the video. See [What's new in version 2.0.0](#whats-new-in-version-200)
+[^1]: The output format has changed since v1.0.0 used in the video. See [changelog.md](changelog.md).

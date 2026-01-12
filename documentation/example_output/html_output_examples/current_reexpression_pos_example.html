@@ -99,11 +99,17 @@
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        
+                
         .tag-caution {
             background-color: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
+        }
+
+        .tag-near-random-chance {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         
         .tag-negative {
@@ -379,7 +385,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.0.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.1.0)</span>
         </div>
 
         <div class="section">
@@ -388,7 +394,7 @@
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Successfully Verified (Prediction)</div>
                 <div class="field-value">
-                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                    <span class="tag tag-positive">True</span>
                 </div>
             </div>
 
@@ -398,18 +404,18 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>User asks whether the newly added nearest_match_html() function in the attached Python file constructs valid HTML. The AI response says yes, citing that the function returns a well-formed HTML fragment with proper nesting and closing of tags, correct HTML escaping of dynamic content, and appropriate dynamic CSS class assignments.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>The question asks whether the newly added nearest_match_html() function produces valid HTML, focusing specifically on balanced &lt;div&gt; tags (and noting True/False literal output is intended). The AI response answers &quot;Yes&quot; and claims the &lt;div&gt; tags are properly balanced and nested.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>I inspected the provided nearest_match_html() function in the attached code. It builds an HTML fragment wrapped in a div with class &quot;nearest-match-box&quot; and includes properly nested div elements for sections, field grids, labels, and values. All opened tags are closed in the correct order, and user-supplied content is escaped using the escape_html() helper. Dynamic CSS classes (positive/negative) are derived from booleans and applied consistently. This is a factual, non-subjective assessment and does not depend on recent information; it is based solely on the code the user provided, so I am highly confident the AI response correctly answers the question.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>Reviewing the nearest_match_html() f-string shows each opened &lt;div&gt; (nearest-match-box, outer section, two field-grid blocks, each field-box, explanation-boxes, and inner prompt/response sections) has a corresponding closing &lt;/div&gt; in proper nesting order. The boolean interpolation yielding &quot;True&quot;/&quot;False&quot; is normal and does not affect HTML validity. This is directly verifiable from the provided code.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The user&#x27;s question is a code analysis question that can be answered by analyzing the provided file. The AI&#x27;s response correctly analyzes the `nearest_match_html` function, noting the use of an f-string to build the HTML, the proper nesting and closing of tags, and the crucial use of an `escape_html` helper function to handle dynamic content safely. The reasoning is sound and directly supported by the code.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
+                <div>The AI response correctly analyzes the provided Python code, specifically the `nearest_match_html` function. It accurately verifies that the HTML structure defined in the f-string has properly balanced `div` tags and that user content is escaped using `html.escape`. The logic provided in the response (checking for start/end tags and nesting) aligns with the code structure.</div>
             </div>
 
             <div class="explanation-box-positive">
@@ -431,7 +437,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-11-04 14:48:19</div>
+                    <div class="field-value">2026-01-11 23:16:32</div>
                 </div>
                 
             </div>
@@ -441,7 +447,7 @@
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.0002515613741707057, 0.9997484087944031]</div>
+                <div class="field-value">[0.032342903316020966, 0.9676571488380432]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
@@ -459,7 +465,7 @@
                 </div>
                 <div class="field-box">
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">30.0</div>
+                    <div class="field-value">128.3815460205078</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -467,21 +473,21 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">30</div>
+                    <div class="field-value">149</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.446249783039093</div>
+                    <div class="field-value">0.11757844686508179</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-2.850944995880127, 2.507685661315918]</div>
+                    <div class="field-value">[-2.3162176609039307, 3.4446659088134766]</div>
                 </div>
             </div>
         </div>
@@ -490,16 +496,16 @@
             <div class="section-title">Analysis of the Effective Sample Size</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.000311644485918805, 0.9996883869171143]</div>
+                <div class="field-value">[0.04019377380609512, 0.9598062634468079]</div>
             </div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.00020305953512433916, 0.9997969269752502]</div>
+                <div class="field-value">[0.025984004139900208, 0.9740160703659058]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[11256.0, 15825.0]</div>
+                    <div class="field-value">[24617.0, 39756.0]</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -507,14 +513,14 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.43471407890319824</div>
+                    <div class="field-value">0.1097780093550682</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.4577854871749878</div>
+                    <div class="field-value">0.12537887692451477</div>
                 </div>
             </div>
         </div>
@@ -533,21 +539,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">6.595553398132324</div>
+                    <div class="field-value">6.207298755645752</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9002129435539246, 0.9067675471305847]</div>
+                    <div class="field-value">[0.9000474810600281, 0.9008400440216064]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">74684</div>
+                    <div class="field-value">120158</div>
                 </div>
             </div>
         </div>
@@ -555,22 +561,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">The attached file creates a static HTML page from python dictionaries. Does the newly added nearest_match_html() function construct valid HTML?</div>
+            <div class="prompt-box">The attached file creates a static HTML page from python dictionaries. Does the newly added nearest_match_html() function construct valid HTML? Note: The boolean True or False as literal text is the intention. Focus on whether div tags are properly balanced, not the exact count.</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal reasoning; /mnt/user-data/uploads/utils_visualization.py, lines 371-488]: The nearest_match_html() function is defined starting at line 371 and returns an HTML string at line 488;
-
-Reference [2, internal reasoning; /mnt/user-data/uploads/utils_visualization.py, lines 427-487]: The function constructs an f-string containing HTML markup with proper opening and closing div tags, nested structure, and dynamic content insertion;
-
-Reference [3, internal reasoning; /mnt/user-data/uploads/utils_visualization.py, lines 408-425]: The function properly escapes HTML content using the escape_html() helper function for user inputs and metadata values to prevent XSS vulnerabilities;
-
-Reference [4, internal reasoning; /mnt/user-data/uploads/utils_visualization.py, lines 427-487]: The HTML structure includes: an outer div with class &quot;nearest-match-box&quot;, a section div with inline margin styling, multiple nested divs for field-boxes, explanation-boxes, prompt-box, and document-box, with all opening tags having corresponding closing tags in the correct order;
-
-Reference [5, internal reasoning; /mnt/user-data/uploads/utils_visualization.py, lines 383-406]: Dynamic CSS classes are properly assigned based on boolean conditions (positive/negative) for visual styling;
-
-Answer: Yes, the nearest_match_html() function constructs valid HTML. The function creates a well-formed HTML fragment with properly nested and closed div elements, appropriate HTML escaping for user-supplied content to prevent XSS attacks, and dynamic CSS class assignments. The HTML structure follows proper nesting rules with all opening tags having corresponding closing tags in the correct order.</div>
+            <div class="document-box">Reference [1, uploaded file, utils_visualization.py, lines 438-498]: The nearest_match_html function returns an f-string containing HTML that starts with &#x27;&lt;div class=&quot;nearest-match-box&quot;&gt;&#x27; and ends with &#x27;&lt;/div&gt;&#x27;, with nested div elements for sections, field-grids, field-boxes, explanation-boxes, prompt-box, and document-box; Reference [2, uploaded file, utils_visualization.py, lines 420-436]: User-provided content is escaped using the escape_html() helper function which calls html.escape() when content_is_html_escaped=False, applied to model1_explanation, model2_explanation, model1_summary, user_question, ai_response, document_id, and document_source; Reference [3, uploaded file, utils_visualization.py, lines 369-373]: The escape_html function returns html.escape(content) when content_is_html_escaped is False, otherwise returns content unchanged; Reference [4, uploaded file, utils_visualization.py, lines 384-395]: Dynamic CSS class names like successfully_verified_html_class and true_class_html_class are assigned only controlled string literals &quot;positive&quot; or &quot;negative&quot; based on boolean conditions, not user input; Reference [5, internal reasoning]: The div tags in lines 438-498 are properly balanced - each opening div tag has a corresponding closing tag with correct nesting hierarchy; Answer: Yes, the nearest_match_html() function constructs valid HTML. The structure has properly balanced and nested div tags, user content is properly escaped to prevent XSS vulnerabilities, and dynamic class names use controlled values rather than user input.</div>
         </div>
         
         <div class="separator"></div>
@@ -584,7 +580,7 @@ Answer: Yes, the nearest_match_html() function constructs valid HTML. The functi
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Successfully Verified (Prediction)</div>
                         <div class="field-value">
-                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                            <span class="tag tag-positive">True</span>
                         </div>
                     </div>
         
@@ -596,16 +592,16 @@ Answer: Yes, the nearest_match_html() function constructs valid HTML. The functi
                 
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>User asked to rewrite an input field with JavaScript validation ensuring the name is at least 5 characters and contains no special characters or numbers. The AI response provided an HTML input with a script that trims input, validates with a regex /^[A-Za-z]{5,}$/, shows/hides an error message, adds a red border on invalid input, and explains complexity as O(n) time and O(1) space.</div>
+                    <div>The user asked to compute 2a - 3b + 4c for given vectors a, b, c and choose the correct option. The AI computed component-wise: 2a=(6,10,-2), -3b=(-6,-6,-9), 4c=(16,-4,-12), summed to (16, 0, -23), and selected option A.</div>
                 </div>
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The response directly implements the requested validation: at least 5 characters and only letters via a concise regex, includes efficient event handling, and explains time/space complexity. It is objective, not opinion-based, and not dependent on recent information. The solution matches the user’s constraints using standard DOM and regex methods. Minor nuance: it restricts to ASCII letters only (not Unicode), but the prompt did not require support for diacritics, so the implementation still satisfies the stated criteria.</div>
+                    <div>The arithmetic is correct and fully shown; the resulting vector (16, 0, -23) matches option A. The task is objective (not opinion-based) and does not depend on recent information. The answer relies solely on the user-provided context and basic vector operations.</div>
                 </div>
     
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI-generated response provides a complete and correct JavaScript solution that meets all the user&#x27;s validation requirements (minimum length of 5, no special characters or numbers). The code is functional, efficient, and well-explained, directly addressing every aspect of the user&#x27;s request.</div>
+                    <div>The AI correctly performs the scalar multiplication and vector addition to arrive at the correct result. The step-by-step calculation is clear and accurate, matching the correct multiple-choice option.</div>
                 </div>
                     
                 <div class="explanation-box-positive">
@@ -616,65 +612,48 @@ Answer: Yes, the nearest_match_html() function constructs valid HTML. The functi
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Rewrite the following JavaScript code to add validation to an input field. The validation should ensure that the user&#x27;s name is at least 5 characters long and does not contain any special characters or numbers.
+                    <div class="prompt-box">Given vectors **a** = (3, 5, -1), **b** = (2, 2, 3), **c** = (4, -1, -3), then the coordinates of the vector 2**a** - 3**b** + 4**c** are (　　)
 
-```javascript
-&lt;input type=&quot;text&quot; id=&quot;name&quot; name=&quot;name&quot; /&gt;
-```
-
-You can use any JavaScript method or technique to achieve the validation, but please ensure that the validation logic is efficient and does not have a high time or space complexity.</div>
+A: (16, 0, -23)  
+B: (28, 0, -23)  
+C: (16, -4, -1)  
+D: (0, 0, 9)</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Here&#x27;s the solution with validation added to the input field:
+                    <div class="document-box">Given vectors **a** = (3, 5, -1), **b** = (2, 2, 3), **c** = (4, -1, -3), we need to find the coordinates of the vector \(2\mathbf{a} - 3\mathbf{b} + 4\mathbf{c}\).
 
-```html
-&lt;input type=&quot;text&quot; id=&quot;name&quot; name=&quot;name&quot; /&gt;
+1. Calculate \(2\mathbf{a}\):
+   \[
+   2\mathbf{a} = 2 \times (3, 5, -1) = (6, 10, -2)
+   \]
 
-&lt;script&gt;
-  const nameInput = document.getElementById(&#x27;name&#x27;);
+2. Calculate \(-3\mathbf{b}\):
+   \[
+   -3\mathbf{b} = -3 \times (2, 2, 3) = (-6, -6, -9)
+   \]
 
-  // Create error element
-  const errorElement = document.createElement(&#x27;div&#x27;);
-  errorElement.id = &#x27;nameError&#x27;;
-  errorElement.textContent = &#x27;Name must be at least 5 characters long and contain only letters.&#x27;;
-  errorElement.style.color = &#x27;red&#x27;;
-  errorElement.style.display = &#x27;none&#x27;;
-  nameInput.parentNode.insertBefore(errorElement, nameInput.nextSibling);
+3. Calculate \(4\mathbf{c}\):
+   \[
+   4\mathbf{c} = 4 \times (4, -1, -3) = (16, -4, -12)
+   \]
 
-  function validateName(value) {
-    const trimmed = value.trim();
-    return /^[A-Za-z]{5,}$/.test(trimmed);
-  }
+4. Add the results component-wise:
+   - For the x-component: \(6 + (-6) + 16 = 6 - 6 + 16 = 16\)
+   - For the y-component: \(10 + (-6) + (-4) = 10 - 6 - 4 = 0\)
+   - For the z-component: \(-2 + (-9) + (-12) = -2 - 9 - 12 = -23\)
 
-  nameInput.addEventListener(&#x27;blur&#x27;, function() {
-    const isValid = validateName(this.value);
-    if (!isValid) {
-      this.style.border = &#x27;2px solid red&#x27;;
-      errorElement.style.display = &#x27;block&#x27;;
-    } else {
-      this.style.border = &#x27;&#x27;;
-      errorElement.style.display = &#x27;none&#x27;;
-    }
-  });
-&lt;/script&gt;
-```
+Thus, the coordinates of the vector \(2\mathbf{a} - 3\mathbf{b} + 4\mathbf{c}\) are \((16, 0, -23)\).
 
-This implementation:
-1. Uses a regular expression (`/^[A-Za-z]{5,}$/`) to validate both length (≥5 characters) and character set (letters only)
-2. Trims whitespace before validation
-3. Shows/hides an error message dynamically
-4. Adds visual feedback with a red border
-5. Triggers validation on blur (when the input loses focus)
-6. Creates the error element once and reuses it for better performance
-
-The validation has O(n) time complexity (where n is input length) due to the regex test, which is efficient for typical name inputs. Space complexity is O(1) as no additional data structures are used.</div>
+\[
+\boxed{A}
+\]</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_614222_6bdda24a-cf0a-485c-977b-020983f02da0</div>
+                        <div class="field-value">pos_926446_fb34c795-214b-4694-9e5a-768bc6a5d942</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>

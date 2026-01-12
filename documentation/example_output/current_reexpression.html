@@ -99,11 +99,17 @@
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        
+                
         .tag-caution {
             background-color: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
+        }
+
+        .tag-near-random-chance {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         
         .tag-negative {
@@ -379,7 +385,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.0.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.1.0)</span>
         </div>
 
         <div class="section">
@@ -398,18 +404,18 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>Question: What is the derivative of ln(x)? AI Response: States the derivative is 1/x, notes it’s valid for x &gt; 0, and mentions proofs via derivative definition and inverse function relationship with e^x.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>The question asks for the derivative of ln(x). The AI response states it is 1/x (for x&gt;0) and provides that as the final answer.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>The response directly and correctly answers the question: d/dx[ln(x)] = 1/x for x &gt; 0. This is a standard, non-subjective calculus fact, not dependent on recent information. Multiple approaches (limit definition, inverse functions) consistently yield 1/x. Verification is based on internal mathematical knowledge and the given context.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>The derivative of ln(x) is a standard, objective calculus result: d/dx ln(x) = 1/x (on its real-domain x&gt;0). The response directly answers the question correctly, is not subjective, and does not depend on recent information; it relies on established mathematical knowledge.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The AI response correctly identifies the derivative of ln(x) as 1/x, which is a fundamental and verifiable fact in calculus.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
+                <div>The derivative of ln(x) being 1/x is a fundamental rule in calculus, making the response factually correct and easy to verify.</div>
             </div>
 
             <div class="explanation-box-positive">
@@ -431,7 +437,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-11-04 14:27:53</div>
+                    <div class="field-value">2026-01-11 22:09:23</div>
                 </div>
                 
             </div>
@@ -441,7 +447,7 @@
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.002092266222462058, 0.9979077577590942]</div>
+                <div class="field-value">[7.182933359217714e-07, 0.9999992847442627]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
@@ -459,7 +465,7 @@
                 </div>
                 <div class="field-box">
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">185.9515380859375</div>
+                    <div class="field-value">363.0</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -467,21 +473,21 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">186</div>
+                    <div class="field-value">363</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.17898619174957275</div>
+                    <div class="field-value">0.44391030073165894</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-3.524892807006836, 3.0554299354553223]</div>
+                    <div class="field-value">[-2.5087058544158936, 2.8926875591278076]</div>
                 </div>
             </div>
         </div>
@@ -490,16 +496,16 @@
             <div class="section-title">Analysis of the Effective Sample Size</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.0028268219903111458, 0.9971731901168823]</div>
+                <div class="field-value">[8.938391715673788e-07, 0.9999991655349731]</div>
             </div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.0015482910675927997, 0.9984517097473145]</div>
+                <div class="field-value">[5.772249664914852e-07, 0.9999994039535522]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[19546.0, 28829.0]</div>
+                    <div class="field-value">[31819.0, 50783.0]</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -507,14 +513,14 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.17023217678070068</div>
+                    <div class="field-value">0.4370492100715637</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.18774020671844482</div>
+                    <div class="field-value">0.45077139139175415</div>
                 </div>
             </div>
         </div>
@@ -533,21 +539,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">6.595553398132324</div>
+                    <div class="field-value">6.207298755645752</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9002129435539246, 0.9067675471305847]</div>
+                    <div class="field-value">[0.9000474810600281, 0.9008400440216064]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">74684</div>
+                    <div class="field-value">120158</div>
                 </div>
             </div>
         </div>
@@ -560,7 +566,7 @@
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal knowledge]: The derivative of ln(x) with respect to x is 1/x, which is a fundamental calculus formula; Reference [2, internal reasoning]: This can be proven using the definition of the derivative or by recognizing that ln(x) and e^x are inverse functions; Reference [3, internal knowledge]: This derivative is valid for x &gt; 0 since the natural logarithm is only defined for positive real numbers; Answer: The derivative of ln(x) is 1/x.</div>
+            <div class="document-box">Reference [1, internal knowledge]: The derivative of the natural logarithm function ln(x) is 1/x, which is a standard result in differential calculus. This derivative is valid for x &gt; 0 since the natural logarithm is only defined for positive real numbers. Answer: The derivative of ln(x) is 1/x.</div>
         </div>
         
         <div class="separator"></div>
@@ -585,17 +591,17 @@
                 </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>Question: Find the perimeter of an isosceles triangle if two sides are 5 and 10. AI Response: Considered both possibilities for the equal sides. Rejected 5,5,10 as invalid (degenerate) and accepted 10,10,5 as valid by triangle inequality, giving perimeter 25.</div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                    <div>The question asks for the imaginary part of a complex number z satisfying z(1+i)=2. The AI response solves for z (finding z=1−i) and concludes the imaginary part is −1.</div>
                 </div>
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The response correctly applies the definition of an isosceles triangle and the triangle inequality, identifying the only valid side lengths as 10,10,5 and computing the perimeter as 25. This is an objective math problem, not opinion-based and not time-sensitive. The verification is based on the given problem context and standard internal mathematical knowledge.</div>
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                    <div>The algebra is correct: z=2/(1+i)=1−i, so Im(z)=−1. The task is objective and does not depend on any external or recent information.</div>
                 </div>
     
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI correctly identifies the two possible cases for the side lengths of the isosceles triangle. It then correctly applies the triangle inequality theorem to eliminate the invalid case (5, 5, 10) and confirm the valid case (10, 10, 5). The final perimeter calculation is accurate.</div>
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
+                    <div>The math is standard and easy to verify algebraically. The AI correctly solved the equation z = 2/(1+i) to find z = 1 - i, and correctly identified the imaginary part as -1.</div>
                 </div>
                     
                 <div class="explanation-box-positive">
@@ -606,38 +612,51 @@
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">In an isosceles triangle, if the lengths of the two sides are $5$ and $10$, then the perimeter of the triangle is ______.</div>
+                    <div class="prompt-box">If the complex number $z$ satisfies $z(1+i)=2$ (where $i$ is the imaginary unit), then the imaginary part of $z$ is ______.</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Given an isosceles triangle with two sides of lengths 5 and 10, we need to determine the perimeter. 
+                    <div class="document-box">Given the complex number \( z \) satisfies \( z(1 + i) = 2 \), we need to find the imaginary part of \( z \).
 
-An isosceles triangle has two equal sides. We need to check both possibilities for the equal sides and ensure they satisfy the triangle inequality theorem, which states that the sum of the lengths of any two sides must be greater than the length of the remaining side.
-
-1. **Case 1: The two equal sides are 5 each.**
-   - The sides would be 5, 5, and 10.
-   - Check the triangle inequality: \(5 + 5 = 10\), which is not greater than 10. This case is invalid as it does not form a valid triangle.
-
-2. **Case 2: The two equal sides are 10 each.**
-   - The sides would be 10, 10, and 5.
-   - Check the triangle inequalities:
-     - \(10 + 10 &gt; 5\) (True)
-     - \(10 + 5 &gt; 10\) (True)
-     - \(10 + 5 &gt; 10\) (True)
-   - All inequalities are satisfied, so this case is valid.
-
-The valid sides of the triangle are 10, 10, and 5. Therefore, the perimeter is:
+First, express \( z \) as \( a + bi \), where \( a \) is the real part and \( b \) is the imaginary part. The equation becomes:
 \[
-10 + 10 + 5 = 25
+(a + bi)(1 + i) = 2
 \]
 
-The perimeter of the triangle is \(\boxed{25}\).</div>
+Expanding the left-hand side using the distributive property:
+\[
+(a + bi)(1 + i) = a + ai + bi + bi^2
+\]
+Since \( i^2 = -1 \), this simplifies to:
+\[
+a + ai + bi - b = (a - b) + (a + b)i
+\]
+
+Equating the real and imaginary parts to the right-hand side \( 2 + 0i \), we get the system of equations:
+1. Real part: \( a - b = 2 \)
+2. Imaginary part: \( a + b = 0 \)
+
+From the second equation, \( a + b = 0 \), we find \( a = -b \). Substituting \( a = -b \) into the first equation:
+\[
+-b - b = 2 \implies -2b = 2 \implies b = -1
+\]
+
+Thus, the imaginary part of \( z \) is \( -1 \).
+
+To verify, solve for \( z \) by dividing both sides by \( 1 + i \):
+\[
+z = \frac{2}{1 + i} \times \frac{1 - i}{1 - i} = \frac{2(1 - i)}{2} = 1 - i
+\]
+
+The imaginary part of \( z = 1 - i \) is indeed \( -1 \).
+
+Therefore, the imaginary part of \( z \) is \boxed{-1}.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_811148_7b257942-e3e0-4a33-a7ae-df9e2ea7acf5</div>
+                        <div class="field-value">pos_585252_bf312529-3afa-432f-b8a3-aca35c8f2c19</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>

@@ -299,7 +299,7 @@ class MCPServerStateController:
                     label_int=label,
                     label_was_updated_int=0,
                     document_source="user_added",
-                    info=constants.REEXPRESS_MCP_SERVER_VERSION,
+                    info=f"{constants.MCP_SERVER_MODEL1_NAME},{constants.MCP_SERVER_MODEL2_NAME}",
                     user_question=json_for_archive[constants.REEXPRESS_QUESTION_KEY],
                     ai_response=self.current_reexpression[constants.REEXPRESS_AI_RESPONSE_KEY]
                 )

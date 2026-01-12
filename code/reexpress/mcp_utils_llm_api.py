@@ -14,9 +14,18 @@ from google import genai
 from google.genai import types
 
 model_path = "ibm-granite/granite-3.3-8b-instruct"
-# device = "mps"
-# device = "cuda"
-device = "cpu"
+
+try:
+    device = str(os.getenv("MCP_SERVER_AGREEMENT_MODEL_DEVICE",
+                           default=constants.MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT))
+    MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH = int(
+        os.getenv("MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH",
+                  default=constants.MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT))
+except:
+    device = constants.MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT
+    MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH = \
+        constants.MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT
+
 model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map=device,
@@ -30,7 +39,8 @@ tokenizer = AutoTokenizer.from_pretrained(
 # env variables
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 google_client = genai.Client(api_key=GEMINI_API_KEY)  # can alternatively replace with a Vertex AI deployment
-GEMINI_MODEL="gemini-2.5-pro"
+
+GEMINI_MODEL="gemini-3-pro-preview"
 
 USE_AZURE_01 = int(os.getenv("USE_AZURE_01", "1"))
 if USE_AZURE_01 == 1:
@@ -41,11 +51,11 @@ if USE_AZURE_01 == 1:
         api_version=kAPI_VERSION,
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
     )
-    GPT5_MODEL = os.getenv("GPT5_2025_08_07_AZURE_DEPLOYMENT_NAME")
+    GPT5_MODEL = os.getenv("GPT_5_2_MODEL_2025_12_11_AZURE_DEPLOYMENT")
 else:
     from openai import OpenAI
     client = OpenAI()
-    GPT5_MODEL = "gpt-5-2025-08-07"
+    GPT5_MODEL = "gpt-5.2-2025-12-11"
 
 
 class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):
@@ -59,7 +69,7 @@ def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_stri
         dict[str, float | bool]:
     time.sleep(torch.abs(torch.randn(1)).item() / constants.SLEEP_CONSTANT)
     try:
-        max_tokens=25000
+        max_tokens=100000
         messages_structure = [
             {"role": "developer", "content": f"{constants.GPT_5_SYSTEM_MESSAGE.strip()}"},
             {"role": "user",
@@ -100,7 +110,17 @@ def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to
             contents=previous_query_and_response_to_verify_string,
             config=types.GenerateContentConfig(
                 system_instruction=constants.SYSTEM_MESSAGE_WITH_EXPLANATION.strip(),
-                thinking_config=types.ThinkingConfig(thinking_budget=-1, includeThoughts=False),
+                thinking_config=types.ThinkingConfig(
+                    thinking_level=types.ThinkingLevel.HIGH,
+                    include_thoughts=False
+                ),
+                tools=[
+                    types.Tool(
+                        google_search=types.GoogleSearch(),
+                        code_execution=types.ToolCodeExecution(),
+                        url_context=types.UrlContext(),
+                    )
+                ],
                 response_mime_type="application/json",
                 response_schema={"type": "OBJECT", "properties": {"verification_classification": {"type": "BOOLEAN"},
                                                                   "confidence_in_classification": {"type": "NUMBER"},
@@ -109,7 +129,7 @@ def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to
                                  "required": ["verification_classification", "confidence_in_classification",
                                               "short_explanation_for_classification_confidence"]},
                 response_modalities=["TEXT"],
-                temperature=0.0,
+                temperature=1.0,
                 max_output_tokens=max_tokens,
                 seed=0)
         )
@@ -130,7 +150,7 @@ def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to
     return verification_dict
 
 
-def get_agreement_model_embedding(document_text: str): # -> list[float]:
+def get_agreement_model_embedding(document_text: str):
     conv = [{"role": "user",
              "content": document_text}]
     input_ids = tokenizer.apply_chat_template(conv, return_tensors="pt", thinking=False,
@@ -175,9 +195,20 @@ def get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summa
 def llm_api_controller(gpt5_model_summary: str, gpt5_model_explanation: str,
                        gemini_model_explanation: str):
     try:
-        prompt = get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summary,
-                                                                             gpt5_model_explanation,
-                                                                             gemini_model_explanation)
+        # Hard truncate by max allowed character count, with strict priority:
+        # gpt5_model_explanation first, then gemini_model_explanation, then summary.
+        # This is intended to put a hard constraint on memory use of the on-device model. Adjust as applicable
+        # via the corresponding environment variable.
+        remaining_max_length_counter = MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH
+        gpt5_model_explanation_filtered = gpt5_model_explanation[0:max(0, remaining_max_length_counter)]
+        remaining_max_length_counter -= len(gpt5_model_explanation_filtered)
+        gemini_model_explanation_filtered = gemini_model_explanation[0:max(0, remaining_max_length_counter)]
+        remaining_max_length_counter -= len(gemini_model_explanation_filtered)
+        gpt5_model_summary_filtered = gpt5_model_summary[0:max(0, remaining_max_length_counter)]
+
+        prompt = get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summary_filtered,
+                                                                             gpt5_model_explanation_filtered,
+                                                                             gemini_model_explanation_filtered)
         agreement_model_embedding, agreement_model_classification = \
             get_agreement_model_embedding(document_text=prompt)
         return agreement_model_embedding, agreement_model_classification

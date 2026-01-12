@@ -86,6 +86,7 @@ class ExternalFileController:
             self._parse_file_access_settings(file_access_settings_json)
         self.file_access_enabled = self.allowed_parent_directory != ""
 
+        # Note: self.allowed_parent_directory should not have a trailing /
         self.current_file_content_list = []
         # Optional. Can be set to avoid specifying a full absolute path for each file. This (and the resolved paths
         # of any added files) MUST share a common path with self.allowed_parent_directory, which is blank by default,
@@ -160,7 +161,7 @@ class ExternalFileController:
                     "DIRECTORY_ACCESS")
             if not os.path.commonpath(
                     [self.allowed_parent_directory, str(file_path.as_posix())]) == self.allowed_parent_directory:
-                raise FileAccessError(f"The file path has not been granted access. It must be a child of {self.allowed_parent_directory}. Consider modifying {constants.MCP_SERVER_SETTINGS_FILENAME}.", "DIRECTORY_ACCESS")
+                raise FileAccessError(f"The file path has not been granted access. It must be a child of {self.allowed_parent_directory}. Consider modifying {constants.MCP_SERVER_SETTINGS_FILENAME}. Also, if applicable, ensure that the 'allowed_parent_directory' JSON key in {constants.MCP_SERVER_SETTINGS_FILENAME} does not have a trailing '/'.", "DIRECTORY_ACCESS")
             if file_path.name.startswith('.'):
                 raise FileAccessError("Hidden files starting with . cannot be added.", "HIDDEN_FILE")
             file_size = file_path.stat().st_size
@@ -212,6 +213,9 @@ class ExternalFileController:
                             [self.allowed_parent_directory, dir_path_string]) == self.allowed_parent_directory:
                         self.available_environment_parent_directory = dir_path_string
                         return f"Added {dir_path_string} as the current parent directory."
+                    else:
+                        return f"ERROR: Unable to add {parent_directory}. Ensure the 'allowed_parent_directory' " \
+                               f"JSON key in {constants.MCP_SERVER_SETTINGS_FILENAME} does not have a trailing '/'."
                 else:
                     self.available_environment_parent_directory = ""
                     return f"ERROR: Unable to add {parent_directory}. " \

@@ -35,7 +35,7 @@ def get_formatted_sdm_estimator_output_string(verification_classification,
         <confidence> {classification_confidence} </confidence> \n
         <model1_explanation> {gpt5_model_explanation} </model1_explanation> \n
         <model2_explanation> {gemini_model_explanation} </model2_explanation> \n
-        <model4_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model4_agreement>
+        <model3_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model3_agreement>
     """
     return formatted_output_string
 
@@ -58,20 +58,28 @@ def get_calibration_confidence_label(calibration_reliability: str, hr_class_cond
     elif calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST:
         classification_confidence_html_class = "positive"
         classification_confidence = f">= {_format_probability_as_string_percentage(valid_probability_float=hr_class_conditional_accuracy)}"
+    elif calibration_reliability == constants.CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE:
+        classification_confidence_html_class = "near-random-chance"
+        classification_confidence = f"< {_format_probability_as_string_percentage(valid_probability_float=constants.CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE_THRESHOLD)} (approaching random chance, so use with caution)"
     else:
         classification_confidence_html_class = "caution"
-        classification_confidence = f"< {_format_probability_as_string_percentage(valid_probability_float=hr_class_conditional_accuracy)} (use with caution)"
+        # Switching to '<= 89%' (or equivalent relative to hr_class_conditional_accuracy with an offset of 0.01),
+        # as some models may miss (or otherwise get confused by) the less than sign when
+        # the output is '< 90%'.
+        classification_confidence = f"<= {_format_probability_as_string_percentage(valid_probability_float=hr_class_conditional_accuracy-0.01)} (use with caution)"
     if return_html_class:
         return classification_confidence, classification_confidence_html_class
     return classification_confidence
 
 
-def get_calibration_reliability_label(is_high_reliability_region, is_ood):
+def get_calibration_reliability_label(is_high_reliability_region, is_ood, sdm_output_for_predicted_class):
     calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_LOW
     if is_high_reliability_region:
         calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_HIGHEST
     elif is_ood:
         calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
+    elif sdm_output_for_predicted_class < constants.CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE_THRESHOLD:
+        calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_LOW__NEAR_CHANCE
     return calibration_reliability
 
 
@@ -80,14 +88,18 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_ex
 
     predicted_class = prediction_meta_data["prediction"]
 
-    # prediction_conditional_distribution__lower = \
-    #     prediction_meta_data["rescaled_prediction_conditional_distribution__lower"]
+    sdm_output_for_predicted_class = \
+        prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
 
     verification_classification = predicted_class == 1
     is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
-    is_ood = prediction_meta_data["is_ood"]
+    # 2026-01-10: Added prediction_meta_data["d"] == 0.0. For these cases, the output is at chance, but the default
+    # output to the LM only shows the coarse labels, so this simplifies the interpretation for the tool-calling LM when
+    # the full probability vector isn't provided (i.e., without calling the View tool).
+    is_ood = prediction_meta_data["is_ood"] or prediction_meta_data["d"] == 0.0
     calibration_reliability = \
-        get_calibration_reliability_label(is_high_reliability_region, is_ood)
+        get_calibration_reliability_label(is_high_reliability_region, is_ood,
+                                          sdm_output_for_predicted_class=sdm_output_for_predicted_class)
 
     formatted_output_string = \
         get_formatted_sdm_estimator_output_string(verification_classification,

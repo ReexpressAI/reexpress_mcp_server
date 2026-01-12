@@ -1,6 +1,6 @@
 
 # Installation Instructions for the Reexpress Model-Context-Protocol (MCP) Server
-### For tool-calling LLMs (e.g., Claude Opus 4.1 or Sonnet 4.5) and MCP clients running on macOS (Sequoia 15 or later on Apple silicon) or Linux
+### For tool-calling LLMs (e.g., Claude Opus 4.5 or Sonnet 4.5) and MCP clients running on macOS (Sequoia 15 or later on Apple silicon) or Linux
 
 The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following.
 
@@ -44,17 +44,19 @@ Run the following lines from the Terminal.
 
 ```bash
 # Create the Conda environment for the MCP server
-conda create -n re_mcp_v200 python=3.12
-conda activate re_mcp_v200
+conda create -n re_mcp_v210 python=3.12
+conda activate re_mcp_v210
 pip install torch==2.7.1 transformers==4.53.0 accelerate==1.8.1 numpy==1.26.4
 conda install -c pytorch faiss-cpu=1.9.0
 pip install "mcp[cli]==1.6.0"
 pip install openai==1.70.0
-pip install google-genai==1.25.0
+pip install google-genai==1.56.0
 conda install -c conda-forge matplotlib=3.10.0
 ```
+> [!NOTE]
+> This requires a more recent version of `google-genai` than used in the previous v2.0.0 of the Reexpress MCP Server.
 
-This will create an environment "re_mcp_v200" with the required dependencies for macOS 15 and Apple silicon.
+The above will create an environment "re_mcp_v210" with the required dependencies for macOS 15 and Apple silicon.
 
 ## 5. Configure environment variables and LLM API keys
 
@@ -73,8 +75,8 @@ export OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 ### The following 3 variables are only needed if USE_AZURE_01='1'. Just set to '' or keep this default text if not used
 export AZURE_OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 export AZURE_OPENAI_ENDPOINT='https://REPLACE_WITH_YOUR_ENDPOINT.azure.com/'
-# Fill in with your deployment name for GPT-5. Replace this with whatever name you chose in Azure.
-export GPT5_2025_08_07_AZURE_DEPLOYMENT_NAME='gpt-5'
+# Fill in with your deployment name for GPT-5.2. Replace this with whatever name you chose in Azure.
+export GPT_5_2_MODEL_2025_12_11_AZURE_DEPLOYMENT='gpt-5.2'
 
 # Google Gemini API key is required
 export GEMINI_API_KEY='REPLACE_WITH_API_KEY'
@@ -82,19 +84,27 @@ export GEMINI_API_KEY='REPLACE_WITH_API_KEY'
 # Optionally, set a cache directory for "ibm-granite/granite-3.3-8b-instruct" by uncommenting the following and adding a valid path
 # export HF_HOME=''
 
+# Optionally, change the local device for the "ibm-granite/granite-3.3-8b-instruct" model. These are the standard PyTorch device strings. The default is 'cpu', but use 'cuda' if you have a suitable Nvidia GPU, and use 'mps' if you have a suitable Apple Silicon Mac. Optionally, you can also change the max character length of the input sent to "ibm-granite/granite-3.3-8b-instruct". These variables are used in mcp_utils_llm_api.py.
+export MCP_SERVER_AGREEMENT_MODEL_DEVICE='cpu'
+export MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH=7000
+
 # '1' to create the HTML page in ${REEXPRESS_MCP_MODEL_DIR}/visualize/current_reexpression.html for each call to the MCP server; '0' turns this feature off
 export REEXPRESS_MCP_SAVE_OUTPUT='0'
 ```
 
-Replace REEXPRESS_MCP_SERVER_REPO_DIR and REEXPRESS_MCP_MODEL_DIR with the repo and model directory from above, respectively. If you want to use OpenAI, set USE_AZURE_01='0' and supply your API key in OPENAI_API_KEY. If instead, you want to use Azure, set USE_AZURE_01='1' and fill in the corresponding 3 variables. Optionally add a Huggingface model cache directory. Finally, set REEXPRESS_MCP_SAVE_OUTPUT='1' if you want to create an HTML page for the tool call output.
+Replace REEXPRESS_MCP_SERVER_REPO_DIR and REEXPRESS_MCP_MODEL_DIR with the repo and model directory from above, respectively. If you want to use OpenAI, set USE_AZURE_01='0' and supply your API key in OPENAI_API_KEY. If instead, you want to use Azure, set USE_AZURE_01='1' and fill in the corresponding 3 variables. Optionally add a Huggingface model cache directory.
+
+Optionally, modify the device used by the "ibm-granite/granite-3.3-8b-instruct" model with MCP_SERVER_AGREEMENT_MODEL_DEVICE. Also, we created the environment variable MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH to make it easy to set a hard character limit on the input sent to the "ibm-granite/granite-3.3-8b-instruct" model. This may be useful if you are using the MCP Server in a compute/GPU constrained environment.
+
+Set REEXPRESS_MCP_SAVE_OUTPUT='1' if you want to create an HTML page for the tool call output.
 
 Save the complete file to a location of your choosing and record the path; it will be referenced below. In addition to not including llm_api_setup.sh in version control (e.g., .git), as a best practice, it is further recommended to not put the file in a location accessible to an LLM agent.
 
 > [!IMPORTANT]
-> If using Azure, you must choose OpenAI deployments corresponding to the specific model gpt-5-2025-08-07 for GPT5_2025_08_07_AZURE_DEPLOYMENT_NAME, otherwise the SDM estimator will have undefined behavior, since it is calibrated against that specific version (along with gemini-2.5-pro and granite-3.3-8b-instruct). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
+> If using Azure, you must choose OpenAI deployments corresponding to the specific model gpt-5.2-2025-12-11 for GPT_5_2_MODEL_2025_12_11_AZURE_DEPLOYMENT, otherwise the SDM estimator will have undefined behavior, since it is calibrated against that specific version (along with gemini-3-pro-preview and granite-3.3-8b-instruct). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
 
 > [!TIP]
-> Each time you call the main Reexpress tool, gpt-5-2025-08-07 will be called 1 time and gemini-2.5-pro will be called 1 time. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the API calls, as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
+> Each time you call the main Reexpress tool, gpt-5.2-2025-12-11 will be called 1 time and gemini-3-pro-preview will be called 1 time. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the API calls, as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
 
 ## 6. Configure the MCP Server
 
@@ -108,7 +118,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate re_mcp_v200 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
+                "source /path/to/your_anaconda3_directory/etc/profile.d/conda.sh && conda activate re_mcp_v210 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -138,7 +148,7 @@ the file would be the following:
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate re_mcp_v200 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
+                "source /Users/a/anaconda3/etc/profile.d/conda.sh && conda activate re_mcp_v210 && source /Users/a/Documents/settings/llm_api_setup.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -157,10 +167,10 @@ See [CONFIG.md](CONFIG.md).
 ## Troubleshooting
 
 If you run into issues, the first things to check are:
-- Verify you are using macOS 15 on Apple silicon and have installed Claude Desktop. (In principle, the above instructions should also work on macOS Tahoe without changes, and on linux distributions using alternative MCP clients available for linux. Let us know if you run into issues.)
+- Verify you are using macOS 15 or macOS Tahoe on Apple silicon and have installed Claude Desktop. (In principle, the above instructions should also work on linux distributions using alternative MCP clients available for linux. Let us know if you run into issues.)
 - You used absolute paths in all of the above.
-- You supplied valid API keys in llm_api_setup.sh, and if using Azure, your deployments are properly configured.
-- Your Mac needs to be able to run "ibm-granite/granite-3.3-8b-instruct" locally. Try a simple example from the model page at [https://huggingface.co/ibm-granite/granite-3.3-8b-instruct](https://huggingface.co/ibm-granite/granite-3.3-8b-instruct).
+- You supplied valid API keys in llm_api_setup.sh, and if using Azure, your deployments are properly configured. Try directly calling the functions in llm_api_setup.sh to check that the third-party APIs are working with your supplied keys.
+- Your Mac needs to be able to run "ibm-granite/granite-3.3-8b-instruct" locally. Try a simple example from the model page at [https://huggingface.co/ibm-granite/granite-3.3-8b-instruct](https://huggingface.co/ibm-granite/granite-3.3-8b-instruct). If that works, try directly calling `get_agreement_model_embedding()` in llm_api_setup.sh. Note that with an Apple Silicon Mac with sufficient memory, you can set MCP_SERVER_AGREEMENT_MODEL_DEVICE='mps', instead of 'cpu', for a significant speedup.
 - Check that there isn't something wrong with your Claude Desktop install. Try walking through the weather MCP server demo at [https://modelcontextprotocol.io/quickstart/server](https://modelcontextprotocol.io/quickstart/server). If that does not work, then other MCP servers are unlikely to work.
 - Verify you are using the dependencies noted above.
 

@@ -99,11 +99,17 @@
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        
+                
         .tag-caution {
             background-color: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
+        }
+
+        .tag-near-random-chance {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         
         .tag-negative {
@@ -379,7 +385,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.0.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.1.0)</span>
         </div>
 
         <div class="section">
@@ -388,28 +394,28 @@
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Successfully Verified (Prediction)</div>
                 <div class="field-value">
-                    <div class="field-value"><span class="tag tag-positive">True</span></div>
+                    <span class="tag tag-positive">True</span>
                 </div>
             </div>
 
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-caution">< 90% (use with caution)</span></div>
+                <div class="field-value"><span class="tag tag-caution"><= 89% (use with caution)</span></div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>User asked how to create, start, and exit a tmux session on Linux and to be reminded of relevant keyboard commands. The AI response provided commands to create a session (tmux new -s name), attach/start a session (tmux attach -t name / tmux a -t name), exit via detaching (Ctrl+b then d) or by exiting/terminating the session (exit/Ctrl+d or tmux kill-session), noted the tmux prefix key (Ctrl+b), and added related commands (tmux ls, Ctrl+b then s).</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>The user asked how to create a new tmux session on Linux, how to start/enter it, and how to exit it, plus relevant keyboard commands. The AI response provided the commands to create/attach/list sessions (e.g., `tmux new -s name`, `tmux attach -t name`, `tmux ls`) and explained exiting via detach (`Ctrl-b` then `d`) versus terminating (`exit`/`Ctrl-d`), and listed several common default keybindings.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                <div>The response directly and accurately covers the three requested items: creating a session, starting/attaching to a session, and exiting (both detaching and killing). It correctly lists key bindings (Ctrl+b prefix, detach with Ctrl+b then d, session switch with Ctrl+b then s) and shell commands. Minor nuance: typing exit/Ctrl+d only terminates the session if it’s the last pane/window running; otherwise it just closes the current shell. Nonetheless, the guidance is standard and sufficient. This is an objective, non-opinion question, not dependent on recent changes, and the verification is based on established tmux usage/internal knowledge.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                <div>The response directly answers all three requested items with correct, standard tmux commands and includes the key keyboard sequence for detaching (exit/leave session). The additional shortcut list is consistent with common default tmux bindings. This is factual (not opinion-based) and not meaningfully dependent on very recent information, aside from potential user-specific remapped prefix keys/configuration.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                <div>The AI response accurately and completely answers all three parts of the user&#x27;s question regarding how to create, start (attach to), and exit a tmux session, providing the correct command-line and keyboard commands for each action.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
+                <div>The response accurately provides the standard commands for creating, starting/attaching, and exiting a tmux session, as well as common keyboard shortcuts. The commands (tmux new -s, tmux attach, Ctrl+b d, etc.) are well-documented standard Linux/Unix commands.</div>
             </div>
 
             <div class="explanation-box-positive">
@@ -431,7 +437,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2025-11-04 14:59:59</div>
+                    <div class="field-value">2026-01-11 23:41:11</div>
                 </div>
                 
             </div>
@@ -441,7 +447,7 @@
             <div class="section-title">Uncertainty (instance-level) Details</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.23446054756641388, 0.7655394077301025]</div>
+                <div class="field-value">[0.18303605914115906, 0.8169639706611633]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
@@ -459,7 +465,7 @@
                 </div>
                 <div class="field-box">
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">38.8072624206543</div>
+                    <div class="field-value">13.414758682250977</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -467,21 +473,21 @@
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">117</div>
+                    <div class="field-value">22</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.06052976846694946</div>
+                    <div class="field-value">0.06859195232391357</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-2.119741678237915, 1.9707467555999756]</div>
+                    <div class="field-value">[-4.084192276000977, 2.77813720703125]</div>
                 </div>
             </div>
         </div>
@@ -490,16 +496,16 @@
             <div class="section-title">Analysis of the Effective Sample Size</div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.2755848169326782, 0.7244152426719666]</div>
+                <div class="field-value">[0.219657301902771, 0.7803427577018738]</div>
             </div>
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.1977974772453308, 0.8022025227546692]</div>
+                <div class="field-value">[0.15133622288703918, 0.8486638069152832]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[12176.0, 17341.0]</div>
+                    <div class="field-value">[13675.0, 19156.0]</div>
                 </div>
             </div>
             <div class="field-grid">
@@ -507,14 +513,14 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.04943842440843582</div>
+                    <div class="field-value">0.058126144111156464</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.0716211125254631</div>
+                    <div class="field-value">0.07905776053667068</div>
                 </div>
             </div>
         </div>
@@ -533,21 +539,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">6.595553398132324</div>
+                    <div class="field-value">6.207298755645752</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9002129435539246, 0.9067675471305847]</div>
+                    <div class="field-value">[0.9000474810600281, 0.9008400440216064]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">74684</div>
+                    <div class="field-value">120158</div>
                 </div>
             </div>
         </div>
@@ -555,37 +561,19 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">Remind me: How do I create a new tmux session on linux and remind me the keyboard commands. I want to know: 1. How to create a session 2. Start the session 3. Exit the session</div>
+            <div class="prompt-box">How do I create a new tmux session on linux and what are the keyboard commands? I want to know: 1. How to create a session 2. Start the session 3. Exit the session</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal knowledge]: tmux is a terminal multiplexer for Unix-like systems that allows multiple terminal sessions to be accessed from a single window. The basic command to create a new named session is &quot;tmux new -s sessionname&quot; where sessionname is replaced with the desired name;
+            <div class="document-box">Reference [1, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;tmux may be controlled from an attached client by using a key combination of a prefix key, &#x27;C-b&#x27; (Ctrl-b) by default, followed by a command key&quot;; Reference [2, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;\&quot; Split the current pane into two, top and bottom&quot; and &quot;% Split the current pane into two, left and right&quot;; Reference [3, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;Each session is persistent and will survive accidental disconnection... tmux may be reattached using: $ tmux attach&quot;; Reference [4, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;the &#x27;C-b d&#x27; key strokes&quot; for detaching; Reference [5, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;You can name your session by passing the parameter -s {name} to the tmux new command when creating a new session&quot;; Reference [6, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;You can detach from your tmux session by pressing Ctrl+B then D&quot;; Reference [7, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;reconnect to the server and reattach to the existing tmux session to resume where you left off: $ tmux attach -t 0&quot;; Reference [8, tmux cheat sheet, https://quickref.me/tmux.html, 8-1]: &quot;Start a new named session $ tmux new -s myname&quot; and &quot;Attach to named $ tmux a -t myname&quot;;
 
-Reference [2, internal knowledge]: To attach to an existing tmux session, the commands are &quot;tmux attach -t sessionname&quot; or the shorter form &quot;tmux a -t sessionname&quot; where sessionname is the name of the session to attach to;
+Answer:
+1. Create a new session: Use &quot;tmux new -s session_name&quot; which creates and immediately attaches you to the session.
+2. Start/attach to an existing session: Use &quot;tmux attach -t session_name&quot; or list sessions first with &quot;tmux ls&quot;.
+3. Exit the session: Either detach (keeps session running) with Ctrl+b then d, or terminate the session with &quot;exit&quot; or Ctrl+d.
 
-Reference [3, internal knowledge]: There are two main ways to exit a tmux session - detaching (which keeps the session running in the background) is done by pressing Ctrl+b followed by d, while killing the session (terminating it) can be done by typing &quot;exit&quot; or pressing Ctrl+d from inside the session;
-
-Reference [4, internal knowledge]: Ctrl+b is tmux&#x27;s prefix key that must be pressed before any tmux keyboard command;
-
-Reference [5, internal knowledge]: Additional useful commands include &quot;tmux ls&quot; to list all sessions, &quot;tmux kill-session -t sessionname&quot; to kill a specific session, and Ctrl+b then s to switch between sessions;
-
-Answer: Here&#x27;s a quick guide to tmux sessions:
-
-1. Create a new session: tmux new -s mysession (Replace &quot;mysession&quot; with whatever name you want)
-
-2. Start/attach to a session: If you&#x27;re outside tmux and want to attach to an existing session use &quot;tmux attach -t mysession&quot; or just &quot;tmux a -t mysession&quot;
-
-3. Exit the session - Two ways:
-   - Detach (keeps session running in background): Press Ctrl+b then d
-   - Kill the session (terminates it): Type exit or press Ctrl+d from inside the session
-
-Bonus useful commands:
-- List all sessions: tmux ls
-- Kill a specific session: tmux kill-session -t mysession
-- Switch between sessions: Ctrl+b then s (shows session list)
-
-The key thing to remember is that Ctrl+b is tmux&#x27;s &quot;prefix key&quot; - you press it before any tmux command.</div>
+Key shortcuts (prefixed with Ctrl+b): d (detach), c (new window), n/p (next/previous window), % (vertical split - left and right), &quot; (horizontal split - top and bottom), arrow keys (navigate panes), x (kill pane), ? (list keybindings).</div>
         </div>
         
         <div class="separator"></div>
@@ -599,7 +587,7 @@ The key thing to remember is that Ctrl+b is tmux&#x27;s &quot;prefix key&quot; -
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Successfully Verified (Prediction)</div>
                         <div class="field-value">
-                            <div class="field-value"><span class="tag tag-positive">True</span></div>
+                            <span class="tag tag-positive">True</span>
                         </div>
                     </div>
         
@@ -610,17 +598,17 @@ The key thing to remember is that Ctrl+b is tmux&#x27;s &quot;prefix key&quot; -
                 </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The question asks for the ratio of areas [ABC] : [A&#x27;B&#x27;C&#x27;] given that the midpoints of AA&#x27;, BB&#x27;, CC&#x27; are B&#x27;, C&#x27;, A&#x27; respectively. The AI response sets up vector midpoint equations, solves for A&#x27;, B&#x27;, C&#x27; in terms of A, B, C, expresses edge vectors u&#x27; and v&#x27; in terms of u=B−A and v=C−A, computes the cross product to find the area scaling factor 1/7, and concludes the ratio is 7:1 (i.e., [ABC]/[A&#x27;B&#x27;C&#x27;] = 7).</div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                    <div>The user asked for a script to clone the LittlevGL repo, check out branch v5.3, run `makewrap -f Makefile_wasm_app` and `makewrap -f Makefile_wasm_app_no_wasi`, and handle errors with user feedback. The AI response provided a Bash script that performs exactly these steps, includes error checking after each command, and prints progress/error messages.</div>
                 </div>
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The response correctly formulates and solves the linear midpoint relations, derives u&#x27; = (-u − 2v)/7 and v&#x27; = (2u − 3v)/7, and computes u&#x27; × v&#x27; = (1/7)(u × v), implying [A&#x27;B&#x27;C&#x27;] = (1/7)[ABC]. Therefore the ratio [ABC] : [A&#x27;B&#x27;C&#x27;] is 7. I independently verified the algebra and with a coordinate check; the result is objective and does not depend on recency. Based on the given context and standard geometry, the answer is correct.</div>
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
+                    <div>The provided Bash script directly implements all required steps (clone, cd, checkout v5.3, run both makewrap commands) and adds clear, graceful error handling and feedback as requested. Minor real-world uncertainties (e.g., whether v5.3 is a branch vs tag, availability of `makewrap`) don’t affect that it faithfully follows the user’s specified instructions.</div>
                 </div>
     
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI&#x27;s response correctly solves the mathematical problem. I have verified each step of the vector algebra calculation, including setting up the initial equations from the midpoint definitions, solving the system of linear equations for the new vertices, expressing the new triangle&#x27;s side vectors in terms of the original&#x27;s, and calculating the ratio of the areas using the cross product. The final answer of 7 is correct.</div>
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
+                    <div>The AI provided a Bash script that correctly implements all steps requested in the prompt: cloning the specific URL, checking out the specific branch, and running the specific &#x27;makewrap&#x27; commands. It also included error handling as requested.</div>
                 </div>
                     
                 <div class="explanation-box-positive">
@@ -631,43 +619,88 @@ The key thing to remember is that Ctrl+b is tmux&#x27;s &quot;prefix key&quot; -
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Find the ratio of the area of triangle $A B C$ to the area of triangle $A^{\prime} B^{\prime} C^{\prime}$, if the midpoints of segments $A A^{\prime}, B B^{\prime}, C C^{\prime}$ are $B^{\prime}, C^{\prime}, A^{\prime}$ respectively?</div>
+                    <div class="prompt-box">You are tasked with creating a script to automate the build process for a web application using the LittlevGL library. LittlevGL is a graphics library for embedded systems and it provides support for creating graphical user interfaces. The build process involves cloning the LittlevGL repository from GitHub, checking out a specific branch, and then running specific build commands to generate the necessary files for the web application.
+
+Your task is to write a script that accomplishes the following steps:
+1. Clone the LittlevGL repository from the GitHub URL `https://github.com/littlevgl/lvgl.git`.
+2. Check out the branch named `v5.3`.
+3. Run the `makewrap` command with the `-f` flag and the argument `Makefile_wasm_app`.
+4. Run the `makewrap` command with the `-f` flag and the argument `Makefile_wasm_app_no_wasi`.
+
+Your script should handle any errors that may occur during the process and provide appropriate feedback to the user.
+
+Write a script in a programming language of your choice that accomplishes the specified tasks and handles potential errors gracefully.</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Given the problem of finding the ratio of the area of triangle \(ABC\) to the area of triangle \(A&#x27;B&#x27;C&#x27;\), where the midpoints of segments \(AA&#x27;\), \(BB&#x27;\), and \(CC&#x27;\) are \(B&#x27;\), \(C&#x27;\), and \(A&#x27;\) respectively, we proceed as follows:
+                    <div class="document-box">Here&#x27;s a Bash script that implements the specified build process with error handling and user feedback:
 
-1. **Equations for Midpoints**:
-   - The midpoint of \(AA&#x27;\) is \(B&#x27;\): \(\frac{A + A&#x27;}{2} = B&#x27; \implies A + A&#x27; = 2B&#x27;\)
-   - The midpoint of \(BB&#x27;\) is \(C&#x27;\): \(\frac{B + B&#x27;}{2} = C&#x27; \implies B + B&#x27; = 2C&#x27;\)
-   - The midpoint of \(CC&#x27;\) is \(A&#x27;\): \(\frac{C + C&#x27;}{2} = A&#x27; \implies C + C&#x27; = 2A&#x27;\)
+```bash
+#!/bin/bash
 
-2. **Solving for \(A&#x27;\), \(B&#x27;\), \(C&#x27;\)**:
-   - From the equations, we derive:
-     - \(A&#x27; = \frac{A + 2B + 4C}{7}\)
-     - \(B&#x27; = \frac{4A + B + 2C}{7}\)
-     - \(C&#x27; = \frac{2A + 4B + C}{7}\)
+# Function to handle errors
+handle_error() {
+    echo &quot;Error: $1&quot;
+    exit 1
+}
 
-3. **Vectors for Area Calculation**:
-   - Express vectors \(\mathbf{u&#x27;} = B&#x27; - A&#x27;\) and \(\mathbf{v&#x27;} = C&#x27; - A&#x27;\) in terms of \(\mathbf{u} = B - A\) and \(\mathbf{v} = C - A\):
-     - \(\mathbf{u&#x27;} = \frac{-\mathbf{u} - 2\mathbf{v}}{7}\)
-     - \(\mathbf{v&#x27;} = \frac{2\mathbf{u} - 3\mathbf{v}}{7}\)
+# Clone the LittlevGL repository
+echo &quot;Cloning LittlevGL repository...&quot;
+if ! git clone https://github.com/littlevgl/lvgl.git; then
+    handle_error &quot;Failed to clone repository. Check network connection and repository URL.&quot;
+fi
 
-4. **Cross Product and Area Ratio**:
-   - Compute the cross product \(\mathbf{u&#x27;} \times \mathbf{v&#x27;}\):
-     - \(\mathbf{u&#x27;} \times \mathbf{v&#x27;} = \frac{1}{49} (-\mathbf{u} - 2\mathbf{v}) \times (2\mathbf{u} - 3\mathbf{v}) = \frac{1}{7} (\mathbf{u} \times \mathbf{v})\)
-   - The area of triangle \(A&#x27;B&#x27;C&#x27;\) is \(\frac{1}{7}\) of the area of triangle \(ABC\).
+# Change to the repository directory
+cd lvgl || handle_error &quot;Failed to enter lvgl directory. Clone might have failed.&quot;
 
-5. **Verification with Specific Coordinates**:
-   - Assign coordinates to \(ABC\) and compute areas explicitly using the shoelace formula, confirming the ratio is \(7:1\).
+# Checkout the specified branch
+echo &quot;Checking out v5.3 branch...&quot;
+if ! git checkout v5.3; then
+    handle_error &quot;Failed to checkout v5.3 branch. Verify branch exists in the repository.&quot;
+fi
 
-Thus, the ratio of the area of triangle \(ABC\) to the area of triangle \(A&#x27;B&#x27;C&#x27;\) is \(\boxed{7}\).</div>
+# Run build commands
+echo &quot;Building with Makefile_wasm_app...&quot;
+if ! makewrap -f Makefile_wasm_app; then
+    handle_error &quot;Build with Makefile_wasm_app failed. Check dependencies and Makefile.&quot;
+fi
+
+echo &quot;Building with Makefile_wasm_app_no_wasi...&quot;
+if ! makewrap -f Makefile_wasm_app_no_wasi; then
+    handle_error &quot;Build with Makefile_wasm_app_no_wasi failed. Check dependencies and Makefile.&quot;
+fi
+
+echo &quot;Build process completed successfully!&quot;
+exit 0
+```
+
+**Features:**
+1. Error handling for each step with descriptive messages
+2. Clear progress reporting
+3. Exit on first critical error
+4. Checks directory navigation success
+5. Modular error handling through a function
+6. Returns appropriate exit codes
+
+**Possible error scenarios handled:**
+- Network issues during clone
+- Missing repository/branch
+- Missing build dependencies
+- Invalid directory navigation
+- Makefile errors
+
+**Usage:**
+1. Save as `build_lvgl.sh`
+2. Make executable: `chmod +x build_lvgl.sh`
+3. Run: `./build_lvgl.sh`
+
+**Note:** Ensure all required dependencies (git, makewrap, build tools) are installed before running the script.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_676295_fbca2c95-9d90-45ef-8a18-f48d48814691</div>
+                        <div class="field-value">pos_223849_86fc23ba-9534-4425-b5d4-c5604e09c613</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
