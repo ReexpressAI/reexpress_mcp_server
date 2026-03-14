@@ -61,22 +61,14 @@ See [documentation/DATA.md](documentation/DATA.md).
 
 See [documentation/EVAL.md](documentation/EVAL.md).
 
+## System Demonstration Paper
+
+A copy of our system demonstration paper "Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following", which focuses in particular on version 2.1.0 of the Reexpress MCP Server, is included [here](documentation/system_demonstration_paper/sdm_demo.pdf). The support scripts to replicate the analysis are included [here](documentation/model_details/release/v2.1.0_demo_paper).
+
+
 ## Citation
 
-If you find this software useful, consider citing the following papers:
-
-```
-@misc{Schmaltz-2025-SimilarityDistanceMagnitudeLanguageModels,
-      title={Similarity-Distance-Magnitude Language Models}, 
-      author={Allen Schmaltz},
-      year={2025},
-      eprint={2510.26183},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2510.26183}, 
-}
-```
-
+If you find this software useful, consider citing the following paper:
 
 ```
 @misc{Schmaltz-2025-SimilarityDistanceMagnitudeActivations,
