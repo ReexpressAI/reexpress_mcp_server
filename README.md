@@ -68,7 +68,7 @@ A copy of our system demonstration paper "Introspectable, Updatable, and Uncerta
 
 ## Citation
 
-If you find this software useful, consider citing the following paper (to appear in *Findings of the Association for Computational Linguistics: ACL 2026*, San Diego, CA, USA):
+If you find this software useful, consider citing the following peer-reviewed papers:
 
 ```
 @misc{Schmaltz-2025-SimilarityDistanceMagnitudeActivations,
@@ -78,7 +78,17 @@ If you find this software useful, consider citing the following paper (to appear
       eprint={2509.12760},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2509.12760}, 
+      url={https://arxiv.org/abs/2509.12760},
+      note={To appear in \emph{Findings of the Association for Computational Linguistics: ACL 2026}, San Diego, CA, USA.},
+}
+```
+
+```
+@misc{Schmaltz-2026-ReexpressMCPServer,
+      title={Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following}, 
+      author={Allen Schmaltz},
+      year={2026},
+      note={To appear in the \emph{1st ACM Conference on AI and Agentic Systems: Demos (ACM CAIS'26 Demos)}, San Jose, CA, USA.},
 }
 ```
 
