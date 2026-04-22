@@ -82,11 +82,17 @@ def main():
                         default=False, action='store_true', help="")
 
     parser.add_argument("--label_error_file", default="",
-                        help="If provided, possible label annotation errors are saved, sorted by the LOWER predictive "
-                             "probability, where the subset is those that are valid index-conditional predictions.")
+                        help="If provided, possible label annotation errors (in HR but y != prediction) are saved, "
+                             "sorted by the SDM(z')_prediction probability.")
     parser.add_argument("--predictions_in_high_reliability_region_file", default="",
                         help="If provided, instances with predictions in the High Reliability region are saved, "
-                             "sorted by the output from sdm().")
+                             "sorted by the SDM(z')_prediction probability.")
+    parser.add_argument("--label_error_hr_lower_file", default="",
+                        help="If provided, possible label annotation errors (in HR_lower but y != prediction) "
+                             "are saved, sorted by the SDM_lower(z')_prediction probability.")
+    parser.add_argument("--predictions_in_high_reliability_region_lower_file", default="",
+                        help="If provided, instances with predictions in the High Reliability LOWER region are saved, "
+                             "sorted by the SDM_lower(z')_prediction probability.")
     parser.add_argument("--prediction_output_file", default="",
                         help="If provided, output predictions are saved to this file "
                              "in the order of the input file.")
@@ -117,6 +123,25 @@ def main():
     parser.add_argument("--print_timing",
                         default=False, action='store_true',
                         help="Used for profiling training.")
+    # ensemble parameters:
+    parser.add_argument("--eval_ensemble", default=False, action='store_true', help="")
+    parser.add_argument("--eval_ensemble_start_iteration", default=-1, type=int, help="")
+    parser.add_argument("--eval_ensemble_end_iteration", default=-1, type=int, help="")
+    parser.add_argument("--eval_ensemble_label_error_file", default="",
+                        help="If provided, possible label annotation errors (in HR but y != prediction) are saved, "
+                             "sorted by the SDM(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_file", default="",
+                        help="If provided, instances with predictions in the High Reliability region are saved, "
+                             "sorted by the SDM(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_label_error_hr_lower_file", default="",
+                        help="If provided, possible label annotation errors (in HR_lower but y != prediction) "
+                             "are saved, sorted by the SDM_lower(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_lower_file", default="",
+                        help="If provided, instances with predictions in the High Reliability LOWER region are saved, "
+                             "sorted by the SDM_lower(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_prediction_output_file", default="",
+                        help="If provided, output predictions are saved to this file "
+                             "in the order of the input file.")
 
     options = parser.parse_args()
 
@@ -150,6 +175,26 @@ def main():
         baseline_utils_test.test(options, main_device)
     else:
         utils_test_batch.test(options, main_device)
+
+        if options.eval_ensemble:
+            import os
+            import utils_test_batch_ensemble
+            id2ensemble_stats = {}
+            total_models_in_ensemble = \
+                len(list(range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1)))
+            print(f"------------------------------------------------------------------------------------------")
+            print(f"---------------Beginning Ensemble Evaluation of {total_models_in_ensemble} models---------------")
+            for iteration in range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1):
+                iteration_model_dir = os.path.join(options.model_dir, str(iteration))
+                print(f"------------------------------------------------------------------------------------------")
+                print(f"---------------Processing Ensemble Shuffle Index {iteration_model_dir}---------------")
+                id2ensemble_stats = \
+                    utils_test_batch.test(options, main_device,
+                                          iteration_model_dir=iteration_model_dir, id2ensemble_stats=id2ensemble_stats)
+            utils_test_batch_ensemble.test(options, id2ensemble_stats=id2ensemble_stats,
+                                           numberOfClasses=options.class_size,
+                                           maxQAvailableFromIndexer=options.maxQAvailableFromIndexer,
+                                           total_models_in_ensemble=total_models_in_ensemble)
     if options.update_support_set_with_eval_data:
         assert not options.is_baseline_adaptor
         utils_update.batch_support_update(options, main_device)

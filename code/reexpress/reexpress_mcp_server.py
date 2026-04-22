@@ -2,6 +2,7 @@
 
 from mcp.server.fastmcp import FastMCP
 import mcp_utils_controller
+import random
 
 mcp = FastMCP("reexpress")
 mcp_server_state_controller_object = mcp_utils_controller.MCPServerStateController()
@@ -155,5 +156,6 @@ async def reexpress(user_question: str, ai_response: str) -> str:
 
 
 if __name__ == "__main__":
+    random.seed(42)
     # Initialize and run the server
     mcp.run(transport='stdio')

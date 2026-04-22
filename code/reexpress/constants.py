@@ -244,8 +244,10 @@ SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE_KEY = "short_explanation_for_cla
 SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR = "Unfortunately, I am unable to verify that response. Please consider providing additional clarification and/or additional references, results, or other information that may assist in the verification process."
 LLM_API_ERROR_KEY = "llm_api_error"
 
-# EXPECTED_EMBEDDING_SIZE = 1349
-EXPECTED_EMBEDDING_SIZE = 8194
+EXPECTED_API_EMBEDDING_SIZE = 3072
+EXPECTED_LOCAL_LM_EMBEDDING_SIZE = 12292
+EXPECTED_EMBEDDING_SIZE = 18436
+
 EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH = 10
 # see construct_document_attributes_and_embedding():
 # EXPECTED_ATTRIBUTES_LENGTH = EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH * 2 + 4 + 2  # v1.1.0
@@ -268,6 +270,10 @@ AGREEMENT_MODEL_USER_FACING_PROMPT = "Do the model explanations agree that the r
 MCP_SERVER_NOT_VERIFIED_CLASS_LABEL = "NOT Verified"
 MCP_SERVER_VERIFIED_CLASS_LABEL = "Verified"
 
+MCP_SERVER_CONFIG_USE_ENSEMBLE = True
+MCP_SERVER_EVAL_ENSEMBLE_START_ITERATION = 0
+MCP_SERVER_EVAL_ENSEMBLE_END_ITERATION = 0  # inclusive
+
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
 MCP_SERVER_MODEL1_NAME = "gpt-5.2-2025-12-11"
@@ -278,7 +284,7 @@ MCP_SERVER_AGREEMENT_MODEL_NAME = "granite-3.3-8b-instruct"
 MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
 MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
-REEXPRESS_MCP_SERVER_VERSION = "2.1.0"  # see also ProgramIdentifiers_version for the classifier
+REEXPRESS_MCP_SERVER_VERSION = "v2.2.0.alpha"  # see also ProgramIdentifiers_version for the classifier
 
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,

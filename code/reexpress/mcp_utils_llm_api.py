@@ -9,38 +9,17 @@ import time
 import os
 
 import constants
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from google import genai
 from google.genai import types
-
-model_path = "ibm-granite/granite-3.3-8b-instruct"
-
-try:
-    device = str(os.getenv("MCP_SERVER_AGREEMENT_MODEL_DEVICE",
-                           default=constants.MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT))
-    MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH = int(
-        os.getenv("MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH",
-                  default=constants.MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT))
-except:
-    device = constants.MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT
-    MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH = \
-        constants.MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT
-
-model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        device_map=device,
-        torch_dtype=torch.bfloat16,
-    )
-tokenizer = AutoTokenizer.from_pretrained(
-        model_path
-)
 
 
 # env variables
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 google_client = genai.Client(api_key=GEMINI_API_KEY)  # can alternatively replace with a Vertex AI deployment
 
-GEMINI_MODEL="gemini-3-pro-preview"
+GEMINI_MODEL = "gemini-3.1-pro-preview"
+GEMINI_EMBEDDING_MODEL = "gemini-embedding-2-preview"
 
 USE_AZURE_01 = int(os.getenv("USE_AZURE_01", "1"))
 if USE_AZURE_01 == 1:
@@ -51,11 +30,11 @@ if USE_AZURE_01 == 1:
         api_version=kAPI_VERSION,
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
     )
-    GPT5_MODEL = os.getenv("GPT_5_2_MODEL_2025_12_11_AZURE_DEPLOYMENT")
+    GPT5_MODEL = os.getenv("GPT_5_4_MODEL_2026_03_05_AZURE_DEPLOYMENT")
 else:
     from openai import OpenAI
     client = OpenAI()
-    GPT5_MODEL = "gpt-5.2-2025-12-11"
+    GPT5_MODEL = "gpt-5.4-2026-03-05"
 
 
 class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):
@@ -65,8 +44,7 @@ class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):
     short_explanation_for_classification_confidence: str
 
 
-def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_string: str) -> \
-        dict[str, float | bool]:
+def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_string: str):
     time.sleep(torch.abs(torch.randn(1)).item() / constants.SLEEP_CONSTANT)
     try:
         max_tokens=100000
@@ -100,8 +78,7 @@ def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_stri
     return verification_dict
 
 
-def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to_verify_string: str) -> \
-        dict[str, float | bool]:
+def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to_verify_string: str):
     time.sleep(torch.abs(torch.randn(1)).item() / constants.SLEEP_CONSTANT)
     try:
         max_tokens=65535
@@ -150,34 +127,25 @@ def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to
     return verification_dict
 
 
-def get_agreement_model_embedding(document_text: str):
-    conv = [{"role": "user",
-             "content": document_text}]
-    input_ids = tokenizer.apply_chat_template(conv, return_tensors="pt", thinking=False,
-                                              return_dict=True, add_generation_prompt=True).to(device)
-    outputs = model.generate(
-        **input_ids,
-        max_new_tokens=1,
-        output_hidden_states=True,
-        return_dict_in_generate=True,
-        output_scores=True,
-    )
-    hidden_states = outputs.hidden_states
-    scores = outputs.scores
-    no_id = tokenizer.vocab["No"]
-    yes_id = tokenizer.vocab["Yes"]
-    probs = torch.softmax(scores[0], dim=-1)
-    # average of all (across tokens) final hidden states :: final token hidden state (here this corresponds to the hidden state of the linear layer that determines the No/Yes classification) :: no_prob :: yes_prob
-    embedding = torch.cat([
-        torch.mean(hidden_states[0][-1][0], dim=0).unsqueeze(0),
-        hidden_states[0][-1][0][-1, :].unsqueeze(0),
-        probs[0:1, no_id].unsqueeze(0),
-        probs[0:1, yes_id].unsqueeze(0)
-    ], dim=-1)
-    embedding = [float(x) for x in embedding[0].cpu().numpy().tolist()]
-    assert len(embedding) == constants.EXPECTED_EMBEDDING_SIZE
-    agreement_classification = probs[0:1, no_id] < probs[0:1, yes_id]
-    return embedding, agreement_classification.item()
+def prepare_classification_input(content):
+    # template from https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-multimodal-embeddings
+    return f"task: classification | query: {content}"
+
+
+def get_document_attributes_from_gemini_embedding(previous_query_and_response_to_verify_string: str):
+    try:
+        result = google_client.models.embed_content(
+            model=GEMINI_EMBEDDING_MODEL,
+            contents=[
+                prepare_classification_input(previous_query_and_response_to_verify_string),
+            ]
+        )
+        api_embedding = result.embeddings[0].values
+        api_embedding = [float(x) for x in api_embedding]
+        assert len(api_embedding) == constants.EXPECTED_API_EMBEDDING_SIZE
+        return api_embedding
+    except:
+        return None
 
 
 def get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summary,
@@ -191,29 +159,13 @@ def get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summa
     return formatted_output_string
 
 
-
-def llm_api_controller(gpt5_model_summary: str, gpt5_model_explanation: str,
-                       gemini_model_explanation: str):
-    try:
-        # Hard truncate by max allowed character count, with strict priority:
-        # gpt5_model_explanation first, then gemini_model_explanation, then summary.
-        # This is intended to put a hard constraint on memory use of the on-device model. Adjust as applicable
-        # via the corresponding environment variable.
-        remaining_max_length_counter = MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH
-        gpt5_model_explanation_filtered = gpt5_model_explanation[0:max(0, remaining_max_length_counter)]
-        remaining_max_length_counter -= len(gpt5_model_explanation_filtered)
-        gemini_model_explanation_filtered = gemini_model_explanation[0:max(0, remaining_max_length_counter)]
-        remaining_max_length_counter -= len(gemini_model_explanation_filtered)
-        gpt5_model_summary_filtered = gpt5_model_summary[0:max(0, remaining_max_length_counter)]
-
-        prompt = get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summary_filtered,
-                                                                             gpt5_model_explanation_filtered,
-                                                                             gemini_model_explanation_filtered)
-        agreement_model_embedding, agreement_model_classification = \
-            get_agreement_model_embedding(document_text=prompt)
-        return agreement_model_embedding, agreement_model_classification
-    except:
-        return None, None
+def get_api_embedding_for_agreement_prompt(gpt5_model_summary: str, gpt5_model_explanation: str,
+                                           gemini_model_explanation: str):
+    # In this case, we do not truncate (cf. the local embedding controllers).
+    prompt = get_model_explanations_formatted_as_binary_agreement_prompt(gpt5_model_summary,
+                                                                         gpt5_model_explanation,
+                                                                         gemini_model_explanation)
+    return get_document_attributes_from_gemini_embedding(previous_query_and_response_to_verify_string=prompt)
 
 
 def get_model_explanations(gpt5_model_verification_dict,

@@ -98,7 +98,7 @@ def init_latex_rows_dict(numberOfClasses):
 
 def print_latex_row(options, model, alpha_prime, latex_rows_dict_no_reject,
                     latex_rows_dict_softmax_f, latex_rows_dict_softmax_df,
-                    latex_rows_dict_sdm, latex_rows_dict_sdm_hr):
+                    latex_rows_dict_sdm, latex_rows_dict_sdm_hr, latex_rows_dict_sdm_hr_lower):
     if options.construct_results_latex_table_rows:
         latex_meta_data_list = options.additional_latex_meta_data.strip().split(",")
         if len(latex_meta_data_list) == 2:
@@ -112,14 +112,16 @@ def print_latex_row(options, model, alpha_prime, latex_rows_dict_no_reject,
             get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_no_reject,
                           r'$\estimatorNoReject$', model.numberOfClasses)
         )
-        print(
-            get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_softmax_f,
-                          r'$\estimatorSoftmax$', model.numberOfClasses)
-        )
-        print(
-            get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_softmax_df,
-                          r'$\estimatorSoftmaxOverDistanceMagnitude$',
-                          model.numberOfClasses)
+        if latex_rows_dict_softmax_f is not None:
+            print(
+                get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_softmax_f,
+                              r'$\estimatorSoftmax$', model.numberOfClasses)
+            )
+        if latex_rows_dict_softmax_df is not None:
+            print(
+                get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_softmax_df,
+                              r'$\estimatorSoftmaxOverDistanceMagnitude$',
+                              model.numberOfClasses)
         )
         print(
             get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_sdm,
@@ -128,4 +130,8 @@ def print_latex_row(options, model, alpha_prime, latex_rows_dict_no_reject,
         print(
             get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_sdm_hr,
                           r'$\sdmHR$', model.numberOfClasses)
+        )
+        print(
+            get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_sdm_hr_lower,
+                          r'$\sdmHRLower$', model.numberOfClasses)
         )

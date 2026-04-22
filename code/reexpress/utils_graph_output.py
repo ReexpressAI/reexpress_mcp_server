@@ -463,7 +463,8 @@ def main():
           f"Click on a point in the graph to print details (including document text, if available) to the console.")
     start_time = time.time()
     model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
-    min_rescaled_similarity_to_determine_high_reliability_region = model.min_rescaled_similarity_to_determine_high_reliability_region
+    min_rescaled_similarity_to_determine_high_reliability_region = \
+        model.min_rescaled_similarity_to_determine_high_reliability_region
     hr_output_thresholds = model.hr_output_thresholds.detach().cpu().tolist()
     hr_class_conditional_accuracy = model.hr_class_conditional_accuracy
 

@@ -2,8 +2,10 @@
 
 # test-time predictions and formatting for MCP server
 
-import torch
+# import torch
 import numpy as np
+import random
+from collections import Counter
 
 import constants
 
@@ -83,8 +85,11 @@ def get_calibration_reliability_label(is_high_reliability_region, is_ood, sdm_ou
     return calibration_reliability
 
 
-def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_explanation, gemini_model_explanation,
+def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data_dict,
+                                             gpt5_model_explanation, gemini_model_explanation,
                                              agreement_model_classification: bool):
+    # Currently only the first index:
+    prediction_meta_data = prediction_meta_data_dict["prediction_meta_data_across_models"][0]
 
     predicted_class = prediction_meta_data["prediction"]
 
@@ -96,6 +101,7 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_ex
     # 2026-01-10: Added prediction_meta_data["d"] == 0.0. For these cases, the output is at chance, but the default
     # output to the LM only shows the coarse labels, so this simplifies the interpretation for the tool-calling LM when
     # the full probability vector isn't provided (i.e., without calling the View tool).
+    # The same is done in construct_ensemble_prediction().
     is_ood = prediction_meta_data["is_ood"] or prediction_meta_data["d"] == 0.0
     calibration_reliability = \
         get_calibration_reliability_label(is_high_reliability_region, is_ood,
@@ -112,23 +118,115 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data, gpt5_model_ex
     return formatted_output_string
 
 
-def test(main_device, model, reexpression_input):
+def random_mode(a):
+    # Find the most common value, randomly selecting if there are ties.
+    counts = Counter(a)
+    max_count = max(counts.values())
+    modes = [k for k, v in counts.items() if v == max_count]
+    return random.choice(modes)
+
+
+def construct_ensemble_prediction(prediction_meta_data_across_models):
+    # This mirrors utils_test_batch_ensemble.py
+
+    if len(prediction_meta_data_across_models) == 0:
+        return {"ensemble_meta_data": None,
+                "prediction_meta_data_across_models": prediction_meta_data_across_models}
+
+    total_models_in_ensemble = len(prediction_meta_data_across_models)
+    predicted_class = random_mode(
+        [prediction_meta_data["prediction"] for prediction_meta_data in prediction_meta_data_across_models])
+
+    # Note that we also require all
+    # predictions to match in order for the ensemble to be in the HR/HR_lower regions. This is checked in the loop
+    # across prediction_meta_data_across_models, below. (.item() is to convert
+    # from numpy to int for JSON serialization.)
+    is_high_reliability_region_lower = \
+        np.sum(
+            [prediction_meta_data["is_high_reliability_region_lower"]
+             for prediction_meta_data in prediction_meta_data_across_models]).item() == total_models_in_ensemble
+    is_high_reliability_region = \
+        np.sum(
+            [prediction_meta_data["is_high_reliability_region"]
+             for prediction_meta_data in prediction_meta_data_across_models]).item() == total_models_in_ensemble
+
+    is_ood = False
+    sdm_output = None  # chosen min among predicted_class
+    rescaled_similarity = None
+    min_sdm_output_index = None
+    sdm_output_lower = None  # chosen min among predicted_class
+    rescaled_similarity_lower = None
+    min_sdm_output_lower_index = None
+    shuffle_index = 0
+    for prediction_meta_data in prediction_meta_data_across_models:
+        # As with format_sdm_estimator_output_for_mcp_tool(), for the purposes of the MCP tool, we also
+        # explicitly set d == 0 as OOD:
+        if prediction_meta_data["is_ood"] or prediction_meta_data["d"] == 0.0:
+            # OOD if at least one OOD
+            is_ood = True
+        if prediction_meta_data["prediction"] == predicted_class:
+            if sdm_output is None or \
+                    prediction_meta_data["sdm_output"][predicted_class] < sdm_output[predicted_class]:
+                sdm_output = prediction_meta_data["sdm_output"]
+                rescaled_similarity = prediction_meta_data["rescaled_similarity"]
+                min_sdm_output_index = shuffle_index
+            if sdm_output_lower is None or \
+                    prediction_meta_data["sdm_output_d_lower"][predicted_class] < sdm_output_lower[predicted_class]:
+                sdm_output_lower = prediction_meta_data["sdm_output_d_lower"]
+                rescaled_similarity_lower = prediction_meta_data["rescaled_similarity_lower"]
+                min_sdm_output_lower_index = shuffle_index
+        else:
+            is_high_reliability_region_lower = False
+            is_high_reliability_region = False
+
+        shuffle_index += 1
+
+    ensemble_meta_data = {
+        # Across models, the modal prediction, with ties randomly broken:
+        "ensemble_prediction": predicted_class,
+        # All predictions match AND all predictions are in HR_lower:
+        "ensemble_is_high_reliability_region_lower": is_high_reliability_region_lower,
+        # Among predictions matching "ensemble_prediction", lowest sdm(z')_lower for the predicted class:
+        "ensemble_sdm_output_lower": sdm_output_lower,
+        # q'_lower corresponding to the model iteration chosen for "ensemble_sdm_output_lower"
+        "ensemble_rescaled_similarity_lower": rescaled_similarity_lower,
+        # All predictions match AND all predictions are in HR:
+        "ensemble_is_high_reliability_region": is_high_reliability_region,
+        # Among predictions matching "ensemble_prediction", lowest sdm(z') for the predicted class:
+        "ensemble_sdm_output": sdm_output,
+        # q' corresponding to the model iteration chosen for "ensemble_sdm_output"
+        "ensemble_rescaled_similarity": rescaled_similarity,
+        # If any of the model predictions are OOD:
+        "ensemble_any_is_ood": is_ood,
+        # model shuffle index for the min SDM output:
+        "min_sdm_output_index": min_sdm_output_index,
+        # model shuffle index for the min SDM_lower output:
+        "min_sdm_output_lower_index": min_sdm_output_lower_index
+    }
+    json_obj = {"ensemble_meta_data": ensemble_meta_data,
+                "prediction_meta_data_across_models": prediction_meta_data_across_models}
+    return json_obj
+
+
+def test(main_device, model_list, reexpression_input):
     try:
         assert main_device.type == "cpu"
-
-        prediction_meta_data = \
-            model(reexpression_input,
-                  forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR,
-                  return_k_nearest_training_idx_in_prediction_metadata=1)
-        # We defer retrieving the training instance from the database, since it is not needed if the
-        # visualization is turned off:
-        prediction_meta_data["nearest_training_idx"] = prediction_meta_data["top_distance_idx"]
-        # add the following model-level values for convenience
-        prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"] = \
-            model.min_rescaled_similarity_to_determine_high_reliability_region
-        prediction_meta_data["hr_output_thresholds"] = model.hr_output_thresholds.detach().cpu().tolist()
-        prediction_meta_data["hr_class_conditional_accuracy"] = model.hr_class_conditional_accuracy
-        prediction_meta_data["support_index_ntotal"] = model.support_index.ntotal
-        return prediction_meta_data
+        prediction_meta_data_across_models = []
+        for model in model_list:
+            prediction_meta_data = \
+                model(reexpression_input,
+                      forward_type=constants.FORWARD_TYPE_SINGLE_PASS_TEST_WITH_EXEMPLAR,
+                      return_k_nearest_training_idx_in_prediction_metadata=1)
+            # We defer retrieving the training instance from the database, since it is not needed if the
+            # visualization is turned off:
+            prediction_meta_data["nearest_training_idx"] = prediction_meta_data["top_distance_idx"]
+            # add the following model-level values for convenience
+            prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"] = \
+                model.min_rescaled_similarity_to_determine_high_reliability_region
+            prediction_meta_data["hr_output_thresholds"] = model.hr_output_thresholds.detach().cpu().tolist()
+            prediction_meta_data["hr_class_conditional_accuracy"] = model.hr_class_conditional_accuracy
+            prediction_meta_data["support_index_ntotal"] = model.support_index.ntotal
+            prediction_meta_data_across_models.append(prediction_meta_data)
+        return construct_ensemble_prediction(prediction_meta_data_across_models)
     except:
         return None

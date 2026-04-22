@@ -126,7 +126,7 @@ def load_model_torch(model_dir, main_device, load_for_inference=False):
         model.set_support_index(support_index)
 
         model.eval()
-        print(f"Model loaded successfully, set to eval() mode.")
+        # print(f"Model loaded successfully, set to eval() mode.")
         return model.to(main_device)
     except:
         print(f"ERROR: The model file is missing or incomplete. Exiting.")
@@ -149,7 +149,7 @@ def load_index(model_dir, main_device):
         loaded_index = faiss.deserialize_index(loaded_index)
         gpu_id = main_device.index
         res = faiss.StandardGpuResources()
-        print(f"Model is on a CUDA device, so the loaded FAISS index has been moved to cuda:{gpu_id}.")
+        # print(f"Model is on a CUDA device, so the loaded FAISS index has been moved to cuda:{gpu_id}.")
         return faiss.index_cpu_to_gpu(res, gpu_id, loaded_index)
     else:
         return faiss.deserialize_index(loaded_index)

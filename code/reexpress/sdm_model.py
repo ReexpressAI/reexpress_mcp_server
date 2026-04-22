@@ -27,7 +27,7 @@ from collections import namedtuple
 #    recommended to also explicitly take into account the error from the effective sample size.
 #
 # At test-time (as calculated for a single instance in `single_pass_forward`):
-#     1. Calculate the SDM High Reliability region.
+#     1. Calculate the SDM High Reliability region (centroid and lower).
 #     2. The non-rejected points from (1) are those suitable for final decision-making. If needed to triage the
 #         remedial actions of the rejected points, the output from sdm() can be used directly with the
 #         understanding that the estimates are of unspecified reliability. The
@@ -928,18 +928,41 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                     batch_f=batch_f,
                     batch_q=batch_q,
                     batch_distance_quantile_per_class=batch_distance_quantile_per_class)
+            # q'_{lower}: Note the use of batch_sdm_d_cdf_lower
+            rescaled_similarities_lower, _ = \
+                self.get_rescaled_similarity_for_eval_batch(
+                    cached_f_outputs=batch_f,
+                    dataset_q_values=batch_q,
+                    sdm_outputs=batch_sdm_d_cdf_lower,
+                    return_tensors_on_cpu=False)
+            # SDM_{HR}^{lower}: Note the use of rescaled_similarities_lower and batch_sdm_d_cdf_lower
+            floor_rescaled_similarity_lower_tensor, is_high_reliability_region_lower_tensor, _ = \
+                self.get_high_reliability_region_indicator_vectorized(
+                    rescaled_similarities=rescaled_similarities_lower,
+                    batch_sdm_outputs=batch_sdm_d_cdf_lower,
+                    predictions=predictions.to(batch_sdm_d_cdf_lower.device))
+            # The final return value is ignored from self.get_high_reliability_region_indicator_vectorized,
+            # because it is equivalent to is_ood_tensor assuming
+            # self.ood_limit == 0. We check that assumption here in cases it changes in the future:
+            assert self.ood_limit == 0, "The current convention assumes self.ood_limit == 0."
             results = []
             for rescaled_similarity, sdm_output, prediction, f, q, distance_quantile_per_class, \
                     d0_value, nearest_support_idx_value, floor_rescaled_similarity, is_high_reliability_region, \
                     is_ood, cumulative_effective_sample_sizes_per_class, effective_cdf_sample_size_error_per_class, \
-                    d_cdf_lower, d_cdf_upper, sdm_output_d_lower, sdm_output_d_upper in \
+                    d_cdf_lower, d_cdf_upper, sdm_output_d_lower, sdm_output_d_upper,\
+                    rescaled_similarity_lower, \
+                    floor_rescaled_similarity_lower, \
+                    is_high_reliability_region_lower in \
                     zip(rescaled_similarities, sdm_batch_outputs, predictions, batch_f,
                         batch_q, batch_distance_quantile_per_class,
                         d0_values,
                         nearest_support_idx_values, floor_rescaled_similarity_tensor,
                         is_high_reliability_region_tensor, is_ood_tensor, cumulative_effective_sample_sizes,
                         effective_cdf_sample_size_error, batch_d_cdf_lower, batch_d_cdf_upper,
-                        batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper):
+                        batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper,
+                        rescaled_similarities_lower,
+                        floor_rescaled_similarity_lower_tensor,
+                        is_high_reliability_region_lower_tensor):
 
                 prediction_meta_data = {
                         # Similarity value: q:
@@ -966,11 +989,16 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                         #    is_ood. That is, not all non-is_high_reliability_region instances are OOD.
                         "is_ood": is_ood.item(),  # bool
                         "top_distance_idx": nearest_support_idx_value.item(),
-                        # Additional reference values for analysis:
+                        # These use the DKW inequality based on the effective sample size to put bounds on the
+                        # Distance empirical CDFs:
                         "d_lower": d_cdf_lower[0].item(),
                         "d_upper": d_cdf_upper[0].item(),
                         "sdm_output_d_lower": sdm_output_d_lower,  # tensor
                         "sdm_output_d_upper": sdm_output_d_upper,  # tensor
+                        "rescaled_similarity_lower": rescaled_similarity_lower.item(),
+                        "is_high_reliability_region_lower": is_high_reliability_region_lower.item(),  # bool
+                        # floor_rescaled_similarity is an int
+                        "floor_rescaled_similarity_lower": floor_rescaled_similarity_lower.item()
                         }
                 results.append(prediction_meta_data)
             return results

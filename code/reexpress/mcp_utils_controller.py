@@ -21,7 +21,7 @@ import mcp_utils_tool_limits_manager
 import data_validator
 import utils_visualization
 import mcp_utils_sqlite_document_db_controller
-
+import mcp_utils_llm_api_granite_3_3_8b_instruct as mcp_local_embedding_controller
 
 class AdaptationError(Exception):
     def __init__(self, message="An adaptation error occurred", error_code=None):
@@ -57,9 +57,19 @@ class MCPServerStateController:
             self.HTML_VISUALIZATION_FILE = None
         # For provenance of any added instances (the file must exist---content can be empty):
         self.DATA_UPDATE_FILE = str(Path(self.MODEL_DIR, "adaptation", "running_updates.jsonl").as_posix())
-        # load model
+        # load model(s)
         self.main_device = torch.device("cpu")
-        self.model = utils_model.load_model_torch(self.MODEL_DIR, torch.device("cpu"), load_for_inference=True)
+        if constants.MCP_SERVER_CONFIG_USE_ENSEMBLE:
+            self.model_list = []
+            for iteration in range(constants.MCP_SERVER_EVAL_ENSEMBLE_START_ITERATION,
+                                   constants.MCP_SERVER_EVAL_ENSEMBLE_END_ITERATION + 1):
+                iteration_model_dir = str(Path(self.MODEL_DIR, str(iteration)).as_posix())
+                self.model_list.append(
+                    utils_model.load_model_torch(iteration_model_dir, torch.device("cpu"), load_for_inference=True))
+        else:
+            self.model_list = \
+                [utils_model.load_model_torch(self.MODEL_DIR, torch.device("cpu"), load_for_inference=True)]
+        self.total_models_in_ensemble = len(self.model_list)
         # self.global_uncertainty_statistics = utils_model.load_global_uncertainty_statistics_from_disk(self.MODEL_DIR)
         # Data Access Manager: Controls file access and content sent directly to the verification LLMs
         self.mcp_file_access_manager_object = \
@@ -117,17 +127,23 @@ class MCPServerStateController:
         # currently identical:
         previous_query_and_response_to_verify_string_gemini = \
             f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
+        # In contrast, currently the embedding API model for the input does not embed the attached documents (if any)
+        previous_query_and_response_to_verify_string_api_embedding_for_input_qa = \
+            f"<question> {user_question} </question> <ai_response> {ai_response} </ai_response>"
         task_configs = [(mcp_utils_llm_api.get_document_attributes_from_gpt5,
                          previous_query_and_response_to_verify_string),
                         (mcp_utils_llm_api.get_document_attributes_from_gemini_reasoning,
-                         previous_query_and_response_to_verify_string_gemini)
+                         previous_query_and_response_to_verify_string_gemini),
+                        (mcp_utils_llm_api.get_document_attributes_from_gemini_embedding,
+                         previous_query_and_response_to_verify_string_api_embedding_for_input_qa),
                         ]
         try:
             results = await self._run_tasks_with_taskgroup(task_configs)
             gpt5_model_verification_dict, \
-                gemini_model_verification_dict = results
+                gemini_model_verification_dict, api_embedding_for_input_qa = results
             llm_api_error = gpt5_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
-                            gemini_model_verification_dict[constants.LLM_API_ERROR_KEY]
+                            gemini_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
+                            api_embedding_for_input_qa is None
         except:
             llm_api_error = True
         formatted_output_string = ""
@@ -141,22 +157,31 @@ class MCPServerStateController:
                 mcp_utils_llm_api.get_model_explanations(gpt5_model_verification_dict,
                                                          gemini_model_verification_dict)
             agreement_model_embedding, agreement_model_classification = \
-                mcp_utils_llm_api.llm_api_controller(gpt5_model_summary=gpt5_model_summary,
-                                                     gpt5_model_explanation=gpt5_model_explanation,
-                                                     gemini_model_explanation=gemini_model_explanation)
-            llm_api_error = agreement_model_embedding is None or agreement_model_classification is None
+                mcp_local_embedding_controller.get_local_embedding_for_agreement_prompt(
+                    gpt5_model_summary=gpt5_model_summary,
+                    gpt5_model_explanation=gpt5_model_explanation,
+                    gemini_model_explanation=gemini_model_explanation)
+            api_embedding_for_agreement_prompt = mcp_utils_llm_api.get_api_embedding_for_agreement_prompt(
+                gpt5_model_summary=gpt5_model_summary,
+                gpt5_model_explanation=gpt5_model_explanation,
+                gemini_model_explanation=gemini_model_explanation)
+            llm_api_error = agreement_model_embedding is None or agreement_model_classification is None or \
+                            api_embedding_for_agreement_prompt is None
             if not llm_api_error:
+                # The embedding is constructed by concatenating the following:
+                # API embedding for question and AI response :: API embedding for agreement prompt :: Local embedding
                 reexpression_input = mcp_utils_data_format.construct_document_attributes_and_embedding(
                     gpt5_model_verification_dict,
-                    gemini_model_verification_dict, agreement_model_embedding)
-                prediction_meta_data = mcp_utils_test.test(self.main_device, self.model, reexpression_input)
-                if prediction_meta_data is not None:
+                    gemini_model_verification_dict,
+                    api_embedding_for_input_qa + api_embedding_for_agreement_prompt + agreement_model_embedding)
+                prediction_meta_data_dict = mcp_utils_test.test(self.main_device, self.model_list, reexpression_input)
+                if prediction_meta_data_dict is not None:
                     formatted_output_string = mcp_utils_test.format_sdm_estimator_output_for_mcp_tool(
-                        prediction_meta_data, gpt5_model_explanation,
+                        prediction_meta_data_dict, gpt5_model_explanation,
                         gemini_model_explanation,
                         agreement_model_classification)
                     partial_reexpression["reexpression_input"] = reexpression_input
-                    partial_reexpression["prediction_meta_data"] = prediction_meta_data
+                    partial_reexpression["prediction_meta_data_dict"] = prediction_meta_data_dict
                     partial_reexpression[constants.REEXPRESS_MODEL1_CLASSIFICATION] = gpt5_model_classification
                     partial_reexpression[constants.REEXPRESS_MODEL2_CLASSIFICATION] = gemini_model_classification
                     partial_reexpression[constants.REEXPRESS_MODEL1_EXPLANATION] = gpt5_model_explanation
@@ -175,7 +200,7 @@ class MCPServerStateController:
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     agreement_model_classification=False,
-                    hr_class_conditional_accuracy=self.model.hr_class_conditional_accuracy))
+                    hr_class_conditional_accuracy=self.model_list[0].hr_class_conditional_accuracy))
             self.current_reexpression = None
         else:
             partial_reexpression["formatted_output_string"] = formatted_output_string
@@ -189,16 +214,22 @@ class MCPServerStateController:
         return formatted_output_string
 
     def get_nearest_match_meta_data(self):
+        # If ensemble mode is on, self.support_db is expected to include the data across all models.
         try:
-            nearest_support_idx = self.current_reexpression["prediction_meta_data"]["nearest_training_idx"]
-            nearest_support_document_id = self.model.train_uuids[nearest_support_idx]
-            nearest_match_meta_data = self.support_db.get_document(nearest_support_document_id)
-            # also add true labels and predictions
-            nearest_match_meta_data["model_train_label"] = self.model.train_labels[nearest_support_idx]
-            nearest_match_meta_data["model_train_predicted_label"] = \
-                self.model.train_predicted_labels[nearest_support_idx]
-            # label_int is also stored in the db for convenience, but the source of truth is model_train_label
-            return nearest_match_meta_data
+            nearest_match_meta_data_list = []
+            for i, model in enumerate(self.model_list):
+                prediction_meta_data = \
+                    self.current_reexpression["prediction_meta_data_dict"]["prediction_meta_data_across_models"][i]
+                nearest_support_idx = prediction_meta_data["nearest_training_idx"]
+                nearest_support_document_id = model.train_uuids[nearest_support_idx]
+                nearest_match_meta_data = self.support_db.get_document(nearest_support_document_id)
+                # also add true labels and predictions
+                nearest_match_meta_data["model_train_label"] = model.train_labels[nearest_support_idx]
+                nearest_match_meta_data["model_train_predicted_label"] = \
+                    model.train_predicted_labels[nearest_support_idx]
+                # label_int is also stored in the db for convenience, but the source of truth is model_train_label
+                nearest_match_meta_data_list.append(nearest_match_meta_data)
+            return nearest_match_meta_data_list
         except:
             return None
 
@@ -206,10 +237,15 @@ class MCPServerStateController:
         if self.current_reexpression is not None and self.CREATE_HTML_VISUALIZATION and \
                 self.HTML_VISUALIZATION_FILE is not None:
             try:
-                nearest_match_meta_data = self.get_nearest_match_meta_data()
-                html_content = utils_visualization.create_html_page(self.current_reexpression,
-                                                                    nearest_match_meta_data=nearest_match_meta_data,
-                                                                    nearest_match_meta_data_is_html_escaped=True)
+                nearest_match_meta_data_list = self.get_nearest_match_meta_data()
+                nearest_match_meta_data = None
+                if nearest_match_meta_data_list is not None:
+                    # currently, only pass the output from the first model:
+                    nearest_match_meta_data = nearest_match_meta_data_list[0]
+                html_content = \
+                    utils_visualization.create_html_page(self.current_reexpression,
+                                                         nearest_match_meta_data=nearest_match_meta_data,
+                                                         nearest_match_meta_data_is_html_escaped=True)
                 html_file_path = Path(self.HTML_VISUALIZATION_FILE)
                 if not html_file_path.exists() or not html_file_path.is_file() \
                         or html_file_path.is_symlink():
@@ -222,7 +258,7 @@ class MCPServerStateController:
 
     def update_model_support(self, label: int) -> str:
         message = "There is no existing reexpression in the cache."
-        if self.model is None or self.current_reexpression is None:
+        if self.model_list is None or self.current_reexpression is None:
             return message
         try:
             if label not in [0, 1, data_validator.oodLabel]:
@@ -235,7 +271,14 @@ class MCPServerStateController:
                 document_id = f"added_{str(uuid.uuid4())}"
             else:
                 document_id = f"user_added_{str(uuid.uuid4())}"
-            prediction_meta_data = self.current_reexpression["prediction_meta_data"]
+            prediction_meta_data_across_models = \
+                self.current_reexpression.get(
+                    "prediction_meta_data_dict", {}).get(
+                    "prediction_meta_data_across_models", {})
+            # Currently only the model at index 0:
+            model = self.model_list[0]
+            prediction_meta_data = prediction_meta_data_across_models[0] if len(
+                prediction_meta_data_across_models) > 0 else {}
             exemplar_vector = prediction_meta_data["exemplar_vector"]
 
             json_for_archive = {}
@@ -267,19 +310,18 @@ class MCPServerStateController:
 
             json_for_archive[constants.REEXPRESS_ATTACHED_FILE_NAMES] = \
                 self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES]
-            json_for_archive[constants.REEXPRESS_INFO_KEY] = self.current_reexpression[constants.REEXPRESS_SUBMITTED_TIME_KEY]
+            json_for_archive[constants.REEXPRESS_INFO_KEY] = \
+                self.current_reexpression[constants.REEXPRESS_SUBMITTED_TIME_KEY]
             utils_model.save_by_appending_json_lines(str(running_updates_file_path.as_posix()), [json_for_archive])
             # Note: Currently there is no notion of database rollback if subsequent saving of the index fails (a la
             # standard sqlite operations with macOS Core Data). However,
             # in such failures, or when a change to an adaptation is needed, it is always possible to reset to the original
             # database in the repo and then batch add (after any needed changes to the JSON) the file DATA_UPDATE_FILE,
             # and then restart the server. See the documentation.
-            print("entering add to support")
-            self.model.add_to_support(label=label, predicted_label=prediction_meta_data["prediction"],
-                                      document_id=document_id, exemplar_vector=exemplar_vector)
+            model.add_to_support(label=label, predicted_label=prediction_meta_data["prediction"],
+                                 document_id=document_id, exemplar_vector=exemplar_vector)
             message = "ERROR: Unable to save changes to the training set database. The cache has been cleared."
-            utils_model.save_support_set_updates(self.model, self.MODEL_DIR)
-            print("did save support")
+            utils_model.save_support_set_updates(model, self.MODEL_DIR)
             # add to document database
             add_to_support_db_message = ""
             try:
@@ -318,7 +360,7 @@ class MCPServerStateController:
             else:
                 raise AdaptationError(f"The provided label is not in [0, 1, {data_validator.oodLabel}].", "LABEL_ERROR")
 
-            message = f"Successfully added document id {document_id} to the training set database with label: {string_label}. The training set database now contains {self.model.support_index.ntotal} labeled examples.{add_to_support_db_message}"
+            message = f"Successfully added document id {document_id} to the training set database with label: {string_label}. The training set database now contains {model.support_index.ntotal} labeled examples.{add_to_support_db_message}"
             return message
         except AdaptationError as e:
             self.current_reexpression = None  # clear the cache to avoid inconsistencies
@@ -331,10 +373,15 @@ class MCPServerStateController:
         if self.current_reexpression is None:
             return "There is no existing reexpression in the cache."  # also return file access information
 
-        prediction_meta_data = self.current_reexpression["prediction_meta_data"]
+        prediction_meta_data_across_models = \
+            self.current_reexpression.get("prediction_meta_data_dict", {}).get("prediction_meta_data_across_models", {})
+        # Currently only the model at index 0:
+        prediction_meta_data = prediction_meta_data_across_models[0] if len(
+            prediction_meta_data_across_models) > 0 else {}
         # also show files in consideration, if any
         files_in_consideration_message = \
-            mcp_utils_test.get_files_in_consideration_message(self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES])
+            mcp_utils_test.get_files_in_consideration_message(
+                self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES])
         formatted_output_string = f"""
             {constants.predictedFull}: {constants.MCP_SERVER_VERIFIED_CLASS_LABEL if prediction_meta_data["prediction"] == 1 else constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL}\n
             Out-of-distribution: {prediction_meta_data["is_ood"]}\n

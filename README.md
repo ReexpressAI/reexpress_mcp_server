@@ -68,7 +68,7 @@ A copy of our system demonstration paper "Introspectable, Updatable, and Uncerta
 
 ## Citation
 
-If you find this software useful, consider citing the following paper:
+If you find this software useful, consider citing the following paper (to appear in *Findings of the Association for Computational Linguistics: ACL 2026*, San Diego, CA, USA):
 
 ```
 @misc{Schmaltz-2025-SimilarityDistanceMagnitudeActivations,

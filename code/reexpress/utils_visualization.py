@@ -21,7 +21,10 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
     # Extract verification results
     # Need defaults for testing
-    prediction_meta_data = current_reexpression.get("prediction_meta_data", {})
+    prediction_meta_data_across_models = \
+        current_reexpression.get("prediction_meta_data_dict", {}).get("prediction_meta_data_across_models", {})
+    # Currently only the model at index 0:
+    prediction_meta_data = prediction_meta_data_across_models[0] if len(prediction_meta_data_across_models) > 0 else {}
 
     predicted_class = prediction_meta_data.get("prediction", 0)
 
