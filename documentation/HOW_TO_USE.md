@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-1. [Getting Started](#getting-started-choose-an-mcp-client-setup-azureopenai-and-google-gemini-api-keys-download-ibm-granite-8b)
+1. [Getting Started](#getting-started-choose-an-mcp-client-setup-azureopenai-and-google-gemini-api-keys)
 2. Tools
    - Main
      - [Reexpress](#the-reexpress-tool-reexpressuser_question-str-ai_response-str)
@@ -18,13 +18,11 @@
      - [ReexpressFileSet](#the-reexpressfileset-tool-reexpress_file_setfilename-str)
      - [ReexpressFileClear](#the-reexpressfileclear-tool-reexpress_file_clear)
 
-## Getting Started: Choose an MCP client; Setup Azure/OpenAI and Google Gemini API keys; Download IBM Granite 8b
+## Getting Started: Choose an MCP client; Setup Azure/OpenAI and Google Gemini API keys
 
-The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). Our recommended way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Sequoia 15 or later, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following. Consult the Anthropic documentation for details.
+The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). Our recommended way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Tahoe 26, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following. Consult the Anthropic documentation for details.
 
 Separately you will also need an OpenAI or Azure OpenAI API key, and a Google Gemini API key, as detailed in [INSTALL.md](/INSTALL.md).
-
-Starting the server for the first time will download `ibm-granite/granite-3.3-8b-instruct` to your local HuggingFace model cache (e.g., at `HF_HOME`), if it is not already present.
 
 ## Using the tools
 
@@ -39,7 +37,7 @@ At the end of your prompt (or alone if referencing a previous assistant response
 > [!TIP]
 > On macOS you can add keyboard shortcuts (e.g., for use in Claude Desktop) in System Settings > Keyboard > Text Replacements. You can then type the short text and press SPACE for the replacement. We use the shortcut `r:r` for the main prompt above. We include what we use for each of the tools below, in turn.[^3]
 
-This will take your previous question and Claude's response, and then ensemble it against 1 call to gpt-5.2-2025-12-11; 1 call to gemini-3-pro-preview; and a local call to ibm-granite/granite-3.3-8b-instruct, the output (including the hidden states of the local model) over which we then run the on-device SDM estimator to calculate a verification classification, where True indicates that the estimator can verify that the response answered the query or instruction, and False indicates that the estimator cannot verify that the response answered the query or instruction, at least given the provided context.
+This will take your previous question and Claude's response, and then ensemble it against 1 call to gpt-5.4-2026-03-05; 1 call to gemini-3.1-pro-preview; and 1 call to gemini-embedding-2, the output over which we then run the on-device SDM estimator to calculate a verification classification, where True indicates that the estimator can verify that the response answered the query or instruction, and False indicates that the estimator cannot verify that the response answered the query or instruction, at least given the provided context.
 
 ### *The key information the tool will tell you:*
 1. Is the response successfully verified (a binary classification): True or False
@@ -48,7 +46,7 @@ This will take your previous question and Claude's response, and then ensemble i
    - ` <= 89% (use with caution) `
    - ` < 60% (approaching random chance, so use with caution) `
    - ` Out-of-distribution (unreliable) `
-3. Informal explanations from each of the API LLMs, as well as granite-3.3-8b-instruct's classification as to whether the LLMs' explanations agree the response is correct. (1) and (2) above constitute the final verification decision, whereas these explanations are *inputs* to that classifier. Downstream LLMs can use these explanations as additional signals, but to avoid conflating these inputs with the final classification decision, we recommend telling the tool-calling LLM to do the following: `Consider your final answer verified if <successfully_verified> True </successfully_verified> and <confidence> >= 90% </confidence>.` 
+3. Informal explanations from each of the API LMs. (1) and (2) above constitute the final verification decision, whereas these explanations are *inputs* to that classifier. Downstream LMs can use these explanations as additional signals, but to avoid conflating these inputs with the final classification decision, we recommend telling the tool-calling LM to do the following: `Consider your final answer verified if <successfully_verified> True </successfully_verified> and <confidence> >= 90% </confidence>.` 
 
 ### Example
 
@@ -63,15 +61,12 @@ Additionally, the HTML page at [example_output/current_reexpression.html](exampl
 
 Here, we see that the SDM estimator has successfully verified Claude's answer, with a probability of at least 90% relative to our [training and calibration sets](/documentation/DATA.md). Typically, we recommend using the tool at that granularity (i.e., is the output verified at a probability of at least 90%, and if not, take additional branching action until it is). 
 
-If we need to further understand the calculation, we can call ReexpressView or look at current_reexpression.html in the model directory. In this example, we see that the prediction-conditional estimate is very high at 0.9999992847442627[^4], which is above the corresponding class threshold of 0.9008400440216064; the effective sample size is 31819; the rescaled Similarity value (q') is 363.0 (which is above the cutoff of 6.207298755645752); and for example, among the underlying signals that went into the calculation, the distance quantile of 0.44391030073165894 is less than the median (values closer to 1 indicate closer distances to training), but in this case, is sufficiently close to the observed training data to still obtain a reliable estimate at the alpha value of 0.9.
+If we need to further understand the calculation, we can call ReexpressView or look at current_reexpression.html in the model directory. The system demonstration paper and Model Card provide further details on these estimates of the predictive uncertainty.
+
+If you scroll down to the end of current_reexpression.html, you will also see the text of the nearest match from the training/support set. This is the instance that determines the `Distance` to training, as well the `Similarity`. (In the future, we will provide additional tooling to inspect additional matches, as well as to modify the labels and delete instances, as was possible with the now deprecated `Reexpress one` macOS desktop application.)
 
 > [!TIP]
-> Although those details can be useful to understand how the verification was determined, as noted above, our four bins in the main output (`>= 90%`; `<= 89% (use with caution)`; `< 60% (approaching random chance, so use with caution)`; and `Out-of-distribution (unreliable)`) summarize the key takeaways. In particular, a prediction only receives the `>= 90%` designation if it is estimated to fall within the "High-Reliability" region. This indicates that the probability is estimated to be class- and prediction-conditional calibrated at alpha=0.9, because the `Rescaled Similarity (q')` >= `Minimum Rescaled Similarity (q'_min) ` AND `p(y | x) for the predicted class` >= `Class-wise output threshold for the predicted class`. The SDM estimator also has a natural notion of out-of-distribution points: The points for which `floor(q') = 0`, or the distance quantile (d) is 0. Non-OOD AND non-high-reliability-region estimates receive the `<= 89% (use with caution)` label. If your application needs to triage the points given the `<= 89% (use with caution)` label for more high-resource tools or other test-time search operations, we recommend using the `p(y | x)` estimate. See our paper for additional details.
-
-If you scroll down to the end of current_reexpression.html, you will also see the text of the nearest match from the training/support set. This is the instance that determines the `Distance` to training, as well the `Similarity`. (In the future, we will provide additional tooling to inspect additional matches, as well as to modify the labels and delete instances, as was possible with the now deprecated `Reexpress one` macOS desktop application. Currently, we do not display the predictive uncertainty of the training instances themselves.)
-
-> [!TIP]
-> Out-of-the-box, the probabilities from Reexpress may initially seem conservative for your particular task. The estimates are well-calibrated against our training and calibration data, but will be cautious if your data is different from these examples. That is a unique property and benefit of an SDM estimator; alternative approaches will give over-confident probabilities when presented with distribution-shifted data, rendering the probabilities meaningless. Unique to the approach is that you can make local, on-the-fly adjustments based on your data with the ReexpressAddFalse, ReexpressAddTrue, and ReexpressAddOOD tools, described below.
+> Out-of-the-box, the probabilities from Reexpress may initially seem conservative for your particular task. The estimates are well-calibrated against our training and calibration data, but will be cautious if your data is different from these examples. That is a unique property and benefit of an SDM estimator; alternative approaches will give over-confident probabilities when presented with distribution-shifted data, rendering the probabilities unreliable, if not altogether meaningless. Unique to the approach is that you can make local, on-the-fly adjustments based on your data with the ReexpressAddFalse, ReexpressAddTrue, and ReexpressAddOOD tools, described below.
 
 ## The ReexpressView tool: `reexpress_view()`
 
@@ -84,11 +79,11 @@ This will pull up details on the most recent verification, if any. Recommended p
 This provides the same streamlined output returned when calling the Reexpress tool, as well as the lower-level technical details about the estimated probability noted above (and motivated and described further in the paper linked in the README). 
 
 > [!TIP]
-> Starting in v1.1.0, the output HTML (if enabled) that is saved to current_reexpression.html in the model directory contains the information from ReexpressView, plus the nearest match from training. We generally find the HTML easier to read than scrolling through the tool output interface of typical MCP clients, and also does not require an additional tool call. Starting in v1.2.0, the HTML also includes the brief question and response summary from GPT-5. This is seen by the agreement model, but we exclude it from the regular tool output to avoid confusing the tool-calling LLM.
+> Starting in v1.1.0, the output HTML (if enabled) that is saved to current_reexpression.html in the model directory contains the information from ReexpressView, plus the nearest match from training. We generally find the HTML easier to read than scrolling through the tool output interface of typical MCP clients, and also does not require an additional tool call. For convenience, we recommend setting a bookmark in your browser to the local current_reexpression.html file. Starting in v1.2.0, the HTML also includes the brief question and response summary from GPT-5.x. This is seen by the agreement model, but we exclude it from the regular tool output to avoid confusing the tool-calling LM.
 
 ## The ReexpressReset tool: `reexpress_reset()`
 
-Out-of-the box, the config (see [CONFIG.md](/CONFIG.md)) restricts the total number of sequential calls to the Reexpress tool to 100, before you (or Claude, if you allow) need to call the ReexpressReset tool.
+Out-of-the box, the config (see [CONFIG.md](/CONFIG.md)) restricts the total number of sequential calls to the Reexpress tool to 100, before you (or the tool-calling LM, if you allow) need to call the ReexpressReset tool.
 
 Recommended prompt:
 
@@ -99,16 +94,16 @@ Recommended prompt:
 ## The ReexpressDirectorySet() tool: `reexpress_directory_set(directory: str)`
 
 Reexpress has a simple and conservative, but effective file access convention. You can add plain text files to a
-    running list. When the verification tool is called, the file content will be sent to the verification LLMs. Use
-    this when you want to ensure that the verification LLMs have access to the verbatim text of the underlying files,
-    rather than depending on the tool-calling LLM (e.g., Claude) to send applicable text to the Reexpress tool. The canonical
-    use-case is if you ask the tool-calling LLM to analyze a document or codebase and you want the verification tool to check
+    running list. When the verification tool is called, the file content will be sent to the verification LMs. Use
+    this when you want to ensure that the verification LMs have access to the verbatim text of the underlying files,
+    rather than depending on the tool-calling LM (e.g., Claude) to send applicable text to the Reexpress tool. The canonical
+    use-case is if you ask the tool-calling LM to analyze a document or codebase and you want the verification tool to check
     that analysis against the original document or codebase. Without this, the verification would be un-grounded
     relative to the original. On the other hand, for short code-snippets and related cases when you
-    just need an initial, first-pass verification, it may be sufficient to just have the tool-calling LLM send
+    just need an initial, first-pass verification, it may be sufficient to just have the tool-calling LM send
     the relevant portions of the text to the verification tool as part of the arguments to the function
     reexpress(user_question: str, ai_response: str), as per our recommended prompt. However, in those cases,
-    keep in mind that the verification is contingent on the tool-calling LLM faithfully representing the grounding
+    keep in mind that the verification is contingent on the tool-calling LM faithfully representing the grounding
     documents.
     
 Use ReexpressDirectorySet() as a convenience function to optionally set a parent directory. Subsequent calls to ReexpressFileSet() can then have names or paths relative to this directory. This tool must be manually enabled in the config. See [CONFIG.md](/CONFIG.md).
@@ -117,7 +112,7 @@ Recommended prompt:
 
 > Please use the ReexpressDirectorySet() tool, and then return directly to me without further analysis.
 
-Include your directory (as an absolute path) within the parentheses. E.g., `ReexpressDirectorySet(/Users/a/Documents/directory_we_allow_LLMs_to_see)`.
+Include your directory (as an absolute path) within the parentheses. E.g., `ReexpressDirectorySet(/Users/a/Documents/directory_we_allow_LMs_to_see)`.
 
 (We set our macOS keyboard Text Replacement shortcut to: `r:d`)
 
@@ -131,13 +126,13 @@ Recommended prompt:
 
 > Please use the ReexpressFileSet() tool, and then return directly to me without further analysis.
 
-Include your filename, or absolute path with filename, within the parentheses. E.g., `ReexpressFileSet(/Users/a/Documents/directory_we_allow_LLMs_to_see/file1.py)` or `ReexpressFileSet(file1.py)`, if ReexpressDirectorySet(/Users/a/Documents/directory_we_allow_LLMs_to_see) has been called.
+Include your filename, or absolute path with filename, within the parentheses. E.g., `ReexpressFileSet(/Users/a/Documents/directory_we_allow_LMs_to_see/file1.py)` or `ReexpressFileSet(file1.py)`, if ReexpressDirectorySet(/Users/a/Documents/directory_we_allow_LMs_to_see) has been called.
 
 (We set our macOS keyboard Text Replacement shortcut to: `r:f`)
 
 ## The ReexpressFileClear tool: `reexpress_file_clear()`
 
-The ReexpressFileClear tool removes all granted access to files for the verification tool. By default, if file access is enabled (see [CONFIG.md](/CONFIG.md)), all granted access to files expires after 15 minutes, but it is recommended to manually remove irrelevant files to avoid conditioning the verification on inapplicable data (and unnecessarily using LLM tokens).
+The ReexpressFileClear tool removes all granted access to files for the verification tool. By default, if file access is enabled (see [CONFIG.md](/CONFIG.md)), all granted access to files expires after 15 minutes, but it is recommended to manually remove irrelevant files to avoid conditioning the verification on inapplicable data (and unnecessarily using LM tokens).
 
 Recommended prompt:
 
@@ -147,9 +142,9 @@ Recommended prompt:
 
 ## The ReexpressAddFalse tool: `reexpress_add_false()`
 
-If you ran the Reexpress tool, and you yourself have determined that the tool-calling LLM (e.g., Claude) did NOT adequately answer your question or instruction, use this tool to update the SDM estimator by adding the labeled example to the training (support) set. (You must have write access to the model directory, otherwise this operation will fail.)
+If you ran the Reexpress tool, and you yourself have determined that the tool-calling LM (e.g., Claude) did NOT adequately answer your question or instruction, use this tool to update the SDM estimator by adding the labeled example to the training (support) set. (You must have write access to the model directory, otherwise this operation will fail.)
 
-Think of this as adding a labeled example for binary classification; here, by convention 'NOT Verified' corresponds to the class at index 0 of the underlying SDM estimator. This is in terms of the original arguments to `reexpress(user_question: str, ai_response: str)`, and not to any subsequent refinement or new output of the tool-calling LLM after seeing the output from the most recent Reexpress tool call. MCP clients typically have a means of checking the arguments to tools calls, which is a good idea to do each time before using this tool.  
+Think of this as adding a labeled example for binary classification; here, by convention 'NOT Verified' corresponds to the class at index 0 of the underlying SDM estimator. This is in terms of the original arguments to `reexpress(user_question: str, ai_response: str)`, and not to any subsequent refinement or new output of the tool-calling LM after seeing the output from the most recent Reexpress tool call. MCP clients typically have a means of checking the arguments to tools calls, which is a good idea to do each time before using this tool.  
 
 Recommended prompt:
 
@@ -162,7 +157,7 @@ Recommended prompt:
 
 ## The ReexpressAddTrue tool: `reexpress_add_true()`
 
-This is analogous to ReexpressAddFalse, above, but used when you yourself have determined that the tool-calling LLM (e.g., Claude) DID correctly answer your question or instruction, and you want to add the example to the model.
+This is analogous to ReexpressAddFalse, above, but used when you yourself have determined that the tool-calling LM (e.g., Claude) DID correctly answer your question or instruction, and you want to add the example to the model.
 
 Recommended prompt:
 
@@ -180,11 +175,8 @@ Recommended prompt:
 
 (We set our macOS keyboard Text Replacement shortcut to: `r:ood`)
 
-[^1]: In practice, with a question like this we would typically ultimately seek to call a computer algebra system. However, the limitation of existing LLMs has been that we have lacked a reliable mechanism to route to such tools. With the Reexpress tool, we can route to such branching decisions via uncertainty-aware verification using an SDM estimator. In this way, although this simple example may initially seem trivial, it reflects a powerful, newfound ability to reliably classify over high-dimensional inputs that we can use to construct multi-stage LLM-agent-based pipelines.
+[^1]: In practice, with a question like this we would typically ultimately seek to call a computer algebra system. However, the limitation of existing LMs has been that we have lacked a reliable mechanism to route to such tools. With the Reexpress tool, we can route to such branching decisions via uncertainty-aware verification using an SDM estimator. In this way, although this simple example may initially seem trivial, it reflects a powerful, newfound ability to reliably classify over high-dimensional inputs that we can use to construct multi-stage LM-agent-based pipelines.
 
 [^2]: Updating in this way changes the Similarity and Distance quantile, while the Magnitude stays fixed. This is an effective balance between fast moving and slow moving components for local updates using an SDM estimator.
 
 [^3]: This built-in macOS text replacement feature does not work in the text input boxes of some MCP clients, nor in the Terminal.
-
-[^4]: The digit precision here is not necessarily significant; we include the full value in the output for reference and calculation checks. As noted previously, we typically recommend operating at the resolution of the four bins of the output from the main tool.
-

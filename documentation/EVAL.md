@@ -1,5 +1,9 @@
 # OpenVerification1 Eval
 
+## Model Cards
+
+Starting with version 2.3.0.preview, the evaluation results are provided in the corresponding Model Card. The rest of this file is archived from earlier versions.
+
 ## Output Predictions and Evaluations
 
 See the model directory (in the GitHub Release binary) `reexpress_mcp_server_model__v2_1_0/model_details/final_eval_output` for the output predictions (`all_predictions.jsonl`), logs (`version_2.1.0.log.txt`), sorted possible label errors[^1] (`possible_label_errors.jsonl`), and sorted predictions in the High-Reliability region [^2] (`high_reliability.jsonl`) for each eval split, as well as the model's calibration set. Graphs of the output are also saved in model directory.

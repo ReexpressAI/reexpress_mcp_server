@@ -1,5 +1,13 @@
 # Changelog: Reexpress Model-Context-Protocol (MCP) Server
 
+## What's new in version 2.3.0.preview
+
+The model card is available [here](documentation/model_cards/model_card_v230_preview.pdf).
+
+Version 2.3.0.preview uses gpt-5.4-2026-03-05 and gemini-3.1-pro-preview as the model ensemble, replacing gpt-5.2-2025-12-11 and gemini-3-pro-preview. Additionally, gemini-embedding-2 replaces the local granite-3.3-8b-instruct model. This greatly simplifies running the Server, since you no longer need to locally run a multi-billion parameter model.
+
+Given the modest-sized support set of this preview release, and as a best practice moving forward, by default the Server uses the lower (more conservative) estimates of the distance quantiles in the main output. See Section 3 of the Model Card for additional details. We have slightly refined the HTML output and the output from the ReexpressView tool to reflect this change.
+
 ## What's new in version 2.1.0
 
 Version 2.1.0 uses gpt-5.2-2025-12-11 and gemini-3-pro-preview as the model ensemble, replacing gpt-5-2025-08-07 and gemini-2.5-pro. 

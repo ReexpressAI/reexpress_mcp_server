@@ -17,9 +17,10 @@ Each time the main Reexpress tool is called, this will save the file `${REEXPRES
 
 ## Examples
 
-See the description of the `reexpress()` tool in [HOW_TO_USE.md](HOW_TO_USE.md#the-reexpress-tool-reexpressuser_question-str-ai_response-str) for details of the information contained in the HTML. We include additional examples below.
+See the description of the `reexpress()` tool in [HOW_TO_USE.md](HOW_TO_USE.md#the-reexpress-tool-reexpressuser_question-str-ai_response-str), the system demonstration paper, and the Model Card for details of the information contained in the HTML. We include additional examples below.
 
 Examples:
 - [Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_pos_example.html)
 - [Verified but confidence `<= 89%`](example_output/html_output_examples/current_reexpression_pos_and_lower_confidence_example.html)
 - [NOT Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_neg_example.html)
+- [Out-of-distribution](example_output/html_output_examples/current_reexpression_ood.html)

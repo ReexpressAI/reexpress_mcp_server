@@ -123,9 +123,12 @@ def print_latex_row(options, model, alpha_prime, latex_rows_dict_no_reject,
                               r'$\estimatorSoftmaxOverDistanceMagnitude$',
                               model.numberOfClasses)
         )
+        # updated from r'$\sdm$':
+        # A separate label for the estimator that thresholds at alpha over the SDM activation
+        # function to avoid overloading the acronym "SDM".
         print(
             get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_sdm,
-                          r'$\sdm$', model.numberOfClasses)
+                          r'$\sdmAtAlpha$', model.numberOfClasses)
         )
         print(
             get_latex_row(dataset_name, model_name, alpha_prime, latex_rows_dict_sdm_hr,

@@ -21,33 +21,42 @@ def get_formatted_sdm_estimator_output_string(verification_classification,
                                               calibration_reliability,
                                               gpt5_model_explanation,
                                               gemini_model_explanation,
-                                              agreement_model_classification: bool,
+                                              agreement_model_classification: bool | None,
                                               hr_class_conditional_accuracy: float) -> str:
     # If this changes, the docstring in reexpress_mcp_server.reexpress() should also be updated to avoid confusing
-    # the downstream LLMs/agents.
+    # the downstream LLMs/agents. Currently, the docstring is hardcoded for the case where
+    # agreement_model_classification is None.
     classification_confidence = \
         get_calibration_confidence_label(calibration_reliability=calibration_reliability,
                                          hr_class_conditional_accuracy=hr_class_conditional_accuracy)
-    if agreement_model_classification:
-        agreement_model_classification_string = "Yes"
+    if agreement_model_classification is not None:
+        if agreement_model_classification:
+            agreement_model_classification_string = "Yes"
+        else:
+            agreement_model_classification_string = "No"
+        formatted_output_string = f"""
+            <successfully_verified> {verification_classification} </successfully_verified> \n
+            <confidence> {classification_confidence} </confidence> \n
+            <model1_explanation> {gpt5_model_explanation} </model1_explanation> \n
+            <model2_explanation> {gemini_model_explanation} </model2_explanation> \n
+            <model3_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model3_agreement>
+        """
     else:
-        agreement_model_classification_string = "No"
-    formatted_output_string = f"""
-        <successfully_verified> {verification_classification} </successfully_verified> \n
-        <confidence> {classification_confidence} </confidence> \n
-        <model1_explanation> {gpt5_model_explanation} </model1_explanation> \n
-        <model2_explanation> {gemini_model_explanation} </model2_explanation> \n
-        <model3_agreement> {constants.AGREEMENT_MODEL_USER_FACING_PROMPT} {agreement_model_classification_string} </model3_agreement>
-    """
+        formatted_output_string = f"""
+            <successfully_verified> {verification_classification} </successfully_verified> \n
+            <confidence> {classification_confidence} </confidence> \n
+            <model1_explanation> {gpt5_model_explanation} </model1_explanation> \n
+            <model2_explanation> {gemini_model_explanation} </model2_explanation>
+        """
     return formatted_output_string
 
 
 def get_files_in_consideration_message(attached_files_names_list):
     if len(attached_files_names_list) > 0:
         files_in_consideration_message = f'The verification model had access to: ' \
-                                         f'{",".join(attached_files_names_list)}\n\n'
+                                         f'{",".join(attached_files_names_list)}'
     else:
-        files_in_consideration_message = f'The verification model did not have access to any external files.\n\n'
+        files_in_consideration_message = f'The verification model did not have access to any external files.'
     return files_in_consideration_message
 
 
@@ -87,22 +96,24 @@ def get_calibration_reliability_label(is_high_reliability_region, is_ood, sdm_ou
 
 def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data_dict,
                                              gpt5_model_explanation, gemini_model_explanation,
-                                             agreement_model_classification: bool):
-    # Currently only the first index:
+                                             agreement_model_classification: bool | None = None):
+    # Currently only the first model index:
     prediction_meta_data = prediction_meta_data_dict["prediction_meta_data_across_models"][0]
 
     predicted_class = prediction_meta_data["prediction"]
-
-    sdm_output_for_predicted_class = \
-        prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
-
     verification_classification = predicted_class == 1
-    is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
-    # 2026-01-10: Added prediction_meta_data["d"] == 0.0. For these cases, the output is at chance, but the default
-    # output to the LM only shows the coarse labels, so this simplifies the interpretation for the tool-calling LM when
-    # the full probability vector isn't provided (i.e., without calling the View tool).
-    # The same is done in construct_ensemble_prediction().
-    is_ood = prediction_meta_data["is_ood"] or prediction_meta_data["d"] == 0.0
+
+    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+        sdm_output_for_predicted_class = \
+            prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()[predicted_class]
+        is_high_reliability_region = prediction_meta_data["is_high_reliability_region_lower"]
+    else:
+        sdm_output_for_predicted_class = \
+            prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
+        is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
+
+    # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+    is_ood = prediction_meta_data["is_ood"]
     calibration_reliability = \
         get_calibration_reliability_label(is_high_reliability_region, is_ood,
                                           sdm_output_for_predicted_class=sdm_output_for_predicted_class)
@@ -129,7 +140,7 @@ def random_mode(a):
 def construct_ensemble_prediction(prediction_meta_data_across_models):
     # This mirrors utils_test_batch_ensemble.py
 
-    if len(prediction_meta_data_across_models) == 0:
+    if len(prediction_meta_data_across_models) == 1:
         return {"ensemble_meta_data": None,
                 "prediction_meta_data_across_models": prediction_meta_data_across_models}
 
@@ -159,9 +170,8 @@ def construct_ensemble_prediction(prediction_meta_data_across_models):
     min_sdm_output_lower_index = None
     shuffle_index = 0
     for prediction_meta_data in prediction_meta_data_across_models:
-        # As with format_sdm_estimator_output_for_mcp_tool(), for the purposes of the MCP tool, we also
-        # explicitly set d == 0 as OOD:
-        if prediction_meta_data["is_ood"] or prediction_meta_data["d"] == 0.0:
+        # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+        if prediction_meta_data["is_ood"]:
             # OOD if at least one OOD
             is_ood = True
         if prediction_meta_data["prediction"] == predicted_class:
@@ -226,6 +236,17 @@ def test(main_device, model_list, reexpression_input):
             prediction_meta_data["hr_output_thresholds"] = model.hr_output_thresholds.detach().cpu().tolist()
             prediction_meta_data["hr_class_conditional_accuracy"] = model.hr_class_conditional_accuracy
             prediction_meta_data["support_index_ntotal"] = model.support_index.ntotal
+
+            # 2026-04-30: Override is_ood to also take into account a distance quantile of 0.
+            # For these cases, the output is at chance, but the default
+            # output to the LM only shows the coarse labels, so this simplifies the interpretation for
+            # the tool-calling LM when
+            # the full probability vector isn't provided (i.e., without calling the View tool).
+            if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES and prediction_meta_data["d_lower"] == 0.0:
+                prediction_meta_data["is_ood"] = True
+            if not constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES and prediction_meta_data["d"] == 0.0:
+                prediction_meta_data["is_ood"] = True
+
             prediction_meta_data_across_models.append(prediction_meta_data)
         return construct_ensemble_prediction(prediction_meta_data_across_models)
     except:

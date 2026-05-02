@@ -61,6 +61,13 @@
             border-radius: 6px;
             padding: 12px 16px;
         }
+        
+        .field-box-highlight {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
 
         .field-label {
             font-size: 13px;
@@ -130,6 +137,13 @@
             border: 1px solid #bee5eb;
         }
 
+        .tag-highlight {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 1px 3px;
+        }
+        
         .prompt-box, .document-box {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -385,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.1.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
         </div>
 
         <div class="section">
@@ -404,25 +418,22 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                <div>The user asked how to create a new tmux session on Linux, how to start/enter it, and how to exit it, plus relevant keyboard commands. The AI response provided the commands to create/attach/list sessions (e.g., `tmux new -s name`, `tmux attach -t name`, `tmux ls`) and explained exiting via detach (`Ctrl-b` then `d`) versus terminating (`exit`/`Ctrl-d`), and listed several common default keybindings.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                <div>The question asked which Python syntax is preferred for testing dictionary key absence: `not &#x27;a&#x27; in d` or `&#x27;a&#x27; not in d`. The AI response said option 2, `&#x27;a&#x27; not in d`, is preferred because `not in` is the idiomatic membership operator, both forms are equivalent in result, and style guidance such as PEP 8 prefers `not in`.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                <div>The response directly answers all three requested items with correct, standard tmux commands and includes the key keyboard sequence for detaching (exit/leave session). The additional shortcut list is consistent with common default tmux bindings. This is factual (not opinion-based) and not meaningfully dependent on very recent information, aside from potential user-specific remapped prefix keys/configuration.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                <div>This is a straightforward, well-established Python style/semantics question, and the response matches standard Python usage: `&#x27;a&#x27; not in d` is the preferred idiom, while `not &#x27;a&#x27; in d` is equivalent but discouraged stylistically. My verification is based on internal knowledge of Python syntax and PEP 8 guidance; it is not meaningfully dependent on recent information, and although it concerns style preference, the accepted convention here is objective enough to verify confidently.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
-                <div>The response accurately provides the standard commands for creating, starting/attaching, and exiting a tmux session, as well as common keyboard shortcuts. The commands (tmux new -s, tmux attach, Ctrl+b d, etc.) are well-documented standard Linux/Unix commands.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                <div>The AI response accurately identifies &#x27;a&#x27; not in d as the preferred syntax. It correctly references PEP 8 guidelines on readability and Pythonic idioms, as well as linting standards like Pylint (C0113) that explicitly flag &#x27;not ... in&#x27; in favor of &#x27;not in&#x27;.</div>
             </div>
+            
+            
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
-                <div>Do the model explanations agree that the response is correct?</div>
-                <div><span class="tag tag-positive">Yes</span></div>
-            </div>
         </div>
         
         <div class="separator"></div>
@@ -437,7 +448,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-01-11 23:41:11</div>
+                    <div class="field-value">2026-04-30 16:12:40</div>
                 </div>
                 
             </div>
@@ -445,82 +456,100 @@
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.18303605914115906, 0.8169639706611633]</div>
-            </div>
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">High-Reliability Region</div>
-                    <div class="field-value">
-                        <span class="tag tag-negative">False</span>
-                    </div>
-                </div>
 
+            <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
                         <span class="tag tag-positive">False</span>
                     </div>
                 </div>
-                <div class="field-box">
-                    <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">13.414758682250977</div>
-                </div>
             </div>
+            
             <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">
-                        Similarity to Training (q)
+                <div class=field-box-highlight>
+                    <div class="field-label">High-Reliability Region (lower)</div>
+                    <div class="field-value">
+                        <span class="tag tag-negative">False</span>
                     </div>
-                    <div class="field-value">22</div>
                 </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        Distance to Training Quantile (d)
+                <div class=field-box>
+                    <div class="field-label">High-Reliability Region</div>
+                    <div class="field-value">
+                        <span class="tag tag-negative">False</span>
                     </div>
-                    <div class="field-value">0.06859195232391357</div>
-                </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        Magnitude
-                    </div>
-                    <div class="field-value">[-4.084192276000977, 2.77813720703125]</div>
                 </div>
             </div>
-        </div>
-
-        <div class="section" style="margin-left: 40px;">
-            <div class="section-title">Analysis of the Effective Sample Size</div>
-            <div class="field-box" style="margin-bottom: 20px;">
+            
+            <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.219657301902771, 0.7803427577018738]</div>
+                <div class="field-value">[0.47883158922195435, 0.5211684107780457]</div>
             </div>
+
+            <div class=field-box style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">[0.1646287739276886, 0.8353713154792786]</div>
+            </div>
+            
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.15133622288703918, 0.8486638069152832]</div>
+                <div class="field-value">[0.04055708274245262, 0.9594429135322571]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[13675.0, 19156.0]</div>
+                    <div class="field-value">[1346.0, 1914.0]</div>
                 </div>
             </div>
+            
             <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">
-                        Distance to Training Lower Quantile (d_lower)
-                    </div>
-                    <div class="field-value">0.058126144111156464</div>
+                <div class=field-box-highlight>
+                    <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
+                    <div class="field-value">15.361017227172852</div>
+                </div>
+
+                <div class=field-box>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">79.74269104003906</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">187</div>
+                </div>                               
+            </div>
+            
+            <div class="field-grid">
+                <div class=field-box-highlight>
+                    <div class="field-label">
+                        Distance to Training Lower Quantile (d_lower)
+                    </div>
+                    <div class="field-value">0.0018359199166297913</div>
+                </div>
+
+                <div class=field-box>
+                    <div class="field-label">
+                        Distance to Training Quantile (d)
+                    </div>
+                    <div class="field-value">0.035194993019104004</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.07905776053667068</div>
+                    <div class="field-value">0.06855406612157822</div>
+                </div>
+            </div>
+
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-4.513095855712891, 4.290864944458008]</div>
                 </div>
             </div>
         </div>
@@ -539,21 +568,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">6.207298755645752</div>
+                    <div class="field-value">3.3118863105773926</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9000474810600281, 0.9008400440216064]</div>
+                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">120158</div>
+                    <div class="field-value">14937</div>
                 </div>
             </div>
         </div>
@@ -561,19 +590,19 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">How do I create a new tmux session on linux and what are the keyboard commands? I want to know: 1. How to create a session 2. Start the session 3. Exit the session</div>
+            <div class="prompt-box">Python question:
+
+d = {&#x27;a&#x27;: 1, &#x27;b&#x27;: 2}
+
+Which is preferred?
+
+1. not &#x27;a&#x27; in d
+2. &#x27;a&#x27; not in d</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;tmux may be controlled from an attached client by using a key combination of a prefix key, &#x27;C-b&#x27; (Ctrl-b) by default, followed by a command key&quot;; Reference [2, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;\&quot; Split the current pane into two, top and bottom&quot; and &quot;% Split the current pane into two, left and right&quot;; Reference [3, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;Each session is persistent and will survive accidental disconnection... tmux may be reattached using: $ tmux attach&quot;; Reference [4, tmux man page, https://man7.org/linux/man-pages/man1/tmux.1.html, 2-1]: &quot;the &#x27;C-b d&#x27; key strokes&quot; for detaching; Reference [5, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;You can name your session by passing the parameter -s {name} to the tmux new command when creating a new session&quot;; Reference [6, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;You can detach from your tmux session by pressing Ctrl+B then D&quot;; Reference [7, Red Hat guide, https://www.redhat.com/en/blog/introduction-tmux-linux, 4-1]: &quot;reconnect to the server and reattach to the existing tmux session to resume where you left off: $ tmux attach -t 0&quot;; Reference [8, tmux cheat sheet, https://quickref.me/tmux.html, 8-1]: &quot;Start a new named session $ tmux new -s myname&quot; and &quot;Attach to named $ tmux a -t myname&quot;;
-
-Answer:
-1. Create a new session: Use &quot;tmux new -s session_name&quot; which creates and immediately attaches you to the session.
-2. Start/attach to an existing session: Use &quot;tmux attach -t session_name&quot; or list sessions first with &quot;tmux ls&quot;.
-3. Exit the session: Either detach (keeps session running) with Ctrl+b then d, or terminate the session with &quot;exit&quot; or Ctrl+d.
-
-Key shortcuts (prefixed with Ctrl+b): d (detach), c (new window), n/p (next/previous window), % (vertical split - left and right), &quot; (horizontal split - top and bottom), arrow keys (navigate panes), x (kill pane), ? (list keybindings).</div>
+            <div class="document-box">Reference [1, internal knowledge]: In Python, `not in` is a dedicated membership test operator, and `&#x27;a&#x27; not in d` is the idiomatic way to check for absence of a key in a dictionary. Reference [2, internal knowledge]: PEP 8, the Python style guide, recommends using `not in` over `not ... in` for readability. Reference [3, internal knowledge]: `not &#x27;a&#x27; in d` works because Python evaluates it as `not (&#x27;a&#x27; in d)`, producing the same boolean result, but it is considered less Pythonic. Reference [4, internal knowledge]: Pylint flags `not &#x27;a&#x27; in d` with a C0113 warning, recommending the use of `not in` instead. Answer: Option 2, `&#x27;a&#x27; not in d`, is preferred. Both produce the same result, but `not in` is the idiomatic Python operator designed for this purpose. It reads more naturally and is recommended by PEP 8. Linters like Pylint will flag `not &#x27;a&#x27; in d` with a C0113 warning.</div>
         </div>
         
         <div class="separator"></div>
@@ -598,109 +627,79 @@ Key shortcuts (prefixed with Ctrl+b): d (detach), c (new window), n/p (next/prev
                 </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                    <div>The user asked for a script to clone the LittlevGL repo, check out branch v5.3, run `makewrap -f Makefile_wasm_app` and `makewrap -f Makefile_wasm_app_no_wasi`, and handle errors with user feedback. The AI response provided a Bash script that performs exactly these steps, includes error checking after each command, and prints progress/error messages.</div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                    <div>The question asked whether `key` in `for key in d:` is a special Python keyword and how Python knows to iterate over dictionary keys. The AI response said that `key` is just a normal variable name, not a keyword, and that iterating over a dictionary uses the dictionary’s default iterator, which yields keys via `__iter__()`.</div>
                 </div>
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                    <div>The provided Bash script directly implements all required steps (clone, cd, checkout v5.3, run both makewrap commands) and adds clear, graceful error handling and feedback as requested. Minor real-world uncertainties (e.g., whether v5.3 is a branch vs tag, availability of `makewrap`) don’t affect that it faithfully follows the user’s specified instructions.</div>
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                    <div>This response is accurate and directly answers the question using well-established Python behavior: iterating over a dict yields keys by default, and `key` is merely a user-chosen loop variable. My assessment is based on internal knowledge of Python semantics, and the question is not subjective or meaningfully dependent on recent information.</div>
                 </div>
     
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
-                    <div>The AI provided a Bash script that correctly implements all steps requested in the prompt: cloning the specific URL, checking out the specific branch, and running the specific &#x27;makewrap&#x27; commands. It also included error handling as requested.</div>
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                    <div>The LLM accurately answers the user&#x27;s questions, correctly explaining that iterating over a dictionary directly calls its `__iter__()` method which yields its keys by default. It also correctly clarifies that `key` is merely a user-defined variable and not a reserved keyword, and uses the provided code example effectively.</div>
                 </div>
-                    
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
-                    <div>Do the model explanations agree that the response is correct?</div>
-                    <div><span class="tag tag-positive">Yes</span></div>
-                </div>
+                
+                
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">You are tasked with creating a script to automate the build process for a web application using the LittlevGL library. LittlevGL is a graphics library for embedded systems and it provides support for creating graphical user interfaces. The build process involves cloning the LittlevGL repository from GitHub, checking out a specific branch, and then running specific build commands to generate the necessary files for the web application.
+                    <div class="prompt-box">In Python, when iterating over dictionaries using &#x27;for&#x27; loops, how does Python recognize that it only needs to read the `key` from the dictionary? Is `key` a special keyword, or simply a variable? For example, in the following code:
 
-Your task is to write a script that accomplishes the following steps:
-1. Clone the LittlevGL repository from the GitHub URL `https://github.com/littlevgl/lvgl.git`.
-2. Check out the branch named `v5.3`.
-3. Run the `makewrap` command with the `-f` flag and the argument `Makefile_wasm_app`.
-4. Run the `makewrap` command with the `-f` flag and the argument `Makefile_wasm_app_no_wasi`.
-
-Your script should handle any errors that may occur during the process and provide appropriate feedback to the user.
-
-Write a script in a programming language of your choice that accomplishes the specified tasks and handles potential errors gracefully.</div>
+```python
+d = {&#x27;x&#x27;: 1, &#x27;y&#x27;: 2, &#x27;z&#x27;: 3}
+for key in d:
+    print(key, &#x27;corresponds to&#x27;, d[key])
+```</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Here&#x27;s a Bash script that implements the specified build process with error handling and user feedback:
+                    <div class="document-box">In Python, when you iterate over a dictionary using a `for` loop, the default behavior is to iterate over the **keys** of the dictionary. The variable name used in the loop (e.g., `key` in your example) is **not a special keyword**—it is simply a programmer-defined variable. Python does not treat `key` as a reserved word; you could replace it with any valid variable name (e.g., `k`, `item`, `my_key`, etc.), and the loop would still iterate over the dictionary&#x27;s keys.
 
-```bash
-#!/bin/bash
-
-# Function to handle errors
-handle_error() {
-    echo &quot;Error: $1&quot;
-    exit 1
-}
-
-# Clone the LittlevGL repository
-echo &quot;Cloning LittlevGL repository...&quot;
-if ! git clone https://github.com/littlevgl/lvgl.git; then
-    handle_error &quot;Failed to clone repository. Check network connection and repository URL.&quot;
-fi
-
-# Change to the repository directory
-cd lvgl || handle_error &quot;Failed to enter lvgl directory. Clone might have failed.&quot;
-
-# Checkout the specified branch
-echo &quot;Checking out v5.3 branch...&quot;
-if ! git checkout v5.3; then
-    handle_error &quot;Failed to checkout v5.3 branch. Verify branch exists in the repository.&quot;
-fi
-
-# Run build commands
-echo &quot;Building with Makefile_wasm_app...&quot;
-if ! makewrap -f Makefile_wasm_app; then
-    handle_error &quot;Build with Makefile_wasm_app failed. Check dependencies and Makefile.&quot;
-fi
-
-echo &quot;Building with Makefile_wasm_app_no_wasi...&quot;
-if ! makewrap -f Makefile_wasm_app_no_wasi; then
-    handle_error &quot;Build with Makefile_wasm_app_no_wasi failed. Check dependencies and Makefile.&quot;
-fi
-
-echo &quot;Build process completed successfully!&quot;
-exit 0
+### Example Breakdown:
+```python
+d = {&#x27;x&#x27;: 1, &#x27;y&#x27;: 2, &#x27;z&#x27;: 3}
+for key in d:  # &#x27;key&#x27; is just a variable name here
+    print(key, &#x27;corresponds to&#x27;, d[key])
 ```
 
-**Features:**
-1. Error handling for each step with descriptive messages
-2. Clear progress reporting
-3. Exit on first critical error
-4. Checks directory navigation success
-5. Modular error handling through a function
-6. Returns appropriate exit codes
+- **How Python Handles Dictionaries in Loops:**  
+  Dictionaries in Python are iterable objects. When you write `for key in d`, Python implicitly calls the dictionary&#x27;s `__iter__()` method, which returns an iterator over the **keys** of the dictionary. This is the default behavior defined by Python&#x27;s design.
 
-**Possible error scenarios handled:**
-- Network issues during clone
-- Missing repository/branch
-- Missing build dependencies
-- Invalid directory navigation
-- Makefile errors
+- **Variable Assignment:**  
+  The loop variable (`key` in this case) is assigned each key in the dictionary one by one. The name `key` is arbitrary—it could be `k`, `x`, or any other valid identifier. For example:
+  ```python
+  for k in d:  # Works the same way
+      print(k)
+  ```
 
-**Usage:**
-1. Save as `build_lvgl.sh`
-2. Make executable: `chmod +x build_lvgl.sh`
-3. Run: `./build_lvgl.sh`
+### Key Takeaways:
+1. **Default Iteration Over Keys:**  
+   The loop `for var in dict` iterates over keys because dictionaries are designed to expose keys by default for simplicity and efficiency.
 
-**Note:** Ensure all required dependencies (git, makewrap, build tools) are installed before running the script.</div>
+2. **Not a Special Keyword:**  
+   `key` is just a variable name chosen by the programmer. Python does not assign any special meaning to it.
+
+3. **Explicit Access to Values/Items:**  
+   To iterate over values or key-value pairs, use:
+   - `d.values()` for values:  
+     ```python
+     for value in d.values():
+         print(value)
+     ```
+   - `d.items()` for key-value pairs:  
+     ```python
+     for key, value in d.items():
+         print(key, &quot;-&gt;&quot;, value)
+     ```
+
+This design choice ensures code clarity while allowing flexibility when working with dictionaries.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_223849_86fc23ba-9534-4425-b5d4-c5604e09c613</div>
+                        <div class="field-value">pos_143642_96ca8a3a-e1c0-4752-ac62-ab094bbb4a1a</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
@@ -716,9 +715,14 @@ exit 0
         <div class="section">
             <div class="section-title">Legend</div>
             <div class="legend-content">
-                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                <p>The classification is in the High-Reliability region when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
-                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
+                
+                <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">gemini-embedding-2</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
+        
+                
+            <p>The classification is in the <span class="tag-highlight">High-Reliability region (lower)</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
+        
+                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

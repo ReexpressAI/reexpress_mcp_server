@@ -177,6 +177,10 @@ dQuantileUpperFull = "Distance to Training Upper Quantile (d_upper)"
 CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL = "High-Reliability Region"
 CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE = "High-Reliability region"
 CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_SHORT_ABBREVIATED = "HR"
+
+CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL = "High-Reliability Region (lower)"
+CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL_NON_TITLE = "High-Reliability region (lower)"
+CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_SHORT_ABBREVIATED = "HR_lower"
 # qShort = "Similarity"
 # qVar = "q" # this should rarely be used
 # dShort = "Distance"
@@ -244,15 +248,6 @@ SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE_KEY = "short_explanation_for_cla
 SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR = "Unfortunately, I am unable to verify that response. Please consider providing additional clarification and/or additional references, results, or other information that may assist in the verification process."
 LLM_API_ERROR_KEY = "llm_api_error"
 
-EXPECTED_API_EMBEDDING_SIZE = 3072
-EXPECTED_LOCAL_LM_EMBEDDING_SIZE = 12292
-EXPECTED_EMBEDDING_SIZE = 18436
-
-EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH = 10
-# see construct_document_attributes_and_embedding():
-# EXPECTED_ATTRIBUTES_LENGTH = EXPECTED_UNPROCESSED_ATTRIBUTES_LENGTH * 2 + 4 + 2  # v1.1.0
-EXPECTED_ATTRIBUTES_LENGTH = 4  # v1.2.0: [GPT-5 class 0; GPT-5 class 1; Gemini class 0; Gemini class 1]
-
 ARBITRARY_NON_INDEX_CONDITIONAL_ESTIMATE_MAX = 0.89  # New: Reflects alpha' >= 0.9. Previous: 0.94  # This is a simple ceiling to apply for LLMs that have no-notion of second-order uncertainty/reliability. This is reasonable when we instruct the LLM to only rely on estimates >= 0.95.
 
 SYSTEM_MESSAGE = """
@@ -270,21 +265,40 @@ AGREEMENT_MODEL_USER_FACING_PROMPT = "Do the model explanations agree that the r
 MCP_SERVER_NOT_VERIFIED_CLASS_LABEL = "NOT Verified"
 MCP_SERVER_VERIFIED_CLASS_LABEL = "Verified"
 
-MCP_SERVER_CONFIG_USE_ENSEMBLE = True
+MCP_SERVER_CONFIG_USE_ENSEMBLE = False
+assert MCP_SERVER_CONFIG_USE_ENSEMBLE is False  # Not fully implemented in this release
 MCP_SERVER_EVAL_ENSEMBLE_START_ITERATION = 0
 MCP_SERVER_EVAL_ENSEMBLE_END_ITERATION = 0  # inclusive
 
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
-MCP_SERVER_MODEL1_NAME = "gpt-5.2-2025-12-11"
-MCP_SERVER_MODEL2_NAME = "gemini-3-pro-preview"
+MCP_SERVER_MODEL1_NAME = "gpt-5.4-2026-03-05"
+MCP_SERVER_MODEL2_NAME = "gemini-3.1-pro-preview"
+MCP_SERVER_API_EMBEDDING_MODEL_NAME = "gemini-embedding-2"
+
+MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA = False
+MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT = False
+
+MCP_SERVER_USE_DKW_LOWER_ESTIMATES = True
+
+EXPECTED_API_EMBEDDING_SIZE = 3072
+EXPECTED_LOCAL_LM_EMBEDDING_SIZE = 12292
+EXPECTED_EMBEDDING_SIZE = \
+    int(EXPECTED_API_EMBEDDING_SIZE +
+        int(MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA)*EXPECTED_API_EMBEDDING_SIZE +
+        int(MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT)*EXPECTED_LOCAL_LM_EMBEDDING_SIZE)
+
+EXPECTED_ATTRIBUTES_LENGTH = 4  # v2.3.0: [GPT-5 class 0; GPT-5 class 1; Gemini class 0; Gemini class 1]
+
+# only relevant if MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT == True:
 MCP_SERVER_AGREEMENT_MODEL_NAME = "granite-3.3-8b-instruct"
-# The following two variables are fallbacks for use in mcp_utils_llm_api.py if the corresponding environment variables
+# The following two variables are fallbacks for use in mcp_utils_llm_api_granite_3_3_8b_instruct.py if
+# the corresponding environment variables
 # (MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH and MCP_SERVER_AGREEMENT_MODEL_DEVICE) are not set:
 MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
 MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
-REEXPRESS_MCP_SERVER_VERSION = "v2.2.0.alpha"  # see also ProgramIdentifiers_version for the classifier
+REEXPRESS_MCP_SERVER_VERSION = "2.3.0.preview"  # see also ProgramIdentifiers_version for the classifier
 
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,

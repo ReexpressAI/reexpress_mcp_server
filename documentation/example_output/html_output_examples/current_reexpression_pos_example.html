@@ -61,6 +61,13 @@
             border-radius: 6px;
             padding: 12px 16px;
         }
+        
+        .field-box-highlight {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
 
         .field-label {
             font-size: 13px;
@@ -130,6 +137,13 @@
             border: 1px solid #bee5eb;
         }
 
+        .tag-highlight {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 1px 3px;
+        }
+        
         .prompt-box, .document-box {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -385,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.1.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
         </div>
 
         <div class="section">
@@ -404,25 +418,22 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                <div>The question asks whether the newly added nearest_match_html() function produces valid HTML, focusing specifically on balanced &lt;div&gt; tags (and noting True/False literal output is intended). The AI response answers &quot;Yes&quot; and claims the &lt;div&gt; tags are properly balanced and nested.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                <div>The question asks what caused a sqlite3 binding error (&#x27;parameter 12: type Tensor is not supported&#x27;) when inserting rows into a SQLite database, and how to fix it. The AI response explains that parameter 12 is `label_int`, that `label_int` comes from `model.train_labels` via `retrieve_model_documents_ids`, and that those labels are likely PyTorch tensor scalars rather than Python integers. It recommends converting the label to `int` before insertion, e.g. `train_document_id_2_label[document_id] = int(label)`.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.2-2025-12-11)</span></div>
-                <div>Reviewing the nearest_match_html() f-string shows each opened &lt;div&gt; (nearest-match-box, outer section, two field-grid blocks, each field-box, explanation-boxes, and inner prompt/response sections) has a corresponding closing &lt;/div&gt; in proper nesting order. The boolean interpolation yielding &quot;True&quot;/&quot;False&quot; is normal and does not affect HTML validity. This is directly verifiable from the provided code.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
+                <div>The response correctly traces parameter 12 to `label_int` using the shown INSERT order, and the data flow in the provided code supports that `label_int` is coming from `model.train_labels` without conversion. The proposed fix—convert the tensor scalar to a Python `int` before calling sqlite3—is the standard and correct remedy. This verification is based on the provided code plus stable internal knowledge about PyTorch tensor iteration and sqlite3 parameter binding.</div>
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3-pro-preview)</span></div>
-                <div>The AI response correctly analyzes the provided Python code, specifically the `nearest_match_html` function. It accurately verifies that the HTML structure defined in the f-string has properly balanced `div` tags and that user content is escaped using `html.escape`. The logic provided in the response (checking for start/end tags and nesting) aligns with the code structure.</div>
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                <div>The LLM accurately identifies that &#x27;label_int&#x27; is the 12th parameter being inserted into the SQLite database. It correctly traces the source of this variable to &#x27;model.train_labels&#x27;, which yields 0-d torch tensors upon iteration. Finally, it provides the correct and practical fix: casting the tensor to a Python integer using `int()` or `.item()` before storing it in the dictionary or passing it to the database query.</div>
             </div>
+            
+            
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
-                <div>Do the model explanations agree that the response is correct?</div>
-                <div><span class="tag tag-positive">Yes</span></div>
-            </div>
         </div>
         
         <div class="separator"></div>
@@ -432,12 +443,12 @@
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">File Access</div>
-                    <div class="field-value">The verification model had access to: utils_visualization.py</div>
+                    <div class="field-value">The verification model did not have access to any external files.</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-01-11 23:16:32</div>
+                    <div class="field-value">2026-04-30 15:07:57</div>
                 </div>
                 
             </div>
@@ -445,82 +456,100 @@
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.032342903316020966, 0.9676571488380432]</div>
-            </div>
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">High-Reliability Region</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">True</span>
-                    </div>
-                </div>
 
+            <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
                         <span class="tag tag-positive">False</span>
                     </div>
                 </div>
-                <div class="field-box">
-                    <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">128.3815460205078</div>
-                </div>
             </div>
+            
             <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">
-                        Similarity to Training (q)
+                <div class=field-box-highlight>
+                    <div class="field-label">High-Reliability Region (lower)</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">True</span>
                     </div>
-                    <div class="field-value">149</div>
                 </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        Distance to Training Quantile (d)
+                <div class=field-box>
+                    <div class="field-label">High-Reliability Region</div>
+                    <div class="field-value">
+                        <span class="tag tag-positive">True</span>
                     </div>
-                    <div class="field-value">0.11757844686508179</div>
-                </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        Magnitude
-                    </div>
-                    <div class="field-value">[-2.3162176609039307, 3.4446659088134766]</div>
                 </div>
             </div>
-        </div>
-
-        <div class="section" style="margin-left: 40px;">
-            <div class="section-title">Analysis of the Effective Sample Size</div>
-            <div class="field-box" style="margin-bottom: 20px;">
+            
+            <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.04019377380609512, 0.9598062634468079]</div>
+                <div class="field-value">[2.046902550885063e-15, 1.0]</div>
             </div>
+
+            <div class=field-box style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">[7.685216221919769e-16, 1.0]</div>
+            </div>
+            
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.025984004139900208, 0.9740160703659058]</div>
+                <div class="field-value">[4.544646223000989e-16, 1.0]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[24617.0, 39756.0]</div>
+                    <div class="field-value">[1948.0, 3033.0]</div>
                 </div>
             </div>
+            
             <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">
-                        Distance to Training Lower Quantile (d_lower)
-                    </div>
-                    <div class="field-value">0.1097780093550682</div>
+                <div class=field-box-highlight>
+                    <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
+                    <div class="field-value">199.0</div>
+                </div>
+
+                <div class=field-box>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">199.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
+                        Similarity to Training (q)
+                    </div>
+                    <div class="field-value">199</div>
+                </div>                               
+            </div>
+            
+            <div class="field-grid">
+                <div class=field-box-highlight>
+                    <div class="field-label">
+                        Distance to Training Lower Quantile (d_lower)
+                    </div>
+                    <div class="field-value">0.9573996067047119</div>
+                </div>
+
+                <div class=field-box>
+                    <div class="field-label">
+                        Distance to Training Quantile (d)
+                    </div>
+                    <div class="field-value">0.9851291179656982</div>
+                </div>
+                
+                <div class="field-box">
+                    <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.12537887692451477</div>
+                    <div class="field-value">1.0</div>
+                </div>
+            </div>
+
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Magnitude
+                    </div>
+                    <div class="field-value">[-3.4807729721069336, 3.1806225776672363]</div>
                 </div>
             </div>
         </div>
@@ -539,21 +568,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">6.207298755645752</div>
+                    <div class="field-value">3.3118863105773926</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9000474810600281, 0.9008400440216064]</div>
+                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">120158</div>
+                    <div class="field-value">14941</div>
                 </div>
             </div>
         </div>
@@ -561,117 +590,122 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">The attached file creates a static HTML page from python dictionaries. Does the newly added nearest_match_html() function construct valid HTML? Note: The boolean True or False as literal text is the intention. Focus on whether div tags are properly balanced, not the exact count.</div>
+            <div class="prompt-box">A Python script aux_construct_document_db.py constructs a SQLite document database. When run, it produced this error:
+
+Successfully loaded ReexpressAI/OpenVerification1, which is the current version from HF Hub.
+Support set size: 14936
+Traceback (most recent call last):
+  File &quot;.../aux_construct_document_db.py&quot;, line 161, in &lt;module&gt;
+    main()
+  File &quot;.../aux_construct_document_db.py&quot;, line 151, in main
+    init_db(database_file=options.database_file, ...)
+  File &quot;.../aux_construct_document_db.py&quot;, line 91, in init_db
+    success = db.add_document(
+  File &quot;.../mcp_utils_sqlite_document_db_controller.py&quot;, line 121, in add_document
+    cursor.execute(&#x27;&#x27;&#x27;
+sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported
+
+Relevant code from aux_construct_document_db.py:
+
+def retrieve_model_documents_ids(options):
+    model = utils_model.load_model_torch(options.model_dir, torch.device(&quot;cpu&quot;), load_for_inference=True)
+    assert len(model.train_uuids) == len(set(model.train_uuids)), &quot;Unexpected Error: The training documents ids are not unique.&quot;
+    print(f&quot;Support set size: {len(model.train_uuids)}&quot;)
+    train_uuids = model.train_uuids
+    train_labels = model.train_labels
+    train_document_id_2_label = {}
+    for document_id, label in zip(train_uuids, train_labels):
+        train_document_id_2_label[document_id] = label
+    return train_document_id_2_label
+
+In init_db:
+    label_int = train_document_id_2_label[document_id]
+    ...
+    success = db.add_document(
+        document_id=document_id,
+        model1_summary=model1_summary,
+        model1_explanation=model1_explanation,
+        model2_explanation=model2_explanation,
+        model3_explanation=&#x27;&#x27;,
+        model4_explanation=&#x27;&#x27;,
+        model1_classification_int=model1_classification_int,
+        model2_classification_int=model2_classification_int,
+        model3_classification_int=0,
+        model4_classification_int=0,
+        agreement_model_classification_int=agreement_classification_int,
+        label_int=label_int,
+        label_was_updated_int=0,
+        document_source=document_source,
+        info=f&quot;{model1_label},{model2_label}&quot;,
+        user_question=user_question,
+        ai_response=ai_response
+    )
+
+Relevant code from mcp_utils_sqlite_document_db_controller.py add_document method:
+
+    cursor.execute(&#x27;&#x27;&#x27;
+        INSERT INTO documents (
+            document_id, model1_summary, model1_explanation, model2_explanation,
+            model3_explanation, model4_explanation, model1_classification_int, model2_classification_int,
+            model3_classification_int, model4_classification_int, agreement_model_classification_int,
+            label_int, label_was_updated_int, document_source, info,
+            user_question, ai_response
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    &#x27;&#x27;&#x27;, (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation,
+          model4_explanation,
+          model1_classification_int, model2_classification_int,
+          model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int,
+          label_was_updated_int, document_source, info,
+          user_question, ai_response))
+
+What is causing the error and how should it be fixed?</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, uploaded file, utils_visualization.py, lines 438-498]: The nearest_match_html function returns an f-string containing HTML that starts with &#x27;&lt;div class=&quot;nearest-match-box&quot;&gt;&#x27; and ends with &#x27;&lt;/div&gt;&#x27;, with nested div elements for sections, field-grids, field-boxes, explanation-boxes, prompt-box, and document-box; Reference [2, uploaded file, utils_visualization.py, lines 420-436]: User-provided content is escaped using the escape_html() helper function which calls html.escape() when content_is_html_escaped=False, applied to model1_explanation, model2_explanation, model1_summary, user_question, ai_response, document_id, and document_source; Reference [3, uploaded file, utils_visualization.py, lines 369-373]: The escape_html function returns html.escape(content) when content_is_html_escaped is False, otherwise returns content unchanged; Reference [4, uploaded file, utils_visualization.py, lines 384-395]: Dynamic CSS class names like successfully_verified_html_class and true_class_html_class are assigned only controlled string literals &quot;positive&quot; or &quot;negative&quot; based on boolean conditions, not user input; Reference [5, internal reasoning]: The div tags in lines 438-498 are properly balanced - each opening div tag has a corresponding closing tag with correct nesting hierarchy; Answer: Yes, the nearest_match_html() function constructs valid HTML. The structure has properly balanced and nested div tags, user content is properly escaped to prevent XSS vulnerabilities, and dynamic class names use controlled values rather than user input.</div>
+            <div class="document-box">Reference [1, mcp_utils_sqlite_document_db_controller.py, lines 121-128]: The INSERT statement column ordering is &quot;document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation, model4_explanation, model1_classification_int, model2_classification_int, model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int, label_was_updated_int, document_source, info, user_question, ai_response&quot;. Counting positionally, label_int is parameter 12.
+
+Reference [2, error traceback from user]: &quot;sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot; at line 121 of mcp_utils_sqlite_document_db_controller.py inside cursor.execute. This identifies parameter 12 as a torch.Tensor that sqlite3 cannot bind.
+
+Reference [3, aux_construct_document_db.py, retrieve_model_documents_ids]: &quot;train_uuids = model.train_uuids; train_labels = model.train_labels; train_document_id_2_label = {}; for document_id, label in zip(train_uuids, train_labels): train_document_id_2_label[document_id] = label&quot;. The label values come directly from model.train_labels with no type conversion.
+
+Reference [4, aux_construct_document_db.py, init_db]: &quot;label_int = train_document_id_2_label[document_id]&quot; then &quot;success = db.add_document(..., label_int=label_int, ...)&quot;. The dict value flows directly into add_document without conversion.
+
+Reference [5, internal knowledge, PyTorch tensor iteration]: Iterating a 1-D torch.Tensor yields 0-d torch.Tensor elements, not Python ints. sqlite3&#x27;s parameter binding does not support torch.Tensor types.
+
+Reference [6, internal knowledge, Python int() on tensors]: int(torch.tensor(5)) returns the Python int 5. Calling int() on either a 0-d torch.Tensor or a Python int produces a Python int safely, making it a robust conversion.
+
+Reference [7, aux_construct_document_db.py, init_db]: &quot;model1_classification_int = row[f&#x27;{model1_string_indicator_name}_verification_classification&#x27;]&quot; and similarly for model2. These come from HuggingFace dataset rows, which typically yield Python ints or numpy scalars (both bindable by sqlite3), not torch tensors. So they are not the source of this specific error.
+
+Answer: The error &quot;Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot; occurs because parameter 12 in the INSERT in mcp_utils_sqlite_document_db_controller.py&#x27;s add_document corresponds to label_int. The value is a torch.Tensor because retrieve_model_documents_ids stores the elements of model.train_labels directly into the dict without conversion, and iterating a torch.Tensor yields 0-d tensors. sqlite3 cannot bind torch.Tensor objects.
+
+Minimal fix: convert at dict insertion in retrieve_model_documents_ids:
+
+    for document_id, label in zip(train_uuids, train_labels):
+        train_document_id_2_label[document_id] = int(label)
+
+int() works on both 0-d tensors and Python ints. Equivalently label.item() works if the value is guaranteed to be a tensor.
+
+Optional defensive measure: model1_classification_int and model2_classification_int come from HF dataset rows and are likely Python ints/numpy scalars (bindable), but wrapping them in int(...) costs nothing and prevents future surprises.</div>
         </div>
         
         <div class="separator"></div>
         
-        
-        <div class="nearest-match-box">
-            <div class="section" style="margin-left: 40px;">
-                <div class="section-title">Nearest Match in Training</div>
-                
-                <div class="field-grid">        
-                    <div class="field-box" style="margin-bottom: 20px;">
-                        <div class="field-label">Successfully Verified (Prediction)</div>
-                        <div class="field-value">
-                            <span class="tag tag-positive">True</span>
-                        </div>
-                    </div>
-        
-                    <div class="field-box" style="margin-bottom: 20px;">
-                        <div class="field-label">True Label</div>
-                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
-                    </div>
-                </div>
-                
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The user asked to compute 2a - 3b + 4c for given vectors a, b, c and choose the correct option. The AI computed component-wise: 2a=(6,10,-2), -3b=(-6,-6,-9), 4c=(16,-4,-12), summed to (16, 0, -23), and selected option A.</div>
-                </div>
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5-2025-08-07)</span></div>
-                    <div>The arithmetic is correct and fully shown; the resulting vector (16, 0, -23) matches option A. The task is objective (not opinion-based) and does not depend on recent information. The answer relies solely on the user-provided context and basic vector operations.</div>
-                </div>
-    
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-2.5-pro)</span></div>
-                    <div>The AI correctly performs the scalar multiplication and vector addition to arrive at the correct result. The step-by-step calculation is clear and accurate, matching the correct multiple-choice option.</div>
-                </div>
-                    
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 3 Agreement <span class="model-name">(granite-3.3-8b-instruct)</span></div>
-                    <div>Do the model explanations agree that the response is correct?</div>
-                    <div><span class="tag tag-positive">Yes</span></div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Given vectors **a** = (3, 5, -1), **b** = (2, 2, 3), **c** = (4, -1, -3), then the coordinates of the vector 2**a** - 3**b** + 4**c** are (　　)
-
-A: (16, 0, -23)  
-B: (28, 0, -23)  
-C: (16, -4, -1)  
-D: (0, 0, 9)</div>
-                </div>
-    
-                <div class="section">
-                    <div class="section-title">AI Response</div>
-                    <div class="document-box">Given vectors **a** = (3, 5, -1), **b** = (2, 2, 3), **c** = (4, -1, -3), we need to find the coordinates of the vector \(2\mathbf{a} - 3\mathbf{b} + 4\mathbf{c}\).
-
-1. Calculate \(2\mathbf{a}\):
-   \[
-   2\mathbf{a} = 2 \times (3, 5, -1) = (6, 10, -2)
-   \]
-
-2. Calculate \(-3\mathbf{b}\):
-   \[
-   -3\mathbf{b} = -3 \times (2, 2, 3) = (-6, -6, -9)
-   \]
-
-3. Calculate \(4\mathbf{c}\):
-   \[
-   4\mathbf{c} = 4 \times (4, -1, -3) = (16, -4, -12)
-   \]
-
-4. Add the results component-wise:
-   - For the x-component: \(6 + (-6) + 16 = 6 - 6 + 16 = 16\)
-   - For the y-component: \(10 + (-6) + (-4) = 10 - 6 - 4 = 0\)
-   - For the z-component: \(-2 + (-9) + (-12) = -2 - 9 - 12 = -23\)
-
-Thus, the coordinates of the vector \(2\mathbf{a} - 3\mathbf{b} + 4\mathbf{c}\) are \((16, 0, -23)\).
-
-\[
-\boxed{A}
-\]</div>
-                </div>
-                <div class="field-grid">        
-                    <div class="field-box" style="margin-bottom: 20px;">
-                        <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_926446_fb34c795-214b-4694-9e5a-768bc6a5d942</div>
-                    </div>
-                    <div class="field-box" style="margin-bottom: 20px;">
-                        <div class="field-label">Document Source</div>
-                        <div class="field-value">OpenVerification1: openthoughts</div>
-                    </div>                
-                </div>
-            </div>
-        </div>
-    
+        <div class="section" style="margin-left: 40px;"> The nearest match is not available. </div>
 
         <div class="separator"></div>
 
         <div class="section">
             <div class="section-title">Legend</div>
             <div class="legend-content">
-                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                <p>The classification is in the High-Reliability region when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
-                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
+                
+                <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">gemini-embedding-2</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
+        
+                
+            <p>The classification is in the <span class="tag-highlight">High-Reliability region (lower)</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
+        
+                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

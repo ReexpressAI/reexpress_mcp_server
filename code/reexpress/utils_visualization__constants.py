@@ -56,6 +56,13 @@ css_style = f"""
             border-radius: 6px;
             padding: 12px 16px;
         }}
+        
+        .field-box-highlight {{
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }}
 
         .field-label {{
             font-size: 13px;
@@ -125,6 +132,13 @@ css_style = f"""
             border: 1px solid #bee5eb;
         }}
 
+        .tag-highlight {{
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 1px 3px;
+        }}
+        
         .prompt-box, .document-box {{
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;

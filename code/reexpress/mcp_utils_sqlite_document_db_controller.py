@@ -34,8 +34,8 @@ class DocumentDatabase:
         Create the documents table if it doesn't exist.
 
         -- Model field mapping (v1.2.0+):
-        -- model1_* fields: GPT-5 (originally model4)
-        -- model2_* fields: Gemini 2.5 Pro (originally model3)
+        -- model1_* fields: GPT (originally model4)
+        -- model2_* fields: Gemini (originally model3)
         -- model3_* fields: Pre-training model (originally model1)
         -- model4_* fields: Pre-training model (originally model2)
         """

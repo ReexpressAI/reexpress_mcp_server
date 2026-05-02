@@ -18,8 +18,8 @@ from google.genai import types
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 google_client = genai.Client(api_key=GEMINI_API_KEY)  # can alternatively replace with a Vertex AI deployment
 
-GEMINI_MODEL = "gemini-3.1-pro-preview"
-GEMINI_EMBEDDING_MODEL = "gemini-embedding-2-preview"
+GEMINI_MODEL = constants.MCP_SERVER_MODEL2_NAME  # "gemini-3.1-pro-preview"
+GEMINI_EMBEDDING_MODEL = constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME  # "gemini-embedding-2"
 
 USE_AZURE_01 = int(os.getenv("USE_AZURE_01", "1"))
 if USE_AZURE_01 == 1:
@@ -34,7 +34,7 @@ if USE_AZURE_01 == 1:
 else:
     from openai import OpenAI
     client = OpenAI()
-    GPT5_MODEL = "gpt-5.4-2026-03-05"
+    GPT5_MODEL = constants.MCP_SERVER_MODEL1_NAME  # "gpt-5.4-2026-03-05"
 
 
 class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):

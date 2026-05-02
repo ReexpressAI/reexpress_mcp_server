@@ -18,7 +18,7 @@ def get_confidence_signed_indicator_list(is_verified, verbalized_confidence):
 def construct_document_attributes_and_embedding(gpt5_model_verification_dict,
                                                 gemini_model_verification_dict,
                                                 model_embedding):
-    # | GPT-5 model soft one hot by verbalized uncertainty | gemini model soft one hot by verbalized uncertainty
+    # | GPT-5 model signed one hot by verbalized uncertainty | gemini model signed one hot by verbalized uncertainty
     attributes = [0.0, 0.0, 0.0, 0.0]  # [GPT-5 class 0; GPT-5 class 1; Gemini class 0; Gemini class 1]
     is_verified_gpt5 = gpt5_model_verification_dict[constants.VERIFICATION_CLASSIFICATION_KEY]
     confidence_gpt5 = gpt5_model_verification_dict[constants.CONFIDENCE_IN_CLASSIFICATION_KEY]

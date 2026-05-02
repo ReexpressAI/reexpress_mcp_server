@@ -21,7 +21,11 @@ import mcp_utils_tool_limits_manager
 import data_validator
 import utils_visualization
 import mcp_utils_sqlite_document_db_controller
-import mcp_utils_llm_api_granite_3_3_8b_instruct as mcp_local_embedding_controller
+
+if constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+    # Conditional import if a local LM is used, as the following requires additional HF dependencies:
+    import mcp_utils_llm_api_granite_3_3_8b_instruct as mcp_local_embedding_controller
+
 
 class AdaptationError(Exception):
     def __init__(self, message="An adaptation error occurred", error_code=None):
@@ -127,23 +131,37 @@ class MCPServerStateController:
         # currently identical:
         previous_query_and_response_to_verify_string_gemini = \
             f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
-        # In contrast, currently the embedding API model for the input does not embed the attached documents (if any)
-        previous_query_and_response_to_verify_string_api_embedding_for_input_qa = \
-            f"<question> {user_question} </question> <ai_response> {ai_response} </ai_response>"
-        task_configs = [(mcp_utils_llm_api.get_document_attributes_from_gpt5,
-                         previous_query_and_response_to_verify_string),
-                        (mcp_utils_llm_api.get_document_attributes_from_gemini_reasoning,
-                         previous_query_and_response_to_verify_string_gemini),
-                        (mcp_utils_llm_api.get_document_attributes_from_gemini_embedding,
-                         previous_query_and_response_to_verify_string_api_embedding_for_input_qa),
-                        ]
+        if constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA:
+            # In contrast, currently the embedding API model for the input does not
+            # embed the attached documents (if any)
+            previous_query_and_response_to_verify_string_api_embedding_for_input_qa = \
+                f"<question> {user_question} </question> <ai_response> {ai_response} </ai_response>"
+            task_configs = [(mcp_utils_llm_api.get_document_attributes_from_gpt5,
+                             previous_query_and_response_to_verify_string),
+                            (mcp_utils_llm_api.get_document_attributes_from_gemini_reasoning,
+                             previous_query_and_response_to_verify_string_gemini),
+                            (mcp_utils_llm_api.get_document_attributes_from_gemini_embedding,
+                             previous_query_and_response_to_verify_string_api_embedding_for_input_qa),
+                            ]
+        else:
+            task_configs = [(mcp_utils_llm_api.get_document_attributes_from_gpt5,
+                             previous_query_and_response_to_verify_string),
+                            (mcp_utils_llm_api.get_document_attributes_from_gemini_reasoning,
+                             previous_query_and_response_to_verify_string_gemini),
+                            ]
         try:
             results = await self._run_tasks_with_taskgroup(task_configs)
-            gpt5_model_verification_dict, \
-                gemini_model_verification_dict, api_embedding_for_input_qa = results
-            llm_api_error = gpt5_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
-                            gemini_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
-                            api_embedding_for_input_qa is None
+            if constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA:
+                gpt5_model_verification_dict, \
+                    gemini_model_verification_dict, api_embedding_for_input_qa = results
+                llm_api_error = gpt5_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
+                                gemini_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
+                                api_embedding_for_input_qa is None
+            else:
+                gpt5_model_verification_dict, \
+                    gemini_model_verification_dict = results
+                llm_api_error = gpt5_model_verification_dict[constants.LLM_API_ERROR_KEY] or \
+                                gemini_model_verification_dict[constants.LLM_API_ERROR_KEY]
         except:
             llm_api_error = True
         formatted_output_string = ""
@@ -156,24 +174,45 @@ class MCPServerStateController:
                 gemini_model_classification, gemini_model_explanation = \
                 mcp_utils_llm_api.get_model_explanations(gpt5_model_verification_dict,
                                                          gemini_model_verification_dict)
-            agreement_model_embedding, agreement_model_classification = \
-                mcp_local_embedding_controller.get_local_embedding_for_agreement_prompt(
-                    gpt5_model_summary=gpt5_model_summary,
-                    gpt5_model_explanation=gpt5_model_explanation,
-                    gemini_model_explanation=gemini_model_explanation)
+            agreement_model_classification = None
+            if constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+                agreement_model_embedding, agreement_model_classification = \
+                    mcp_local_embedding_controller.get_local_embedding_for_agreement_prompt(
+                        gpt5_model_summary=gpt5_model_summary,
+                        gpt5_model_explanation=gpt5_model_explanation,
+                        gemini_model_explanation=gemini_model_explanation)
+                llm_api_error = agreement_model_embedding is None or agreement_model_classification is None
             api_embedding_for_agreement_prompt = mcp_utils_llm_api.get_api_embedding_for_agreement_prompt(
                 gpt5_model_summary=gpt5_model_summary,
                 gpt5_model_explanation=gpt5_model_explanation,
                 gemini_model_explanation=gemini_model_explanation)
-            llm_api_error = agreement_model_embedding is None or agreement_model_classification is None or \
-                            api_embedding_for_agreement_prompt is None
+            llm_api_error = llm_api_error or api_embedding_for_agreement_prompt is None
             if not llm_api_error:
-                # The embedding is constructed by concatenating the following:
-                # API embedding for question and AI response :: API embedding for agreement prompt :: Local embedding
+                if constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA and \
+                        constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+                    # The embedding is constructed by concatenating the following:
+                    # API embedding for question and AI response :: API embedding for agreement prompt ::
+                    # Local embedding for agreement prompt
+                    sdm_activation_input = \
+                        api_embedding_for_input_qa + api_embedding_for_agreement_prompt + agreement_model_embedding
+                elif not constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA and \
+                        constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+                    # The embedding is constructed by concatenating the following:
+                    # API embedding for agreement prompt :: Local embedding for agreement prompt
+                    sdm_activation_input = api_embedding_for_agreement_prompt + agreement_model_embedding
+                elif not constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA and \
+                        not constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+                    # The embedding is the following:
+                    # API embedding for agreement prompt
+                    sdm_activation_input = api_embedding_for_agreement_prompt
+                else:
+                    # Only using the following is not currently implemented: API embedding for question and AI response
+                    # In principle, this could be used with a strong local model, but is not currently implemented.
+                    assert False
                 reexpression_input = mcp_utils_data_format.construct_document_attributes_and_embedding(
                     gpt5_model_verification_dict,
                     gemini_model_verification_dict,
-                    api_embedding_for_input_qa + api_embedding_for_agreement_prompt + agreement_model_embedding)
+                    sdm_activation_input)
                 prediction_meta_data_dict = mcp_utils_test.test(self.main_device, self.model_list, reexpression_input)
                 if prediction_meta_data_dict is not None:
                     formatted_output_string = mcp_utils_test.format_sdm_estimator_output_for_mcp_tool(
@@ -199,7 +238,7 @@ class MCPServerStateController:
                     False, constants.CALIBRATION_RELIABILITY_LABEL_OOD,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
-                    agreement_model_classification=False,
+                    agreement_model_classification=None,
                     hr_class_conditional_accuracy=self.model_list[0].hr_class_conditional_accuracy))
             self.current_reexpression = None
         else:
@@ -337,7 +376,8 @@ class MCPServerStateController:
                     model3_classification_int=0,
                     model4_classification_int=0,
                     agreement_model_classification_int=
-                    int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]),
+                    int(self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION]) if
+                    self.current_reexpression[constants.REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION] is not None else -1,
                     label_int=label,
                     label_was_updated_int=0,
                     document_source="user_added",
@@ -381,19 +421,44 @@ class MCPServerStateController:
         # also show files in consideration, if any
         files_in_consideration_message = \
             mcp_utils_test.get_files_in_consideration_message(
-                self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES])
+                self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES]).strip()
+        if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+            hr_region_and_sdm_output_block = f"""
+            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region_lower"]}\n
+            p(y | x)_lower: {prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()}
+            """
+        else:
+            hr_region_and_sdm_output_block = f"""
+            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region"]}\n
+            p(y | x): {prediction_meta_data["sdm_output"].detach().cpu().tolist()}
+            """
+        # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+        is_ood = prediction_meta_data["is_ood"]
         formatted_output_string = f"""
+            # Verification Results Details:\n
             {constants.predictedFull}: {constants.MCP_SERVER_VERIFIED_CLASS_LABEL if prediction_meta_data["prediction"] == 1 else constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL}\n
-            Out-of-distribution: {prediction_meta_data["is_ood"]}\n
+            Out-of-distribution: {is_ood}
+            {hr_region_and_sdm_output_block}
+            ## Additional Uncertainty (instance-level) Details:\n            
             {constants.qFull}: {int(prediction_meta_data["q"])}\n
-            {constants.dFull} Quantile: {prediction_meta_data["d"]}\n
+            {constants.dQuantileLowerFull}: {prediction_meta_data["d_lower"]}\n
+            {constants.dQuantileFull}: {prediction_meta_data["d"]}\n
             {constants.fFull}: {prediction_meta_data["f"].detach().cpu().tolist()}\n
-            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL} (at alpha={prediction_meta_data["hr_class_conditional_accuracy"]}, q'_min={prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]}, class-wise output thresholds={prediction_meta_data["hr_output_thresholds"]}): {prediction_meta_data["is_high_reliability_region"]}\n
+            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region_lower"]}\n
+            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region"]}\n
+            p(y | x)_lower: {prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()}\n
             p(y | x): {prediction_meta_data["sdm_output"].detach().cpu().tolist()}\n
+            q'_lower: {prediction_meta_data["rescaled_similarity_lower"]}\n
             q': {prediction_meta_data["rescaled_similarity"]}\n
             Effective sample size (by class): {prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().tolist()}\n
-            {files_in_consideration_message}
-            ---------------\n
+            ## File Access:\n
+            {files_in_consideration_message}\n
+            ## SDM Estimator (Model-level) Details:\n
+            alpha={prediction_meta_data["hr_class_conditional_accuracy"]}\n
+            q'_min={prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]}\n
+            class-wise output thresholds={prediction_meta_data["hr_output_thresholds"]}\n
+            Support/training size={prediction_meta_data["support_index_ntotal"]}\n
+            # Verification Results Summary:
             {self.current_reexpression["formatted_output_string"]}
         """
         return formatted_output_string

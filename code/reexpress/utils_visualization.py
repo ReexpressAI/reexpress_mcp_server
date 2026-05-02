@@ -34,13 +34,15 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
     else:
         successfully_verified_html_class = "negative"
     is_high_reliability_region = prediction_meta_data.get("is_high_reliability_region", False)
-    # 2026-01-10: Added prediction_meta_data["d"] == 0.0. (See note in mcp_utils_test.py.)
-    # is_ood = prediction_meta_data.get("is_ood", True)
-    is_ood = prediction_meta_data.get("is_ood", True) or prediction_meta_data.get("d", 0.0) == 0.0
+    # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+    is_ood = prediction_meta_data.get("is_ood", True)
     is_ood_html_class = "positive" if not is_ood else "negative"
 
-    sdm_output_for_predicted_class = \
-        prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
+    try:
+        sdm_output_for_predicted_class = \
+            prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
+    except:
+        sdm_output_for_predicted_class = 0.0
 
     calibration_reliability = \
         mcp_utils_test.get_calibration_reliability_label(is_high_reliability_region, is_ood,
@@ -113,6 +115,10 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         distance_d_upper = prediction_meta_data["d_upper"]
         sdm_output_d_lower = prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()
         sdm_output_d_upper = prediction_meta_data["sdm_output_d_upper"].detach().cpu().tolist()
+
+        rescaled_similarity_lower = prediction_meta_data["rescaled_similarity_lower"]
+        is_high_reliability_region_lower = prediction_meta_data["is_high_reliability_region_lower"]
+        is_high_reliability_region_lower_html_class = "positive" if is_high_reliability_region_lower else "negative"
     except:
         sdm_output = "N/A"
         is_high_reliability_region = False
@@ -128,6 +134,17 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         sdm_output_d_lower = "N/A"
         sdm_output_d_upper = "N/A"
 
+        rescaled_similarity_lower = "N/A"
+        is_high_reliability_region_lower = False
+        is_high_reliability_region_lower_html_class = "negative"
+
+    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+        highlighted_field_box_html_class_lower = "field-box-highlight"
+        highlighted_field_box_html_class = "field-box"
+    else:
+        highlighted_field_box_html_class_lower = "field-box"
+        highlighted_field_box_html_class = "field-box-highlight"
+
     user_question = html.escape(current_reexpression.get(constants.REEXPRESS_QUESTION_KEY, ''))
     ai_response = html.escape(current_reexpression.get(constants.REEXPRESS_AI_RESPONSE_KEY, ''))
 
@@ -140,7 +157,33 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
     except:
         nearest_match_html_string = """<div class="section" style="margin-left: 40px;"> The nearest match is not available. </div>"""
 
+    if constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+        agreement_model_html_block = f"""
+                <div class="explanation-box-{agreement_model_html_class}">
+                    <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
+                    <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
+                    <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
+                </div>
+        """
+        legend_model_html_block = f"""
+                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
+        """
+    else:
+        agreement_model_html_block = ""
+        legend_model_html_block = f"""
+                <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">{constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME}</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
+        """
 
+    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+        legend_sdm_estimator_html_block = f"""
+            <p>The classification is in the <span class="tag-highlight">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL_NON_TITLE}</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
+        """
+    else:
+        legend_sdm_estimator_html_block = f"""
+            <p>The classification is in the <span class="tag-highlight">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE}</span> when the <span class="tag-highlight">rescaled Similarity (q')</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The lower (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>
+        """
     html_content_string = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -185,12 +228,9 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
                 <div class="explanation-title-{model2_html_class}">Model 2 Explanation <span class="model-name">({model2_name})</span></div>
                 <div>{model2_explanation}</div>
             </div>
+            
+            {agreement_model_html_block}
 
-            <div class="explanation-box-{agreement_model_html_class}">
-                <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
-                <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
-                <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
-            </div>
         </div>
         
         <div class="separator"></div>
@@ -213,59 +253,41 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">p(y | x)</div>
-                <div class="field-value">{sdm_output}</div>
-            </div>
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}</div>
-                    <div class="field-value">
-                        <span class="tag tag-{is_high_reliability_region_html_class}">{is_high_reliability_region}</span>
-                    </div>
-                </div>
 
+            <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
                         <span class="tag tag-{is_ood_html_class}">{is_ood}</span>
                     </div>
                 </div>
-                <div class="field-box">
-                    <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">{rescaled_similarity}</div>
-                </div>
             </div>
+            
             <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">
-                        {constants.qFull}
+                <div class={highlighted_field_box_html_class_lower}>
+                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}</div>
+                    <div class="field-value">
+                        <span class="tag tag-{is_high_reliability_region_lower_html_class}">{is_high_reliability_region_lower}</span>
                     </div>
-                    <div class="field-value">{similarity_q}</div>
                 </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        {constants.dQuantileFull}
+                <div class={highlighted_field_box_html_class}>
+                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}</div>
+                    <div class="field-value">
+                        <span class="tag tag-{is_high_reliability_region_html_class}">{is_high_reliability_region}</span>
                     </div>
-                    <div class="field-value">{distance_d}</div>
-                </div>
-
-                <div class="field-box">
-                    <div class="field-label">
-                        {constants.fFull}
-                    </div>
-                    <div class="field-value">{magnitude}</div>
                 </div>
             </div>
-        </div>
-
-        <div class="section" style="margin-left: 40px;">
-            <div class="section-title">Analysis of the Effective Sample Size</div>
-            <div class="field-box" style="margin-bottom: 20px;">
+            
+            <div class={highlighted_field_box_html_class_lower} style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
                 <div class="field-value">{sdm_output_d_lower}</div>
             </div>
+
+            <div class={highlighted_field_box_html_class} style="margin-bottom: 20px;">
+                <div class="field-label">p(y | x)</div>
+                <div class="field-value">{sdm_output}</div>
+            </div>
+            
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
                 <div class="field-value">{sdm_output_d_upper}</div>
@@ -276,19 +298,55 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
                     <div class="field-value">{cumulative_effective_sample_sizes}</div>
                 </div>
             </div>
+            
             <div class="field-grid">
+                <div class={highlighted_field_box_html_class_lower}>
+                    <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
+                    <div class="field-value">{rescaled_similarity_lower}</div>
+                </div>
+
+                <div class={highlighted_field_box_html_class}>
+                    <div class="field-label">Rescaled Similarity (q')</div>
+                    <div class="field-value">{rescaled_similarity}</div>
+                </div>
+
                 <div class="field-box">
+                    <div class="field-label">
+                        {constants.qFull}
+                    </div>
+                    <div class="field-value">{similarity_q}</div>
+                </div>                               
+            </div>
+            
+            <div class="field-grid">
+                <div class={highlighted_field_box_html_class_lower}>
                     <div class="field-label">
                         {constants.dQuantileLowerFull}
                     </div>
                     <div class="field-value">{distance_d_lower}</div>
                 </div>
 
+                <div class={highlighted_field_box_html_class}>
+                    <div class="field-label">
+                        {constants.dQuantileFull}
+                    </div>
+                    <div class="field-value">{distance_d}</div>
+                </div>
+                
                 <div class="field-box">
                     <div class="field-label">
                         {constants.dQuantileUpperFull}
                     </div>
                     <div class="field-value">{distance_d_upper}</div>
+                </div>
+            </div>
+
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        {constants.fFull}
+                    </div>
+                    <div class="field-value">{magnitude}</div>
                 </div>
             </div>
         </div>
@@ -346,9 +404,9 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         <div class="section">
             <div class="section-title">Legend</div>
             <div class="legend-content">
-                <p>An ensemble of models 1, 2, and 3 (including the hidden states of model 3) is taken as the input to the SDM estimator that determines the verification classification.</p>
-                <p>The classification is in the {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE} when the rescaled Similarity (q') is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, p(y | x), for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
-                <p>The estimates in the section 'Analysis of the Effective Sample Size' are based on the DKW inequality applied to the distance quantiles.</p>
+                {legend_model_html_block}
+                {legend_sdm_estimator_html_block}
+                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>
@@ -438,6 +496,17 @@ def nearest_match_html(nearest_match_meta_data,
     document_source = escape_html(nearest_match_meta_data.get("document_source", ""),
                                   content_is_html_escaped=content_is_html_escaped)
 
+    if constants.MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT:
+        agreement_model_html_block = f"""
+                    <div class="explanation-box-{agreement_model_html_class}">
+                        <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
+                        <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
+                        <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
+                    </div>
+        """
+    else:
+        agreement_model_html_block = ""
+
     nearest_match_html_string = f"""
         <div class="nearest-match-box">
             <div class="section" style="margin-left: 40px;">
@@ -470,12 +539,8 @@ def nearest_match_html(nearest_match_meta_data,
                     <div class="explanation-title-{model2_html_class}">Model 2 Explanation <span class="model-name">({model2_name})</span></div>
                     <div>{model2_explanation}</div>
                 </div>
-                    
-                <div class="explanation-box-{agreement_model_html_class}">
-                    <div class="explanation-title-{agreement_model_html_class}">Model 3 Agreement <span class="model-name">({agreement_model_name})</span></div>
-                    <div>{html.escape(constants.AGREEMENT_MODEL_USER_FACING_PROMPT)}</div>
-                    <div><span class="tag tag-{agreement_model_html_class}">{agreement_model_classification_string}</span></div>
-                </div>
+                
+                {agreement_model_html_block}
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
