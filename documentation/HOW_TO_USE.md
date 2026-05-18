@@ -37,7 +37,7 @@ At the end of your prompt (or alone if referencing a previous assistant response
 > [!TIP]
 > On macOS you can add keyboard shortcuts (e.g., for use in Claude Desktop) in System Settings > Keyboard > Text Replacements. You can then type the short text and press SPACE for the replacement. We use the shortcut `r:r` for the main prompt above. We include what we use for each of the tools below, in turn.[^3]
 
-This will take your previous question and Claude's response, and then ensemble it against 1 call to gpt-5.4-2026-03-05; 1 call to gemini-3.1-pro-preview; and 1 call to gemini-embedding-2, the output over which we then run the on-device SDM estimator to calculate a verification classification, where True indicates that the estimator can verify that the response answered the query or instruction, and False indicates that the estimator cannot verify that the response answered the query or instruction, at least given the provided context.
+This will take your previous question and Claude's response, and then ensemble it against 1 call to gpt-5.5-2026-04-23; 1 call to gemini-3.1-pro-preview; and 1 call to gemini-embedding-2, the output over which we then run the on-device SDM estimator to calculate a verification classification, where True indicates that the estimator can verify that the response answered the query or instruction, and False indicates that the estimator cannot verify that the response answered the query or instruction, at least given the provided context.
 
 ### *The key information the tool will tell you:*
 1. Is the response successfully verified (a binary classification): True or False

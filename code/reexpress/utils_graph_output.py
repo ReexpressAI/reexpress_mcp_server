@@ -7,11 +7,13 @@ scatterplot show the distribution of relative counts. A plot is generated for ea
 """
 import argparse
 import time
-import utils_model
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from datetime import datetime
+
+import utils_model
+import constants
 
 
 class InteractiveScatter:
@@ -106,20 +108,30 @@ class InteractiveScatter:
                 print(f"Coordinates: ({self.x[idx]:.2f}, {self.y[idx]:.2f})")
                 print(f"Row: {self.data_rows[idx]}")
                 # Below, we duplicate the key information from the row to make it easier to read:
+                print(f"\n{'+' * 14}")
                 print(f"Label == Prediction: {self.data_rows[idx]['label'] == self.data_rows[idx]['prediction']}")
                 print(f"Label: {self.data_rows[idx]['label']}")
                 print(f"Prediction: {self.data_rows[idx]['prediction']}")
+                print(
+                    f"{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: "
+                    f"{self.data_rows[idx]['is_high_reliability_region_lower']}")
+                print(f"p(y|x)_lower: {self.data_rows[idx]['sdm_output_d_lower']}")
+                print(f"{'+' * 14}\n")
                 print(f"p(y|x): {self.data_rows[idx]['sdm_output']}")
-                print(f"High reliability region: {self.data_rows[idx]['is_high_reliability_region']}")
+                print(f"{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: "
+                      f"{self.data_rows[idx]['is_high_reliability_region']}")
+                print(f"Rescaled Similarity, lower (q'_lower): {self.data_rows[idx]['rescaled_similarity_lower']}")
                 print(f"Rescaled Similarity (q'): {self.data_rows[idx]['rescaled_similarity']}")
                 print(f"OOD: {self.data_rows[idx]['is_ood']}")
                 print(f"Effective sample size: {self.data_rows[idx]['cumulative_effective_sample_sizes']}")
                 separator_text = ", "
                 print(f"Similarity (q): {self.data_rows[idx]['q']}{separator_text} "
+                      f"Distance quantile, lower (d_lower): {self.data_rows[idx]['d_lower']}{separator_text} "
                       f"Distance quantile (d): {self.data_rows[idx]['d']}{separator_text} "
                       f"Magnitude (f): {self.data_rows[idx]['f']}")
                 print(f"d_nearest: {self.data_rows[idx]['d0']}")
-                print(f"Document: {self.data_rows[idx]['document']}")
+                print(f"\n{'+' * 14}")
+                print(f"Document:\n{self.data_rows[idx]['document']}")
                 print(f"{'=' * 40}\n")
 
                 # Clicked on a point - make it persist
@@ -182,6 +194,7 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
     data_rows_filtered = []
     colors_filtered = []
     accuracy = []
+    accuracy_class_conditional = []
     accuracy_filtered = []
     point_sizes = []
     is_correct_filtered = []  # Track correct/incorrect for histograms
@@ -191,29 +204,39 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         document_id = document["id"]
         floor_rescaled_similarity = document["floor_rescaled_similarity"]
         rescaled_similarity = document["rescaled_similarity"]
-        q = document["q"]
-        d = document["d"]
+        rescaled_similarity_lower = document["rescaled_similarity_lower"]
+        # q = document["q"]
+        # d = document["d"]
         prediction_probability = document["sdm_output"][document["prediction"]]
+        prediction_probability_lower = document["sdm_output_d_lower"][document["prediction"]]
         # softmax_predicted = torch.softmax(torch.tensor(document["f"]), dim=0)[document["prediction"]]  # reference
 
         if options.graph_all_points:
             filter_condition = True
         else:
-            filter_condition = document["is_high_reliability_region"]
+            if options.graph_centroid:
+                filter_condition = document["is_high_reliability_region"]
+            else:
+                filter_condition = document["is_high_reliability_region_lower"]
         label = document["label"]
         if true_label_to_graph is not None:
             filter_condition = filter_condition and label == true_label_to_graph
             # can use these to verify the bin distribution alignment, which must match with the x and y-axis:
             # and 0.0 <= rescaled_similarity <= 2.5
             # and 0.7 <= prediction_probability <= 0.8
-
+        if label == true_label_to_graph:
+            accuracy_class_conditional.append(document["prediction"] == label)
         if filter_condition:
             document_ids_filtered.append(document_id)
             is_correct = document["prediction"] == label
             accuracy_filtered.append(is_correct)
             is_correct_filtered.append(is_correct)
-            x_filtered.append(rescaled_similarity)
-            y_filtered.append(prediction_probability)
+            if options.graph_centroid:
+                x_filtered.append(rescaled_similarity)
+                y_filtered.append(prediction_probability)
+            else:
+                x_filtered.append(rescaled_similarity_lower)
+                y_filtered.append(prediction_probability_lower)
             data_rows_filtered.append(document)
             if is_correct:
                 colors_filtered.append("green")
@@ -227,8 +250,27 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
 
         accuracy.append(document["prediction"] == label)
 
-    print(f"Overall accuracy: {np.mean(accuracy)} out of {len(accuracy)}")
-    print(f"Overall filtered accuracy: {np.mean(accuracy_filtered)} out of {len(accuracy_filtered)}")
+    print(f"Marginal accuracy: {np.mean(accuracy)} out of {len(accuracy)}")
+    total_points = len(accuracy)
+    if options.graph_all_points:
+        print(f"Class-conditional (label={true_label_to_graph}) accuracy: "
+              f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+              f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
+    else:
+        print(
+            f"Class-conditional (label={true_label_to_graph}) accuracy: "
+            f"{np.mean(accuracy_class_conditional)} out of {len(accuracy_class_conditional)} "
+            f"({len(accuracy_class_conditional)/total_points if total_points > 0 else 0.0} of all points)")
+        if options.graph_centroid:
+            print(
+                f"Class-conditional (label={true_label_to_graph}) accuracy, SDM_HR: "
+                f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+                f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
+        else:
+            print(
+                f"Class-conditional (label={true_label_to_graph}) accuracy, SDM_HR (lower): "
+                f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+                f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
 
     # Create figure with subplots
     fig = plt.figure(figsize=(10, 10))
@@ -252,25 +294,36 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
                                      ids=document_ids_filtered, data_rows=data_rows_filtered, ax=ax_main)
 
     ax_main.set_xlabel(r"$q'$")
-    # ax_main.set_ylabel(r'$\hat{p}(y \mid \mathbf{x})$')
-    ax_main.set_ylabel(r"$\rm{sdm}(\mathbf{z'})_{\hat{y}}$")
+    if options.graph_centroid:
+        ax_main.set_ylabel(r"$\rm{sdm}(\mathbf{z'})_{\hat{y}}$")
+    else:
+        ax_main.set_ylabel(r"$\rm{sdm}(\mathbf{z'})_{\hat{y}}~({\mathrm{lower}})$")
 
     if true_label_to_graph is not None:
         if options.graph_all_points:
             latex_string = r'$\alpha$'
             fig.suptitle(
-                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}={hr_class_conditional_accuracy} (rejections are also graphed)",
+                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, "
+                f"{latex_string}={hr_class_conditional_accuracy} (rejections are also graphed)",
                 y=0.98)
         else:
-            latex_string = r'$\hat{p}(y \mid \mathbf{x}) \neq \bot, \alpha$'
+            if options.graph_centroid:
+                latex_string = r'$\rm{SDM}_{\mathrm{HR}} \neq \bot, \alpha$'
+            else:
+                latex_string = r'$\rm{SDM}^{\mathrm{lower}}_{\mathrm{HR}} \neq \bot, \alpha$'
             fig.suptitle(
-                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, {latex_string}={hr_class_conditional_accuracy}",
+                f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, "
+                f"{latex_string}={hr_class_conditional_accuracy}",
                 y=0.98)
         if options.graph_thresholds:
             latex_threshold_label = r'Class-wise thresholds ($\psi$)'
-            output_thresholds_hline = ax_main.axhline(y=hr_output_thresholds[true_label_to_graph],
-                                                      color='orange', linestyle=':', linewidth=2,
-                                                      label=f"{latex_threshold_label}, index {true_label_to_graph}{latex_approx_symbol}{hr_output_thresholds[true_label_to_graph]:.4f}")
+            output_thresholds_hline = \
+                ax_main.axhline(y=hr_output_thresholds[true_label_to_graph],
+                                color='orange', linestyle=':', linewidth=2,
+                                label=f"{latex_threshold_label}, "
+                                      f"index {true_label_to_graph}"
+                                      f"{latex_approx_symbol}"
+                                      f"{hr_output_thresholds[true_label_to_graph]:.4f}")
 
     if options.graph_thresholds:
         latex_min_valid_qbin = r"${q'}_{\mathrm{min}}$"
@@ -278,7 +331,9 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
             ax_main.axvline(x=min_rescaled_similarity_to_determine_high_reliability_region,
                             color=min_rescaled_similarity_to_determine_high_reliability_region_error_color,
                             linestyle='--', linewidth=2,
-                            label=f"{latex_min_valid_qbin}{latex_approx_symbol}{min_rescaled_similarity_to_determine_high_reliability_region:.2f}")
+                            label=f"{latex_min_valid_qbin}"
+                                  f"{latex_approx_symbol}"
+                                  f"{min_rescaled_similarity_to_determine_high_reliability_region:.2f}")
         # Fixed: Center the legend horizontally by using loc='upper center' with bbox_to_anchor at x=0.5
         # ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=1)
 
@@ -386,7 +441,8 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
         fig.text(text_x + 0.06, 0.06,
-                 f"(x-axis bins: width {options.x_axis_histogram_width}; y-axis bins: width {options.y_axis_histogram_width})",
+                 f"(x-axis bins: width {options.x_axis_histogram_width}; "
+                 f"y-axis bins: width {options.y_axis_histogram_width})",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -398,7 +454,8 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
                  ha='center', va='top',
                  fontsize=9, style='italic', color='gray')
         fig.text(0.5, 0.16,
-                 f"(x-axis bins: width {options.x_axis_histogram_width}; y-axis bins: width {options.y_axis_histogram_width})",
+                 f"(x-axis bins: width {options.x_axis_histogram_width}; "
+                 f"y-axis bins: width {options.y_axis_histogram_width})",
                  ha='center', va='top',
                  fontsize=9, style='italic', color='gray')
         # Add timestamp centered under the filename
@@ -428,6 +485,8 @@ def main():
     parser.add_argument("--graph_all_points", default=False, action='store_true',
                         help="If provided, all points are graphed. "
                              "The default is to only graph the valid index-conditional points.")
+    parser.add_argument("--graph_centroid", default=False, action='store_true',
+                        help="If provided, the y-axis is sdm(z') instead of the default sdm(z')_lower.")
     parser.add_argument("--graph_thresholds", default=False, action='store_true',
                         help="If provided, the threshold on rescaled_similarity and the class-wise thresholds are "
                              "included in the graph.")
@@ -447,8 +506,6 @@ def main():
     parser.add_argument("--save_file_prefix", default="",
                         help="If provided, the image will be saved at this location with the suffix "
                              "'__class_label_X_only_admitted.png' or '__class_label_X_all_points.png'")
-    parser.add_argument("--exclude_graph_labels", default=False, action='store_true',
-                        help="For use when adding graphs to LaTeX documents.")
 
     options = parser.parse_args()
     # Set higher-resolution for saving

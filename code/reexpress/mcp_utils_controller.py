@@ -125,12 +125,14 @@ class MCPServerStateController:
             available_file_names = []
         attached_document_note = ""
         if len(attached_documents) > 0:
-            attached_document_note = "(Note: I have included additional documents relevant to this discussion within the <attached_file></attached_file> XML tags.) "
+            attached_document_note = constants.MCP_SERVER_ATTACHED_DOCUMENT_NOTE
+
         previous_query_and_response_to_verify_string = \
             f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
         # currently identical:
         previous_query_and_response_to_verify_string_gemini = \
             f"<question> {attached_documents}{user_question} {attached_document_note}</question> <ai_response> {ai_response} </ai_response>"
+
         if constants.MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA:
             # In contrast, currently the embedding API model for the input does not
             # embed the attached documents (if any)
@@ -231,6 +233,17 @@ class MCPServerStateController:
                     now = datetime.now()
                     submitted_time = now.strftime("%Y-%m-%d %H:%M:%S")
                     partial_reexpression[constants.REEXPRESS_SUBMITTED_TIME_KEY] = submitted_time
+                    # saved for reference:
+                    try:
+                        partial_reexpression[constants.REEXPRESS_MODEL1_CONFIDENCE] = \
+                            float(gpt5_model_verification_dict[constants.CONFIDENCE_IN_CLASSIFICATION_KEY])
+                    except:
+                        partial_reexpression[constants.REEXPRESS_MODEL1_CONFIDENCE] = -1.0
+                    try:
+                        partial_reexpression[constants.REEXPRESS_MODEL2_CONFIDENCE] = \
+                            float(gemini_model_verification_dict[constants.CONFIDENCE_IN_CLASSIFICATION_KEY])
+                    except:
+                        partial_reexpression[constants.REEXPRESS_MODEL2_CONFIDENCE] = -1.0
 
         if formatted_output_string == "":
             formatted_output_string = (
@@ -243,11 +256,16 @@ class MCPServerStateController:
             self.current_reexpression = None
         else:
             partial_reexpression["formatted_output_string"] = formatted_output_string
-            # Currently we do not store attached documents (if any) for archive with data additions. However, we do
-            # save the file names.
             partial_reexpression[constants.REEXPRESS_QUESTION_KEY] = user_question
             partial_reexpression[constants.REEXPRESS_AI_RESPONSE_KEY] = ai_response
             partial_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES] = available_file_names
+            if constants.MCP_SERVER_SAVE_ATTACHED_FILE_CONTENT_TO_DATABASE:
+                partial_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENTS_CONTENT] = attached_documents
+                # we also save the attached document note to simplify reproducibility in case it changes in the future
+                partial_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENT_NOTE_KEY] = attached_document_note
+            else:
+                partial_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENTS_CONTENT] = ""
+                partial_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENT_NOTE_KEY] = ""
             self.current_reexpression = partial_reexpression
             self.save_html_visualization()
         return formatted_output_string
@@ -273,6 +291,8 @@ class MCPServerStateController:
             return None
 
     def save_html_visualization(self):
+        # Note that the HTML output for the prompt does not contain the content of the attached documents, if any. Only
+        # the file names are provided.
         if self.current_reexpression is not None and self.CREATE_HTML_VISUALIZATION and \
                 self.HTML_VISUALIZATION_FILE is not None:
             try:
@@ -349,8 +369,28 @@ class MCPServerStateController:
 
             json_for_archive[constants.REEXPRESS_ATTACHED_FILE_NAMES] = \
                 self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES]
-            json_for_archive[constants.REEXPRESS_INFO_KEY] = \
+            json_for_archive[constants.REEXPRESS_ATTACHED_DOCUMENTS_CONTENT] = \
+                self.current_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENTS_CONTENT]
+            json_for_archive[constants.REEXPRESS_ATTACHED_DOCUMENT_NOTE_KEY] = \
+                self.current_reexpression[constants.REEXPRESS_ATTACHED_DOCUMENT_NOTE_KEY]
+
+            json_for_archive[constants.REEXPRESS_MODEL1_NAME_KEY] = \
+                constants.MCP_SERVER_MODEL1_NAME
+            json_for_archive[constants.REEXPRESS_MODEL2_NAME_KEY] = \
+                constants.MCP_SERVER_MODEL2_NAME
+            json_for_archive[constants.REEXPRESS_AGREEMENT_MODEL_NAME_KEY] = \
+                constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME
+            json_for_archive[constants.REEXPRESS_MCP_SERVER_VERSION_KEY] = \
+                constants.REEXPRESS_MCP_SERVER_VERSION
+            # for research purposes, we also save the verbalized uncertainty to the JSON archive:
+            json_for_archive[constants.REEXPRESS_MODEL1_CONFIDENCE] = \
+                self.current_reexpression[constants.REEXPRESS_MODEL1_CONFIDENCE]
+            json_for_archive[constants.REEXPRESS_MODEL2_CONFIDENCE] = \
+                self.current_reexpression[constants.REEXPRESS_MODEL2_CONFIDENCE]
+
+            json_for_archive[constants.REEXPRESS_SUBMITTED_TIME_KEY] = \
                 self.current_reexpression[constants.REEXPRESS_SUBMITTED_TIME_KEY]
+
             utils_model.save_by_appending_json_lines(str(running_updates_file_path.as_posix()), [json_for_archive])
             # Note: Currently there is no notion of database rollback if subsequent saving of the index fails (a la
             # standard sqlite operations with macOS Core Data). However,
@@ -364,6 +404,8 @@ class MCPServerStateController:
             # add to document database
             add_to_support_db_message = ""
             try:
+                # Currently we do not save the content of the attached files (if any) to the SQLite database. This is
+                # to avoid duplication of potentially large files that are already saved to the JSON.
                 success = self.support_db.add_document(
                     document_id=document_id,
                     model1_summary=self.current_reexpression[constants.REEXPRESS_MODEL1_TOPIC_SUMMARY],
@@ -381,8 +423,8 @@ class MCPServerStateController:
                     label_int=label,
                     label_was_updated_int=0,
                     document_source="user_added",
-                    info=f"{constants.MCP_SERVER_MODEL1_NAME},{constants.MCP_SERVER_MODEL2_NAME}",
-                    user_question=json_for_archive[constants.REEXPRESS_QUESTION_KEY],
+                    info=f"{constants.MCP_SERVER_MODEL1_NAME},{constants.MCP_SERVER_MODEL2_NAME},{constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME}",
+                    user_question=self.current_reexpression[constants.REEXPRESS_QUESTION_KEY],
                     ai_response=self.current_reexpression[constants.REEXPRESS_AI_RESPONSE_KEY]
                 )
                 assert success

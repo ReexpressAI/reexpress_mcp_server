@@ -48,31 +48,47 @@ def get_confidence_soft_one_hot_list(is_verified, verbalized_confidence):
 
 def construct_agreement_template(row, is_eval=False):
     document_id = row["id"]
-    user_question = row["user_question"]
-    ai_response = row["ai_response"]
-    # These correspond to the attributes from v1.1.0 and are not used here: attributes = row["attributes"]
+    user_question = row["problem_markdown"]
+    label = int(row['v1_verification_is_for_original_solution'])
+    if label == 1:
+        # Note that solutions_markdown is a list; chosen_solution_index determines the index to use
+        ai_response = row["solutions_markdown"][row["chosen_solution_index"]]
+        field_prefix = "original_solution_verification"
+    elif label == 0:
+        ai_response = row["synthetic_negative_gpt-5.5-2026-04-23"]
+        field_prefix = "synthetic_negative_verification"
+    else:
+        raise ValueError(f"Unexpected label: {label}")
     document = f'<question> {user_question} </question> <ai_response> {ai_response} </ai_response>'
-    label = int(row['label'])
-    summary_from_previous_gpt_model = row['model7_short_summary_of_original_question_and_response'].strip()
-    summary_from_latest_gpt_model = row['model9_short_summary_of_original_question_and_response'].strip()
+
+    model1_summary = \
+        row[f'{field_prefix}_{GPT_MODEL_LABEL_KEY}_short_summary_of_original_question_and_response']
+    model1_explanation = \
+        row[f"{field_prefix}_{GPT_MODEL_LABEL_KEY}_short_explanation_for_classification_confidence"]
+    model1_classification_int = \
+        row[f'{field_prefix}_{GPT_MODEL_LABEL_KEY}_verification_classification']
+    model1_classification_confidence = \
+        row[f'{field_prefix}_{GPT_MODEL_LABEL_KEY}_confidence_in_classification']
+
+    model2_explanation = \
+        row[f"{field_prefix}_{GEMINI_MODEL_LABEL_KEY}_short_explanation_for_classification_confidence"]
+    model2_classification_int = \
+        row[f'{field_prefix}_{GEMINI_MODEL_LABEL_KEY}_verification_classification']
+    model2_classification_confidence = \
+        row[f'{field_prefix}_{GEMINI_MODEL_LABEL_KEY}_confidence_in_classification']
+
+    summary_from_latest_gpt_model = model1_summary
     assert label in [0, 1]
 
     attributes = [0.0, 0.0, 0.0, 0.0]  # [GPT-5 class 0; GPT-5 class 1; Gemini class 0; Gemini class 1]
 
-    previous_gemini_model_explanation = row["model6_short_explanation_for_classification_confidence"]
-    previous_gpt_model_explanation = row["model7_short_explanation_for_classification_confidence"]
-
-    latest_gemini_model_explanation = row["model8_short_explanation_for_classification_confidence"]
-    latest_gpt_model_explanation = row["model9_short_explanation_for_classification_confidence"]
-
-    previous_gemini_present = previous_gemini_model_explanation != ""
-    previous_gpt_present = previous_gpt_model_explanation != ""
+    latest_gpt_model_explanation = model1_explanation
+    latest_gemini_model_explanation = model2_explanation
 
     latest_gemini_present = latest_gemini_model_explanation != ""
     latest_gpt_present = latest_gpt_model_explanation != ""
 
-    gpt_and_gemini_present = (previous_gemini_present or latest_gemini_present) and \
-                             (previous_gpt_present or latest_gpt_present)
+    gpt_and_gemini_present = latest_gemini_present and latest_gpt_present
 
     model_explanation_string = ""
     # models: [GPT-5] + [Gemini]
@@ -84,55 +100,34 @@ def construct_agreement_template(row, is_eval=False):
     latest_gemini_prediction = -1
     latest_gemini_confidence = -1
     if gpt_and_gemini_present:
-        if latest_gpt_present:
-            current_xml_tag = GPT_EXPLANATION_XML_TAG
-            model_explanation_string = model_explanation_string.strip() + " " + \
-                                       f"<{current_xml_tag}> {latest_gpt_model_explanation} </{current_xml_tag}>"
-            gpt_attributes = get_confidence_soft_one_hot_list(row['model9_verification_classification'],
-                                                              row['model9_confidence_in_classification'])
-            latest_gpt_prediction = int(row['model9_verification_classification'])
-            latest_gpt_confidence = float(row['model9_confidence_in_classification'])
-            attributes[0:2] = gpt_attributes
-            model1_label = row['model9']
-        else:  # for reference, we consider the older model, but this is not used in the downstream analysis
-            assert previous_gpt_present
-            current_xml_tag = GPT_EXPLANATION_XML_TAG
-            model_explanation_string = model_explanation_string.strip() + " " + \
-                                       f"<{current_xml_tag}> {previous_gpt_model_explanation} </{current_xml_tag}>"
-            gpt_attributes = get_confidence_soft_one_hot_list(row['model7_verification_classification'],
-                                                              row['model7_confidence_in_classification'])
-            attributes[0:2] = gpt_attributes
-            model1_label = row['model7']
-        if latest_gemini_present:
-            current_xml_tag = GEMINI_EXPLANATION_XML_TAG
-            model_explanation_string = model_explanation_string.strip() + " " + \
-                                       f"<{current_xml_tag}> {latest_gemini_model_explanation} </{current_xml_tag}>"
-            gemini_attributes = get_confidence_soft_one_hot_list(row['model8_verification_classification'],
-                                                                 row['model8_confidence_in_classification'])
-            latest_gemini_prediction = int(row['model8_verification_classification'])
-            latest_gemini_confidence = float(row['model8_confidence_in_classification'])
-            attributes[2:4] = gemini_attributes
-            model2_label = row['model8']
-        else:  # for reference, we consider the older model, but this is not used in the downstream analysis
-            assert previous_gemini_present
-            current_xml_tag = GEMINI_EXPLANATION_XML_TAG
-            model_explanation_string = model_explanation_string.strip() + " " + \
-                                       f"<{current_xml_tag}> {previous_gemini_model_explanation} </{current_xml_tag}>"
-            gemini_attributes = get_confidence_soft_one_hot_list(row['model6_verification_classification'],
-                                                                 row['model6_confidence_in_classification'])
-            attributes[2:4] = gemini_attributes
-            model2_label = row['model6']
+        current_xml_tag = GPT_EXPLANATION_XML_TAG
+        model_explanation_string = model_explanation_string.strip() + " " + \
+                                   f"<{current_xml_tag}> {latest_gpt_model_explanation} </{current_xml_tag}>"
+        gpt_attributes = get_confidence_soft_one_hot_list(model1_classification_int,
+                                                          model1_classification_confidence)
+        latest_gpt_prediction = int(model1_classification_int)
+        latest_gpt_confidence = float(model1_classification_confidence)
+        attributes[0:2] = gpt_attributes
+        model1_label = GPT_MODEL_LABEL_KEY
+
+        current_xml_tag = GEMINI_EXPLANATION_XML_TAG
+        model_explanation_string = model_explanation_string.strip() + " " + \
+                                   f"<{current_xml_tag}> {latest_gemini_model_explanation} </{current_xml_tag}>"
+        gemini_attributes = get_confidence_soft_one_hot_list(model2_classification_int,
+                                                             model2_classification_confidence)
+        latest_gemini_prediction = int(model2_classification_int)
+        latest_gemini_confidence = float(model2_classification_confidence)
+        attributes[2:4] = gemini_attributes
+        model2_label = GEMINI_MODEL_LABEL_KEY
 
     if not is_eval and not gpt_and_gemini_present:
         # For this script, we give verbalized uncertainty the benefit of treating API rejections as outside the
         # admitted set, whereas for the SDM estimator, they are treated as wrong predictions.
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None
 
     topic = None
     if latest_gpt_present and summary_from_latest_gpt_model != "":
         topic = summary_from_latest_gpt_model
-    elif previous_gpt_present and summary_from_previous_gpt_model != "":
-        topic = summary_from_previous_gpt_model
     model_explanation_string = model_explanation_string.strip()
 
     agreement_prompt = _construct_agreement_template(model_explanation_string=model_explanation_string, topic=topic)
@@ -141,14 +136,7 @@ def construct_agreement_template(row, is_eval=False):
     new_dict[REEXPRESS_ID_KEY] = document_id
     new_dict[REEXPRESS_DOCUMENT_KEY] = document
     new_dict["agreement_prompt"] = agreement_prompt
-    new_dict["summary"] = topic if topic is not None else ""
     new_dict[REEXPRESS_ATTRIBUTES_KEY] = attributes
-    # new_dict["user_question"] = user_question
-    # new_dict["ai_response"] = ai_response
-    new_dict["info"] = row["info"]
-    new_dict["meta"] = row["meta"]
-    new_dict["previous_gpt_present"] = previous_gpt_present
-    new_dict["previous_gemini_present"] = previous_gemini_present
     new_dict["latest_gpt_present"] = latest_gpt_present
     new_dict["latest_gemini_present"] = latest_gemini_present
     # For convenience, we also store the model names:
@@ -157,7 +145,7 @@ def construct_agreement_template(row, is_eval=False):
 
     return new_dict, gpt_and_gemini_present, \
         latest_gpt_prediction, latest_gpt_confidence, latest_gemini_prediction, \
-        latest_gemini_confidence, latest_gpt_present and latest_gemini_present
+        latest_gemini_confidence
 
 
 def get_acc_prop_tuple(list_to_process, total=None):
@@ -349,7 +337,7 @@ def calculate_summary_stats(model_label, number_of_classes, test_set_size, alpha
     return latex_rows_dict_no_reject, latex_rows_dict_at_alpha
 
 
-def process_data_split(ds, split_name, field_selection_value, number_of_classes, alpha):
+def process_data_split(ds, split_name, number_of_classes, alpha):
 
     class_conditional = {}
     prediction_conditional = {}
@@ -370,14 +358,13 @@ def process_data_split(ds, split_name, field_selection_value, number_of_classes,
             class_conditional[model_class][c] = []
             prediction_conditional[model_class][c] = []
 
-    filtered_dataset = ds[split_name].filter(lambda x: x['info'] == field_selection_value)
+    filtered_dataset = ds[split_name]
     for row in filtered_dataset:
-        reexpress_obj, _, \
+        reexpress_obj, latest_gpt_and_latest_gemini_present, \
             latest_gpt_prediction, latest_gpt_confidence, \
-            latest_gemini_prediction, latest_gemini_confidence, \
-            latest_gpt__and_latest_gemini_present = construct_agreement_template(row, is_eval=True)
+            latest_gemini_prediction, latest_gemini_confidence = construct_agreement_template(row, is_eval=True)
 
-        if latest_gpt__and_latest_gemini_present is not None and latest_gpt__and_latest_gemini_present:
+        if latest_gpt_and_latest_gemini_present is not None and latest_gpt_and_latest_gemini_present:
             true_label = reexpress_obj[REEXPRESS_LABEL_KEY]
             # JOINT
             if latest_gpt_prediction == latest_gemini_prediction:
@@ -456,13 +443,7 @@ def process_data_split(ds, split_name, field_selection_value, number_of_classes,
                                 marginal=marginal[JOINT_MODEL_LABEL_KEY],
                                 marginal_at_alpha=marginal_at_alpha[JOINT_MODEL_LABEL_KEY])
 
-    if split_name == "validation" and field_selection_value == "mmlu_validation":
-        dataset_name = r'$\datasetMMLUValidationBinaryVerification$'
-    elif split_name == "eval" and field_selection_value == "openthoughts":
-        dataset_name = r'$\OpenThoughtsTest$'
-    else:
-        assert False
-
+    dataset_name = r'$\MathNetTest$'
     print_latex_row(dataset_name, number_of_classes, alpha,
                     latex_rows_dict_no_reject_latest_gpt_model, 
                     latex_rows_dict_verbalized_uncertainty_at_alpha_latest_gpt_model,
@@ -472,10 +453,13 @@ def process_data_split(ds, split_name, field_selection_value, number_of_classes,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="-----Evaluate verbalized uncertainty-----")
-    parser.add_argument("--open_verification_file", default="", help="")
-    parser.add_argument("--load_from_disk", default=False, action='store_true',
-                        help="")
+    parser = argparse.ArgumentParser(description="-----Evaluate verbalized uncertainty (MathNet eval)-----")
+    parser.add_argument("--hf_mathnet_datasets_file", default="ReexpressAI/OpenVerification1_aux_mathnet",
+                        help="ReexpressAI/OpenVerification1_aux_mathnet, "
+                             "or an archived on-disk version if --load_hf_mathnet_from_disk.")
+    parser.add_argument("--load_hf_mathnet_from_disk", default=False, action='store_true',
+                        help="If provided, then --hf_mathnet_datasets_file should be a path to "
+                             "a locally saved datasets file.")
     parser.add_argument("--alpha", default=0.9, type=float, help="")
     parser.add_argument("--number_of_classes", default=2, type=int, help="")
     options = parser.parse_args()
@@ -485,24 +469,22 @@ def main():
     alpha = options.alpha
     number_of_classes = options.number_of_classes
     print(f"Evaluated at alpha={alpha} for {number_of_classes} classes")
-    if options.load_from_disk:
-        print(f"Loading OpenVerification from {options.open_verification_file}")
-        ds = load_from_disk(options.open_verification_file)
+    open_verification_file = options.hf_mathnet_datasets_file
+    load_from_disk_flag = options.load_hf_mathnet_from_disk
+    hf_datasets_name = "ReexpressAI/OpenVerification1_aux_mathnet"
+    if load_from_disk_flag:
+        print(f"Loading {hf_datasets_name} from {open_verification_file}")
+        ds = load_from_disk(open_verification_file)
     else:
-        print(f'Loading OpenVerification from "ReexpressAI/OpenVerification1"')
-        ds = load_dataset("ReexpressAI/OpenVerification1")
+        print(f'Loading {hf_datasets_name} from HF')
+        ds = load_dataset(f"{hf_datasets_name}")
 
-    print("This evaluates the verbalized uncertainty for examples in OpenVerification1 with "
+    print(f"This evaluates the verbalized uncertainty for examples in {hf_datasets_name} with "
           "responses from the latest GPT and latest Gemini models.")
-    # print(f"##################################")
-    # print(f"######## Dataset : MMLU-validation ########")
-    # print(f"################")
-    # process_data_split(ds=ds, split_name="validation", field_selection_value="mmlu_validation",
-    #                    number_of_classes=number_of_classes, alpha=alpha)
     print(f"##################################")
-    print(f"######## Dataset : OpenThoughts ########")
+    print(f"######## Dataset : {hf_datasets_name} 'eval' split ########")
     print(f"################")
-    process_data_split(ds=ds, split_name="eval", field_selection_value="openthoughts",
+    process_data_split(ds=ds, split_name="eval",
                        number_of_classes=number_of_classes, alpha=alpha)
 
     print("For this script, API rejections are treated as non-admitted points.")

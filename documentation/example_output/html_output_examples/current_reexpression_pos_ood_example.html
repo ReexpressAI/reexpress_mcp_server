@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.4.0)</span>
         </div>
 
         <div class="section">
@@ -418,18 +418,18 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The user asked whether 47 chameleons starting with counts 15 purple, 15 yellow, and 17 maroon can all become the same color under the given pairwise color-change rule. The AI answered no, using a mod-3 invariant on differences between color counts to argue that a monochromatic state cannot be reached, although it mistakenly wrote the monochromatic target states as totaling 69 instead of 47.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The question asks why PyTorch-loading controllers created in an async main_runner loop are initialized serially before asyncio.to_thread workers run, how to parallelize by constructing them inside the worker function, and what trade-offs result. The response explains that synchronous code in an async function runs serially until an await, recommends moving controller construction into the function executed by asyncio.to_thread, and lists trade-offs around error handling, I/O contention, and memory.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The main answer is mathematically correct: a modulo-3 invariant on color-count differences rules out any all-one-color state. My confidence is below 0.95 because the response contains a factual typo/error in listing final states as (69,0,0), (0,69,0), and (0,0,69) instead of totals of 47, and it does not fully spell out the preservation of the Y-M invariant it uses. A corrected final-state list or a cleaner invariant proof would improve confidence.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The response correctly identifies the main cause: controller construction happens in a synchronous for-loop before any awaited to_thread/gather scheduling, so it runs serially on the main thread. It also gives the correct refactor: instantiate the controller inside the threaded worker and remove it from the prebuilt task config. The trade-offs listed are mostly valid. Confidence is below 0.95 because some performance claims are overgeneralized: PyTorch loading may not always release the GIL enough for near-linear speedup, concurrency is limited by the ThreadPoolExecutor max_workers, and peak memory can increase during concurrent deserialization due to temporary buffers even if final steady-state model memory is similar. Actual code for run_tasks_dynamically, executor settings, model/device placement, and storage behavior would improve confidence.</div>
             </div>
 
-            <div class="explanation-box-negative">
-                <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The LLM incorrectly concludes that it is not possible for all chameleons to become the same color. Since there are exactly 15 purple and 15 yellow chameleons, they can simply form 15 pairs of (purple, yellow) which will all turn into maroon, resulting in 47 maroon chameleons. Additionally, the LLM hallucinates the total number of chameleons as 69 instead of the given 47, leading to flawed invariant arithmetic.</div>
+            <div class="explanation-box-positive">
+                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                <div>The AI response successfully addresses all parts of the prompt, explaining why synchronous code within an async function without `await` is serial, providing clear instructions on how to move the construction to the threaded worker function to enable parallelization, and accurately outlining the trade-offs regarding error handling, disk I/O contention, and peak memory usage.</div>
             </div>
             
             
@@ -448,7 +448,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-04-30 15:30:07</div>
+                    <div class="field-value">2026-05-18 01:14:34</div>
                 </div>
                 
             </div>
@@ -488,36 +488,36 @@
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.49996107816696167, 0.5000389814376831]</div>
+                <div class="field-value">[0.4698609709739685, 0.5301390886306763]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.49245554208755493, 0.5075443983078003]</div>
+                <div class="field-value">[0.33554980158805847, 0.6644501686096191]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[0.0, 0.0]</div>
+                    <div class="field-value">[2171.0, 2497.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">0.0</div>
+                    <div class="field-value">6.557438373565674</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">0.0</div>
+                    <div class="field-value">7.344554901123047</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">0</div>
+                    <div class="field-value">41</div>
                 </div>                               
             </div>
             
@@ -533,14 +533,14 @@
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.005163729190826416</div>
+                    <div class="field-value">0.0056365132331848145</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">1.0</div>
+                    <div class="field-value">0.03190327808260918</div>
                 </div>
             </div>
 
@@ -549,7 +549,7 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-0.298628568649292, -0.25508806109428406]</div>
+                    <div class="field-value">[-2.6832616329193115, 3.0102405548095703]</div>
                 </div>
             </div>
         </div>
@@ -568,21 +568,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">3.3118863105773926</div>
+                    <div class="field-value">17.74595832824707</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
+                    <div class="field-value">[0.9270761013031006, 0.9011152386665344]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">14936</div>
+                    <div class="field-value">19814</div>
                 </div>
             </div>
         </div>
@@ -590,20 +590,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">Is it possible that, after some pairwise meetings where two different-coloured chameleons meet and both turn into the third color, all 47 chameleons (starting with 15 purple, 15 yellow, and 17 maroon) become the same color?</div>
+            <div class="prompt-box">In an async Python script that uses asyncio.to_thread to dispatch N shard workers, controllers are constructed inside the main_runner&#x27;s for-loop before the call to run_tasks_dynamically. Each controller loads a PyTorch model. Why is the controller construction serial rather than parallel, and how can it be made parallel by moving construction into the threaded worker function? What are the trade-offs?</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal reasoning]: The transformation rule is: when two chameleons of different colors meet, both turn into the third color. This means: P + Y → 2M, P + M → 2Y, Y + M → 2P.
-
-Reference [2, internal reasoning]: I identified the invariant (P - Y) mod 3. This difference is preserved under all three types of meetings: Type 1 (P + Y → M + M) changes (p,y,m) to (p-1, y-1, m+2), leaving P-Y unchanged. Type 2 (P + M → Y + Y) changes to (p-1, y+2, m-1), leaving P-Y unchanged mod 3 (changes by -3). Type 3 (Y + M → P + P) changes to (p+2, y-1, m-1), leaving P-Y unchanged mod 3 (changes by +3).
-
-Reference [3, internal reasoning]: Initially: P - Y ≡ 15 - 15 ≡ 0 (mod 3), and Y - M ≡ 15 - 17 ≡ -2 ≡ 1 (mod 3).
-
-Reference [4, internal reasoning]: For all chameleons to be the same color, one of these must be true: (69, 0, 0) where P-Y ≡ 69 ≡ 0 (mod 3) but Y-M ≡ 0 - 0 ≡ 0 (mod 3), violating the invariant Y - M ≡ 1 (mod 3); or (0, 69, 0) where Y-M ≡ 69 - 0 ≡ 0 (mod 3), violating the invariant; or (0, 0, 69) where Y-M ≡ 0 - 69 ≡ 0 (mod 3), violating the invariant.
-
-Answer: No, it is not possible for all chameleons to become the same color. The invariant Y - M ≡ 1 (mod 3) is preserved under all meeting operations, but reaching any monochromatic state requires Y - M ≡ 0 (mod 3), which is impossible.</div>
+            <div class="document-box">Reference [1, internal reasoning about the user&#x27;s posted script structure, z_run_mcp_server_over_hle_depth0.py]: The main_runner function is async, but the for-loop that constructs each ExtendedMCPServerStateController() contains no await statements. The loop body is therefore ordinary synchronous Python that executes start-to-finish on the main thread before run_tasks_dynamically is awaited. Reference [2, internal knowledge about asyncio]: An async function only yields control to the event loop at await points; synchronous code inside an async function runs on the calling thread without concurrency. asyncio.to_thread schedules a callable on the default ThreadPoolExecutor, but no thread starts work until the corresponding awaitable is actually awaited (here, inside run_tasks_dynamically via asyncio.gather). Reference [3, internal knowledge about CPython and PyTorch]: PyTorch model loading (torch.load, file reads, tensor deserialization, BLAS initialization) spends most of its time in C/C++ extensions that release the GIL, so multi-threaded loading produces real wall-clock speedup, not just apparent concurrency. Answer: The construction is serial because the for-loop in main_runner has no await, so each ExtendedMCPServerStateController() call completes before the next begins on the main thread; with N shards each taking T seconds to load, startup wall-clock is N*T. To parallelize, move &quot;reexpress_mcp_server_local_controller = ExtendedMCPServerStateController()&quot; out of main_runner and into construct_verification_and_save_shard as its first statement, and drop the controller from the task_configs tuple. Each shard&#x27;s thread (spawned by asyncio.to_thread inside run_tasks_dynamically) then performs its own model load concurrently with the others; because PyTorch releases the GIL during loading, wall-clock drops from ~N*T to roughly T modulo disk I/O contention. Trade-offs: (a) construction errors now surface from inside worker threads via asyncio.gather rather than aborting in the main thread, making fail-fast startup harder; a quick discarded sanity instantiation in main() can mitigate this. (b) Loading N PyTorch checkpoints simultaneously increases peak disk I/O contention; on a slow or networked filesystem the parallel loads may not be much faster than serial. (c) Peak memory is unchanged because eventually all N controllers coexist regardless of when each one was constructed.</div>
         </div>
         
         <div class="separator"></div>
@@ -623,55 +615,79 @@ Answer: No, it is not possible for all chameleons to become the same color. The 
         
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">True Label</div>
-                        <div class="field-value"><span class="tag tag-negative">NOT Verified</span></div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
                     </div>
                 </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>The question asks for the number of ways to choose 10 containers from capacities 1 through 25 so that 1 liter can be measured using any pair of chosen containers. The AI response argues this means every pair must be coprime, so the chosen set must contain 1 and one prime power for each prime up to 25, yielding 4×2×2=32 ways.</div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked for an async Python `process_requests(client, requests)` function that submits each `Request` via `client.submit` and asserts that each response has status 200 and JSON data matching the request’s expected form data. The AI response provided a sequential async loop using `await client.submit(request)`, then asserted `response.status == 200` and `response.json() == request.form`.</div>
                 </div>
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>For the standard water-jug interpretation, two containers can measure 1 liter iff their capacities are coprime. Then a 10-element subset of {1,...,25} with this property must be pairwise coprime; since there are only 9 primes up to 25, the set must be {1} plus 9 numbers each using a distinct prime, which forces prime powers only. The count is therefore 4 choices for the 2-power, 2 for the 3-power, 2 for the 5-power, and 1 each for the remaining primes, giving 32. The response is concise but mathematically correct under the standard interpretation.</div>
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The response directly implements the requested function structure, uses `await client.submit`, iterates over all requests, and uses assertions to validate status and response JSON against request form data. Confidence is below 0.95 because the exact `Request`/`Response` API was not provided; depending on the actual classes, `response.json()` might need to be awaited or the form data attribute might have a different name than `request.form`. The original code snippet or API documentation would improve confidence.</div>
                 </div>
     
-                <div class="explanation-box-negative">
-                    <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                    <div>The AI correctly deduced the mathematical requirements of the problem (finding 10 pairwise coprime numbers up to 25), successfully identified the correct number of choices for each prime power (4 for base 2, 2 for base 3, 2 for base 5, and 1 for the remaining 6 primes), but made a basic arithmetic mistake in its final step. It calculated 4 * 2 * 2 * 1^6 as 32 instead of the correct product, 16. Therefore, the final answer is incorrect.</div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                    <div>The LLM accurately implemented the requested async function, properly iterating over the requests, awaiting the client.submit method, and using assert statements to validate that the response status is 200 and the response JSON matches the request&#x27;s form data as instructed.</div>
                 </div>
                 
                 
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Given 25 containers, their capacities are $1, 2, \ldots, 25$ liters. In how many ways can ten of them be chosen such that any amount of 1 liter of water can be measured using any two of the selected containers? (An unlimited amount of water is available, and water can be transferred from one container to another.)
+                    <div class="prompt-box">You are tasked with implementing a Python function that processes HTTP requests and responses. The function should take a list of request objects, send them to a server, and then validate the responses. Each request object contains information about the request to be made, and each response object contains information about the expected response from the server.
 
+You are provided with a code snippet that demonstrates the usage of the `Request` and `Response` classes, as well as the `client.submit` method for sending requests. Your task is to create a function that utilizes these classes and methods to send the requests and validate the responses.
 
+You need to implement the following function:
 
+```python
+async def process_requests(client, requests):
+    # Your implementation here
+```
 
+The `client` parameter is an instance of a client object that has a `submit` method for sending requests. The `requests` parameter is a list of `Request` objects, each containing the necessary information for making a request.
 
-Translating the text into English while preserving the original line breaks and format, the result is as above.</div>
+Your function should send each request in the `requests` list to the server using the `client.submit` method, and then validate the responses against the expected values. For each request-response pair, you should assert that the response status is 200 and that the JSON data in the response matches the expected form data specified in the request.
+
+You should use the `assert` statement to validate the response status and form data. If the assertions fail, the function should raise an appropriate exception to indicate the failure.
+
+Note: The `Request` and `Response` classes are assumed to have appropriate attributes and methods for constructing requests and validating responses, as demonstrated in the provided code snippet.</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">To solve the problem, we need to select 10 containers such that any two selected containers can measure 1 liter of water, which requires that all pairs are coprime.
+                    <div class="document-box">To solve this problem, we need to implement a function that sends HTTP requests to a server using a client object, then validates the responses against expected criteria. The function should ensure that each response has a status code of 200 and that the JSON data in the response matches the form data specified in the corresponding request.
 
-1. **Prime Families**: The primes up to 25 are 2, 3, 5, 7, 11, 13, 17, 19, and 23. For each, we can select either the prime or one of its powers.
-2. **Prime Powers**: For 2, the options are 2, 4, 8, 16 (4 choices). For 3, the options are 3, 9 (2 choices). For 5, the options are 5, 25 (2 choices). For the rest, only the prime itself is available (1 choice each).
-3. **Inclusion of 1**: The number 1 is coprime with all numbers, so we must include it.
-4. **Calculate Choices**: The total number of ways is:
-\[
-4 \text{ (for 2)} \times 2 \text{ (for 3)} \times 2 \text{ (for 5)} \times 1^6 = 32
-\]
+### Approach
+1. **Iterate Over Requests**: Loop through each request in the provided list of request objects.
+2. **Submit Requests**: Use the client&#x27;s asynchronous `submit` method to send each request to the server.
+3. **Validate Responses**: For each response received, check that the status code is 200 and that the JSON data matches the form data from the request. If any validation fails, an `AssertionError` will be raised, which meets the requirement of raising an appropriate exception.
 
-Thus, the number of ways to choose 10 containers is \(\boxed{32}\).</div>
+### Solution Code
+```python
+async def process_requests(client, requests):
+    for request in requests:
+        response = await client.submit(request)
+        assert response.status == 200, f&quot;Expected status 200, got {response.status}&quot;
+        assert response.json() == request.form, f&quot;Response data {response.json()} does not match form {request.form}&quot;
+```
+
+### Explanation
+- **Iterate Over Requests**: The function processes each request sequentially by iterating over the list of request objects.
+- **Submit Requests**: Each request is sent to the server using the asynchronous `client.submit` method. The `await` keyword ensures that each request is fully processed before moving to the next one.
+- **Validate Responses**: After receiving a response, two assertions are made:
+  - The response status must be 200. If not, an `AssertionError` is raised with a message indicating the unexpected status code.
+  - The JSON data from the response must match the form data specified in the request. If there is a mismatch, an `AssertionError` is raised with a message showing the discrepancy.
+
+This approach ensures that each request is validated immediately after receiving the response, providing immediate feedback if any validation fails. The use of `assert` statements guarantees that any failure in validation will raise an appropriate exception, thereby meeting the problem&#x27;s requirements.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">neg_813509_0c7a02ad-ce63-4893-8b04-2796c0c92148</div>
+                        <div class="field-value">pos_393988_47e8bad5-7f73-45c3-8667-6a0448d5a85f</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>

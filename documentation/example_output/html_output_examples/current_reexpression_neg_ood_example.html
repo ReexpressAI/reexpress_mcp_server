@@ -408,28 +408,28 @@
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Successfully Verified (Prediction)</div>
                 <div class="field-value">
-                    <span class="tag tag-positive">True</span>
+                    <span class="tag tag-negative">False</span>
                 </div>
             </div>
 
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-caution"><= 89% (use with caution)</span></div>
+                <div class="field-value"><span class="tag tag-negative">Out-of-distribution (unreliable)</span></div>
             </div>
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The user asked to check whether the SQLite `create_table()` column types match the rest of the Python code. The AI response identified that `label_int` is declared as `TEXT` in the table schema but is typed and treated as an integer elsewhere, and recommended changing it to `INTEGER`.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The user asked to check a SQLite table-creation function for issues. The AI response claimed the AFTER UPDATE trigger is a critical infinite-recursion/error problem, suggested an invalid SQLite BEFORE trigger using `SET NEW.updated_at`, and noted `label_int` should likely be INTEGER rather than TEXT.</div>
             </div>
             
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The response correctly compares the schema against the function type hints, example usage, and display logic in the provided file. `label_int` is indeed the notable mismatch: declared as `TEXT` in `create_table()` but otherwise treated as an integer. The answer directly addresses the user&#x27;s request.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The response contains significant SQLite inaccuracies. SQLite generally allows a trigger to UPDATE the same table; with default `PRAGMA recursive_triggers` off, this pattern will not necessarily infinite-loop, though it can be risky if recursive triggers are enabled. The claimed error message is not a standard SQLite limitation. The proposed `BEFORE UPDATE ... SET NEW.updated_at = CURRENT_TIMESTAMP` syntax is invalid in SQLite. The `label_int TEXT` inconsistency is a real issue, but the main trigger analysis and fix are not reliably correct. A SQLite version and `PRAGMA recursive_triggers` setting or actual test output could further clarify the trigger behavior in the user’s environment.</div>
             </div>
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The AI correctly identified the type mismatch for the `label_int` column, which is defined as TEXT in the `create_table` SQL statement but is typed as an `int` in the method signature of `add_document` and treated as an integer elsewhere.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                <div>The AI incorrectly identifies an infinite loop issue with the SQLite trigger. In SQLite, recursive triggers are disabled by default, so the provided AFTER UPDATE trigger works perfectly fine without causing recursion. Furthermore, the AI&#x27;s proposed solution using a BEFORE UPDATE trigger with &#x27;SET NEW.updated_at = CURRENT_TIMESTAMP&#x27; is invalid syntax in SQLite and will throw a syntax error. While the AI correctly spots the &#x27;label_int TEXT&#x27; typo, its primary critique regarding the trigger is factually incorrect.</div>
             </div>
             
             
@@ -448,7 +448,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-05-18 01:06:04</div>
+                    <div class="field-value">2026-05-18 01:41:30</div>
                 </div>
                 
             </div>
@@ -461,7 +461,7 @@
                 <div class="field-box">
                     <div class="field-label">Out-of-Distribution</div>
                     <div class="field-value">
-                        <span class="tag tag-positive">False</span>
+                        <span class="tag tag-negative">True</span>
                     </div>
                 </div>
             </div>
@@ -483,41 +483,41 @@
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.314581036567688, 0.685418963432312]</div>
+                <div class="field-value">[0.5, 0.5]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.26186537742614746, 0.7381346225738525]</div>
+                <div class="field-value">[0.5234633088111877, 0.47653672099113464]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.21520982682704926, 0.7847901582717896]</div>
+                <div class="field-value">[0.6439192891120911, 0.3560808002948761]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[2900.0, 3517.0]</div>
+                    <div class="field-value">[3091.0, 3771.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">11.4375638961792</div>
+                    <div class="field-value">14.071247100830078</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">13.795266151428223</div>
+                    <div class="field-value">15.930153846740723</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">33</div>
+                    <div class="field-value">196</div>
                 </div>                               
             </div>
             
@@ -526,21 +526,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.06873340904712677</div>
+                    <div class="field-value">0.0</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.09146016836166382</div>
+                    <div class="field-value">0.004147589206695557</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.11418692767620087</div>
+                    <div class="field-value">0.026160983368754387</div>
                 </div>
             </div>
 
@@ -549,7 +549,7 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-1.3023476600646973, 1.8845607042312622]</div>
+                    <div class="field-value">[2.2291715145111084, -2.0529515743255615]</div>
                 </div>
             </div>
         </div>
@@ -582,7 +582,7 @@
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">19814</div>
+                    <div class="field-value">19815</div>
                 </div>
             </div>
         </div>
@@ -590,20 +590,93 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">I have updated create_table() in /mnt/user-data/uploads/mcp_utils_sqlite_document_db_controller.py. Check that the types match.</div>
+            <div class="prompt-box">Check this Python function for issues:
+
+```python
+def create_table(self):
+    &quot;&quot;&quot;
+    Create the documents table if it doesn&#x27;t exist.
+
+    -- Model field mapping (v1.2.0+):
+    -- model1_* fields: GPT (originally model4)
+    -- model2_* fields: Gemini (originally model3)
+    -- model3_* fields: Pre-training model (originally model1)
+    -- model4_* fields: Pre-training model (originally model2)
+    &quot;&quot;&quot;
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(&#x27;&#x27;&#x27;
+            CREATE TABLE IF NOT EXISTS documents (
+                document_id TEXT PRIMARY KEY,
+                model1_summary TEXT,
+                model1_explanation TEXT,
+                model2_explanation TEXT,
+                model3_explanation TEXT,
+                model4_explanation TEXT,
+                model1_classification_int INTEGER,
+                model2_classification_int INTEGER,
+                model3_classification_int INTEGER,
+                model4_classification_int INTEGER,
+                agreement_model_classification_int INTEGER,
+                label_int TEXT,
+                label_was_updated_int INTEGER,
+                document_source TEXT,
+                info TEXT,
+                user_question TEXT,
+                ai_response TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        &#x27;&#x27;&#x27;)
+
+        # Create trigger to automatically update updated_at on row update
+        cursor.execute(&#x27;&#x27;&#x27;
+            CREATE TRIGGER IF NOT EXISTS update_documents_timestamp 
+            AFTER UPDATE ON documents
+            FOR EACH ROW
+            BEGIN
+                UPDATE documents SET updated_at = CURRENT_TIMESTAMP 
+                WHERE document_id = NEW.document_id;
+            END
+        &#x27;&#x27;&#x27;)
+
+        # Create index on timestamps for faster queries
+        cursor.execute(&#x27;CREATE INDEX IF NOT EXISTS idx_created_at ON documents(created_at)&#x27;)
+        cursor.execute(&#x27;CREATE INDEX IF NOT EXISTS idx_updated_at ON documents(updated_at)&#x27;)
+
+        conn.commit()
+```</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, uploaded file, mcp_utils_sqlite_document_db_controller.py, line 57]: In the `CREATE TABLE IF NOT EXISTS documents` statement inside `create_table()`, the column is declared as `label_int TEXT,`.
+            <div class="document-box">Reference [1, internal reasoning]: The function contains a critical database design issue. The trigger implementation creates an infinite loop problem. When a row is updated, the trigger updates the same row&#x27;s updated_at field, which fires the trigger again, creating a recursive update loop. In SQLite, this would cause a runtime error: &quot;trigger action cannot update the table that the trigger is attached to&quot;. 
 
-Reference [2, uploaded file, mcp_utils_sqlite_document_db_controller.py, line 91]: The `add_document()` signature types the parameter as `label_int: int`.
+Reference [2, internal reasoning]: The correct approach is to use the `NEW` row binding provided by SQLite to set the timestamp directly in the trigger without performing an UPDATE. The trigger should be:
+```sql
+CREATE TRIGGER IF NOT EXISTS update_documents_timestamp 
+AFTER UPDATE ON documents
+FOR EACH ROW
+BEGIN
+    UPDATE documents SET updated_at = CURRENT_TIMESTAMP 
+    WHERE document_id = NEW.document_id;
+END
+```
+This will fail with error &quot;cannot update a table in an AFTER trigger&quot;.
 
-Reference [3, uploaded file, mcp_utils_sqlite_document_db_controller.py, lines 334, 355, 376]: Example usage passes integer literals, e.g. `label_int=1`.
+Reference [3, internal reasoning]: The correct solution requires a BEFORE UPDATE trigger instead, which allows setting values before the update completes:
+```sql
+CREATE TRIGGER IF NOT EXISTS update_documents_timestamp 
+BEFORE UPDATE ON documents
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END
+```
 
-Reference [4, uploaded file, mcp_utils_sqlite_document_db_controller.py, lines 168, 271, 307]: `get_document()`, `get_recent_documents()`, and `get_recently_updated_documents()` include `&#x27;label_int&#x27;` in the set of fields exempted from `html.escape(...)` because they are treated as integers.
+Additionally, there is a data type inconsistency: label_int is defined as TEXT but should be INTEGER based on the naming convention used throughout the schema.
 
-Answer: The types do not match. `label_int` is declared `TEXT` in `create_table()` but is treated as an integer everywhere else in the file (column name suffix `_int`, `int` type hint in `add_document()`, integer literals in example usage, and inclusion in the integer-field exemption list in three read methods). The declaration should be `label_int INTEGER`.</div>
+Answer: The function has two critical issues: (1) The trigger uses AFTER UPDATE with a recursive UPDATE statement which will fail in SQLite, and (2) The data type for label_int column is incorrectly set to TEXT when it should be INTEGER to match the schema naming convention.</div>
         </div>
         
         <div class="separator"></div>
@@ -617,127 +690,58 @@ Answer: The types do not match. `label_int` is declared `TEXT` in `create_table(
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Successfully Verified (Prediction)</div>
                         <div class="field-value">
-                            <span class="tag tag-positive">True</span>
+                            <span class="tag tag-negative">False</span>
                         </div>
                     </div>
         
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">True Label</div>
-                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                        <div class="field-value"><span class="tag tag-negative">NOT Verified</span></div>
                     </div>
                 </div>
                 
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                    <div>The user asked why sqlite3 reports parameter 12 as an unsupported Tensor when inserting documents and how to fix it. The AI response identified parameter 12 as label_int, traced it to model.train_labels being a PyTorch tensor whose iterated elements are tensors, and recommended converting labels to Python ints before insertion.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked for a SQL query selecting all columns/rows from a table where column b is less than -1. The AI response provided `SELECT * FROM your_table WHERE b &lt;= -1;`, which filters for less than or equal to -1.</div>
                 </div>
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                    <div>The response correctly counts the INSERT placeholders/arguments and identifies the 12th bound value as label_int. Given the provided code, label_int comes from train_labels without conversion, and PyTorch tensor labels would indeed be unsupported by sqlite3. Converting label to int at dict creation or before db.add_document is an appropriate fix. The answer is based on the provided code plus standard PyTorch/sqlite3 behavior; it does include a minor irrelevant reference to a prior verification turn, but that does not affect the correctness of the diagnosis or fix.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The requested condition is strictly `b &lt; -1`, but the response uses `b &lt;= -1`, incorrectly including rows where b equals -1. The correct query would be `SELECT * FROM your_table WHERE b &lt; -1;`.</div>
                 </div>
     
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                    <div>The LLM accurately identified that parameter 12 in the SQL insert statement corresponds to `label_int`. It correctly deduced that since `train_labels` is a PyTorch tensor, iterating over it yields 0-dimensional tensors, which sqlite3 cannot natively bind. The proposed fix of casting the label to an integer using `int(label)` or `label.item()` is valid and effectively resolves the issue.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                    <div>The user requested a query where the value in column &#x27;b&#x27; is strictly less than -1. The AI response provides a query with a &#x27;less than or equal to&#x27; (&lt;=) condition, which is incorrect.</div>
                 </div>
                 
                 
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Running aux_construct_document_db.py against ReexpressAI/OpenVerification1 produced this error after &quot;Support set size: 14936&quot;:
-
-  File &quot;aux_construct_document_db.py&quot;, line 91, in init_db
-    success = db.add_document(...)
-  File &quot;mcp_utils_sqlite_document_db_controller.py&quot;, line 121, in add_document
-    cursor.execute(&#x27;&#x27;&#x27;
-sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported
-
-The mcp_utils_sqlite_document_db_controller.py file is also attached. Identify the cause and provide a fix.
-
-Relevant code from aux_construct_document_db.py (retrieve_model_documents_ids):
-
-    model = utils_model.load_model_torch(options.model_dir, torch.device(&quot;cpu&quot;), load_for_inference=True)
-    ...
-    train_uuids = model.train_uuids
-    train_labels = model.train_labels
-    train_document_id_2_label = {}
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = label
-    return train_document_id_2_label
-
-And in init_db:
-    label_int = train_document_id_2_label[document_id]
-    ...
-    success = db.add_document(
-        document_id=document_id,
-        model1_summary=model1_summary,
-        model1_explanation=model1_explanation,
-        model2_explanation=model2_explanation,
-        model3_explanation=&#x27;&#x27;,
-        model4_explanation=&#x27;&#x27;,
-        model1_classification_int=model1_classification_int,
-        model2_classification_int=model2_classification_int,
-        model3_classification_int=0,
-        model4_classification_int=0,
-        agreement_model_classification_int=agreement_classification_int,
-        label_int=label_int,
-        label_was_updated_int=0,
-        document_source=document_source,
-        info=f&quot;{model1_label},{model2_label}&quot;,
-        user_question=user_question,
-        ai_response=ai_response
-    )
-
-Relevant code from mcp_utils_sqlite_document_db_controller.py (add_document INSERT, line 121):
-
-    cursor.execute(&#x27;&#x27;&#x27;
-        INSERT INTO documents (
-            document_id, model1_summary, model1_explanation, model2_explanation,
-            model3_explanation, model4_explanation, model1_classification_int, model2_classification_int,
-            model3_classification_int, model4_classification_int, agreement_model_classification_int,
-            label_int, label_was_updated_int, document_source, info,
-            user_question, ai_response
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    &#x27;&#x27;&#x27;, (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation,
-          model4_explanation,
-          model1_classification_int, model2_classification_int,
-          model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int,
-          label_was_updated_int, document_source, info,
-          user_question, ai_response))</div>
+                    <div class="prompt-box">You are tasked with creating a SQL query to retrieve all columns and rows from a specific table where the value in column &quot;b&quot; is less than -1. Write the SQL query to achieve this.</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Reference [1, mcp_utils_sqlite_document_db_controller.py, line 121-134, INSERT parameter ordering]: The cursor.execute INSERT in add_document binds parameters in this order: (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation, model4_explanation, model1_classification_int, model2_classification_int, model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int, label_was_updated_int, document_source, info, user_question, ai_response). Counting positionally, parameter 12 is label_int.
+                    <div class="document-box">To retrieve all columns and rows from a table where the value in column &quot;b&quot; is less than -1, use the following SQL query:
 
-Reference [2, error message]: &quot;sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot;. This identifies the failing parameter as position 12 and the offending Python type as torch.Tensor.
+```sql
+SELECT * FROM your_table WHERE b &lt;= -1;
+```
 
-Reference [3, aux_construct_document_db.py, retrieve_model_documents_ids]: train_labels = model.train_labels; for document_id, label in zip(train_uuids, train_labels): train_document_id_2_label[document_id] = label. The label values are stored without conversion, taken directly from a torch model attribute.
-
-Reference [4, internal knowledge, PyTorch iteration semantics]: Iterating a 1-D torch.Tensor yields 0-dimensional torch.Tensor elements, not Python ints. So when train_labels is a 1-D tensor, each label in the loop is a 0-d Tensor, which becomes the dict value, and ultimately the label_int kwarg passed into db.add_document.
-
-Reference [5, internal knowledge, sqlite3 type adapters]: Python&#x27;s stdlib sqlite3 module supports binding None, int, float, str, bytes by default. It does not have a built-in adapter for torch.Tensor, so binding a Tensor raises sqlite3.ProgrammingError: type &#x27;Tensor&#x27; is not supported. This matches the observed error verbatim.
-
-Reference [6, internal knowledge, Python/PyTorch int() coercion]: int(x) on a 0-d torch.Tensor (e.g., int(torch.tensor(5))) returns the Python int 5, and int() on a Python int is a no-op returning the same int. So int(label) is safe regardless of whether train_labels is a tensor or a list of ints.
-
-Reference [7, internal reasoning, Reexpress verifier feedback from prior turn]: The earlier verification call flagged that runtime claims depended on utils_model.load_model_torch and the model object&#x27;s attributes, which were not visible at static-review time. The current error confirms exactly that gap: model.train_labels turned out to be a tensor, which static analysis of aux_construct_document_db.py alone could not establish.
-
-Answer: SQL parameter 12 in add_document&#x27;s INSERT (mcp_utils_sqlite_document_db_controller.py line 121) is label_int. The sqlite3 error &quot;type &#x27;Tensor&#x27; is not supported&quot; at parameter 12 means label_int is being passed as a torch.Tensor. The source is retrieve_model_documents_ids in aux_construct_document_db.py: train_labels = model.train_labels is a torch tensor, and iterating it yields 0-d tensors which are stored in train_document_id_2_label and passed unchanged to db.add_document(label_int=...). The minimal fix is to convert at dict insertion time:
-
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = int(label)
-
-int() works on both 0-d tensors and plain Python ints, so this is safe regardless. Equivalently, label.item() works if train_labels is guaranteed to be a tensor. Optionally, also wrap model1_classification_int and model2_classification_int from the HF dataset row in int(...) defensively, though those are likely already plain Python ints.</div>
+**Explanation:**
+- `SELECT *`: Selects all columns from the table.
+- `FROM your_table`: Replace `your_table` with the actual name of your table.
+- `WHERE b &lt;= -1`: Filters rows to include only those where the value in column &quot;b&quot; is less than or equal to -1.</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">user_added_3d20277d-fb33-4dc9-a616-ab1b051576db</div>
+                        <div class="field-value">neg_1094302_d30475f8-c2ad-437e-b285-25c8af89c63c</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
-                        <div class="field-value">OpenVerification1_aux_adaptation_examples: attached_documents: No</div>
+                        <div class="field-value">OpenVerification1: openthoughts</div>
                     </div>                
                 </div>
             </div>

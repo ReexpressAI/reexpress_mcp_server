@@ -45,8 +45,8 @@ Run the following lines from the Terminal.
 ### macOS Tahoe 26 and Apple silicon:
 
 ```
-conda create -n re_mcp_v230 python=3.12
-conda activate re_mcp_v230
+conda create -n re_mcp_v240 python=3.12
+conda activate re_mcp_v240
 conda install -c pytorch -c conda-forge \
   faiss-cpu=1.14.1 \
   pytorch=2.9.1
@@ -57,15 +57,15 @@ python -m pip install \
   google-genai==1.73.1
 ```
 
-The above will create an environment "re_mcp_v230" with the required dependencies for macOS Tahoe 26 and Apple silicon.
+The above will create an environment "re_mcp_v240" with the required dependencies for macOS Tahoe 26 and Apple silicon.
 
 ### Linux with Nvidia GPUs
 
 For running the train/eval script reexpress.py on Nvidia GPUs to recalibrate over new data (i.e., create a new SDM estimator), the following environment has been verified to work on Nvidia L4 GPUs:
 
 ```
-conda create -n re_mcp_v230 python=3.12
-conda activate re_mcp_v230
+conda create -n re_mcp_v240 python=3.12
+conda activate re_mcp_v240
 conda install -c pytorch -c nvidia -c rapidsai -c conda-forge libnvjitlink faiss-gpu-cuvs=1.14.1
 python -m pip install \
   torch==2.9.1 \
@@ -96,8 +96,8 @@ export OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 ### The following 3 variables are only needed if USE_AZURE_01='1'. Just set to '' or keep this default text if not used
 export AZURE_OPENAI_API_KEY='REPLACE_WITH_API_KEY'
 export AZURE_OPENAI_ENDPOINT='https://REPLACE_WITH_YOUR_ENDPOINT.azure.com/'
-# Fill in with your deployment name for GPT-5.4. Replace this with whatever name you chose in Azure.
-export GPT_5_4_MODEL_2026_03_05_AZURE_DEPLOYMENT='gpt-5.4'
+# Fill in with your deployment name for GPT-5. Replace this with whatever name you chose in Azure.
+export GPT_5_5_MODEL_2026_04_23_AZURE_DEPLOYMENT='gpt-5.5'
 
 # Google Gemini API key is required
 export GEMINI_API_KEY='REPLACE_WITH_API_KEY'
@@ -113,10 +113,10 @@ Set REEXPRESS_MCP_SAVE_OUTPUT='1' if you want to create an HTML page for the too
 Save the complete file to a location of your choosing and record the path; it will be referenced below. In addition to not including llm_api_setup.sh in version control (e.g., .git), as a best practice, it is further recommended to not put the file in a location accessible to an LLM agent.
 
 > [!IMPORTANT]
-> If using Azure, you must choose OpenAI deployments corresponding to the specific model gpt-5.4-2026-03-05 for GPT_5_4_MODEL_2026_03_05_AZURE_DEPLOYMENT, otherwise the SDM estimator will have undefined behavior, since it is calibrated against that specific version (along with gemini-3.1-pro-preview and gemini-embedding-2). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
+> If using Azure, you must choose OpenAI deployments corresponding to the specific model gpt-5.5-2026-04-23 for GPT_5_5_MODEL_2026_04_23_AZURE_DEPLOYMENT, otherwise the SDM estimator will have undefined behavior, since it is calibrated against that specific version (along with gemini-3.1-pro-preview and gemini-embedding-2). We will provide new SDM estimators as new models emerge, as needed. If you have a particular enterprise need for alternative models in the near term, contact us.
 
 > [!TIP]
-> Each time you call the main Reexpress tool, gpt-5.4-2026-03-05 will be called 1 time, gemini-3.1-pro-preview, and gemini-embedding-2 will be called 1 time. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the API calls, as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
+> Each time you call the main Reexpress tool, gpt-5.5-2026-04-23 will be called 1 time, gemini-3.1-pro-preview, and gemini-embedding-2 will be called 1 time. These calls are handled in the file [code/reexpress/mcp_utils_llm_api.py](code/reexpress/mcp_utils_llm_api.py). As with using these exact release dates of the models, we also recommend against changing the parameters of the API calls, as the behavior of the SDM estimator would then become undefined relative to its initial calibration.
 
 ## 6. Configure the MCP Server
 
@@ -130,7 +130,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /path/to/your_conda_directory/etc/profile.d/conda.sh && conda activate re_mcp_v230 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
+                "source /path/to/your_conda_directory/etc/profile.d/conda.sh && conda activate re_mcp_v240 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -138,7 +138,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
 ```
 
 Replace the following paths with your actual paths:
-- `/path/to/your/llm_api_setup.sh`: Path to your API setup script from above
+- `/path/to/your/llm_api_setup.sh`: Path to your API setup script from above, using whatever filename you chose
 - `/path/to/the/repo`: Path to the root directory of this repository (i.e., ${REEXPRESS_MCP_SERVER_REPO_DIR})
 - `/path/to/your_conda_directory/`: Parent path for conda, from above. As noted above, you can get this via `echo $(conda info --base)`
 
@@ -148,7 +148,7 @@ Replace the following paths with your actual paths:
 For example, with  
 - macOS username `a` 
 - REEXPRESS_MCP_SERVER_REPO_DIR='/Users/a/Documents/repos_agents/reexpress_mcp_server'
-- /Users/a/local_projects/llm_api_setup_v2.3.0.sh (Here, we place llm_api_setup_v2.3.0.sh outside of the Documents folder in a directory arbitrarily named 'local_projects' to simplify macOS file permissions when using Claude for Mac.)
+- /Users/a/local_projects/llm_api_setup_v2.4.0.sh (Here, we place llm_api_setup_v2.4.0.sh outside of the Documents folder in a directory arbitrarily named 'local_projects' to simplify macOS file permissions when using Claude for Mac.)
 
 the file would be the following:
 
@@ -160,7 +160,7 @@ the file would be the following:
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /Users/a/miniconda3/etc/profile.d/conda.sh && conda activate re_mcp_v230 && source /Users/a/local_projects/llm_api_setup_v2.3.0.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
+                "source /Users/a/miniconda3/etc/profile.d/conda.sh && conda activate re_mcp_v240 && source /Users/a/local_projects/llm_api_setup_v2.4.0.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }

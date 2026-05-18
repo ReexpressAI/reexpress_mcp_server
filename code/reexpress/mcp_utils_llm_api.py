@@ -3,13 +3,12 @@
 # LLM API calls and transformations for MCP server
 
 import torch
-import numpy as np
-from pydantic import BaseModel
 import time
 import os
-
 import constants
 
+from openai import OpenAI
+from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
@@ -18,23 +17,20 @@ from google.genai import types
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 google_client = genai.Client(api_key=GEMINI_API_KEY)  # can alternatively replace with a Vertex AI deployment
 
-GEMINI_MODEL = constants.MCP_SERVER_MODEL2_NAME  # "gemini-3.1-pro-preview"
-GEMINI_EMBEDDING_MODEL = constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME  # "gemini-embedding-2"
+GEMINI_MODEL = constants.MCP_SERVER_MODEL2_NAME
+GEMINI_EMBEDDING_MODEL = constants.MCP_SERVER_API_EMBEDDING_MODEL_NAME
 
 USE_AZURE_01 = int(os.getenv("USE_AZURE_01", "1"))
 if USE_AZURE_01 == 1:
-    from openai import AzureOpenAI
-    kAPI_VERSION = "2024-12-01-preview"
-    client = AzureOpenAI(
+    endpoint = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/") + "/openai/v1/"
+    client = OpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=kAPI_VERSION,
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+        base_url=endpoint,
     )
-    GPT5_MODEL = os.getenv("GPT_5_4_MODEL_2026_03_05_AZURE_DEPLOYMENT")
+    GPT5_MODEL = os.getenv("GPT_5_5_MODEL_2026_04_23_AZURE_DEPLOYMENT")
 else:
-    from openai import OpenAI
     client = OpenAI()
-    GPT5_MODEL = constants.MCP_SERVER_MODEL1_NAME  # "gpt-5.4-2026-03-05"
+    GPT5_MODEL = constants.MCP_SERVER_MODEL1_NAME
 
 
 class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):
@@ -47,22 +43,17 @@ class ResponseVerificationWithConfidenceAndExplanationAndSummary(BaseModel):
 def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_string: str):
     time.sleep(torch.abs(torch.randn(1)).item() / constants.SLEEP_CONSTANT)
     try:
-        max_tokens=100000
-        messages_structure = [
-            {"role": "developer", "content": f"{constants.GPT_5_SYSTEM_MESSAGE.strip()}"},
-            {"role": "user",
-             "content": f"{previous_query_and_response_to_verify_string}"}
-        ]
-        completion = client.beta.chat.completions.parse(
+        max_tokens = 100000
+        response = client.responses.parse(
             model=GPT5_MODEL,
-            messages=messages_structure,
-            response_format=ResponseVerificationWithConfidenceAndExplanationAndSummary,
-            max_completion_tokens=max_tokens,
-            reasoning_effort="high",
+            instructions=constants.GPT_5_SYSTEM_MESSAGE.strip(),
+            input=previous_query_and_response_to_verify_string,
+            text_format=ResponseVerificationWithConfidenceAndExplanationAndSummary,
+            max_output_tokens=max_tokens,
+            reasoning={"effort": "high"},
             user="sdm_llm_reasoning_branching_v1",
-            seed=0
         )
-        verification_object = completion.choices[0].message.parsed
+        verification_object = response.output_parsed
         verification_dict = {constants.SHORT_SUMMARY_KEY: verification_object.short_summary_of_original_question_and_response,
                              constants.VERIFICATION_CLASSIFICATION_KEY: verification_object.verification_classification,
                              constants.CONFIDENCE_IN_CLASSIFICATION_KEY: verification_object.confidence_in_classification,
@@ -81,7 +72,7 @@ def get_document_attributes_from_gpt5(previous_query_and_response_to_verify_stri
 def get_document_attributes_from_gemini_reasoning(previous_query_and_response_to_verify_string: str):
     time.sleep(torch.abs(torch.randn(1)).item() / constants.SLEEP_CONSTANT)
     try:
-        max_tokens=65535
+        max_tokens = 65535
         response = google_client.models.generate_content(
             model=GEMINI_MODEL,
             contents=previous_query_and_response_to_verify_string,

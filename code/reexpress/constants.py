@@ -38,7 +38,7 @@ ERROR_MESSAGES_UNCERTAINTY_STATS_JSON_MALFORMED = \
 ##### SDM constants
 q_rescale_offset: int = 2  # This typically should not change.
 ood_limit: int = 0  # This typically should not change.
-maxQAvailableFromIndexer: int = 1000 # 150  # This is the max k indexed. Note that this corresponds to the raw q value. Ignored if --use_training_set_max_label_size_as_max_q is used
+maxQAvailableFromIndexer: int = 2048  # This is the max k indexed. Note that this corresponds to the raw q value. Ignored if --use_training_set_max_label_size_as_max_q is used. The source of the default value 2048 was a limitation from some older versions of the GPU version of FAISS.
 default_max_hard_bin = 20  # arbitrarily large to handle q up to np.exp(20) = 485165195; i.e., max hard bin is int(np.log(int(np.exp(20))))
 ##### SDM generation model constants
 top_logits_k: int = 3
@@ -225,18 +225,27 @@ REEXPRESS_EMBEDDING_KEY = "embedding"
 REEXPRESS_QUESTION_KEY = "question"
 REEXPRESS_AI_RESPONSE_KEY = "ai_response"
 REEXPRESS_INFO_KEY = "info"
+REEXPRESS_MODEL1_NAME_KEY = "model1_name"
+REEXPRESS_MODEL2_NAME_KEY = "model2_name"
+REEXPRESS_AGREEMENT_MODEL_NAME_KEY = "agreement_mode_name"
 REEXPRESS_MODEL1_EXPLANATION = "model1_explanation"
 REEXPRESS_MODEL2_EXPLANATION = "model2_explanation"
 # REEXPRESS_MODEL3_EXPLANATION = "model3_explanation"
 REEXPRESS_ATTACHED_FILE_NAMES = "attached_file_names"
+REEXPRESS_ATTACHED_DOCUMENTS_CONTENT = "attached_documents_content"
+REEXPRESS_ATTACHED_DOCUMENT_NOTE_KEY = "attached_document_note"
 
 REEXPRESS_MODEL1_CLASSIFICATION = "model1_classification"
 REEXPRESS_MODEL2_CLASSIFICATION = "model2_classification"
 # REEXPRESS_MODEL3_CLASSIFICATION = "model3_classification"
+REEXPRESS_MODEL1_CONFIDENCE = "model1_confidence"
+REEXPRESS_MODEL2_CONFIDENCE = "model2_confidence"
+
 REEXPRESS_AGREEMENT_MODEL_CLASSIFICATION = "agreement_model_classification"
 REEXPRESS_MODEL1_TOPIC_SUMMARY = "model1_summary"
 REEXPRESS_SUBMITTED_TIME_KEY = "submitted_time"
 
+REEXPRESS_VIEW_OUTPUT_KEY = "reexpress_view_output"
 
 
 SLEEP_CONSTANT = 40
@@ -272,7 +281,7 @@ MCP_SERVER_EVAL_ENSEMBLE_END_ITERATION = 0  # inclusive
 
 MCP_SERVER_SETTINGS_FILENAME = "mcp_settings.json"
 
-MCP_SERVER_MODEL1_NAME = "gpt-5.4-2026-03-05"
+MCP_SERVER_MODEL1_NAME = "gpt-5.5-2026-04-23"
 MCP_SERVER_MODEL2_NAME = "gemini-3.1-pro-preview"
 MCP_SERVER_API_EMBEDDING_MODEL_NAME = "gemini-embedding-2"
 
@@ -280,6 +289,12 @@ MCP_SERVER_CONFIG_USE_API_EMBEDDING_OVER_QA = False
 MCP_SERVER_CONFIG_USE_LOCAL_EMBEDDING_OVER_AGREEMENT = False
 
 MCP_SERVER_USE_DKW_LOWER_ESTIMATES = True
+
+# Note that if MCP_SERVER_SAVE_ATTACHED_FILE_CONTENT_TO_DATABASE = False, generating a new model output with the
+# same conditioned context for the question and ai_response requires
+# access to the original file content separate from what is contained in the JSON/database archived by the Server.
+MCP_SERVER_SAVE_ATTACHED_FILE_CONTENT_TO_DATABASE = True
+MCP_SERVER_ATTACHED_DOCUMENT_NOTE = "(Note: I have included additional documents relevant to this discussion within the <attached_file></attached_file> XML tags.) "
 
 EXPECTED_API_EMBEDDING_SIZE = 3072
 EXPECTED_LOCAL_LM_EMBEDDING_SIZE = 12292
@@ -298,7 +313,8 @@ MCP_SERVER_AGREEMENT_MODEL_NAME = "granite-3.3-8b-instruct"
 MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
 MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
-REEXPRESS_MCP_SERVER_VERSION = "2.3.0.preview"  # see also ProgramIdentifiers_version for the classifier
+REEXPRESS_MCP_SERVER_VERSION_KEY = "mcp_server_version"
+REEXPRESS_MCP_SERVER_VERSION = "2.4.0"  # see also ProgramIdentifiers_version for the classifier
 
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,

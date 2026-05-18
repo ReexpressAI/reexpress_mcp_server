@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.4.0)</span>
         </div>
 
         <div class="section">
@@ -418,18 +418,18 @@
             </div>
 
             <div class="explanation-box-negative">
-                <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The user asked how many letter &#x27;p&#x27;s are in the word &quot;strawperry.&quot; The AI response said there are 2 p&#x27;s.</div>
+                <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The user asked how many letter &#x27;g&#x27;s are in the string &quot;computerggame&quot;. The AI response broke the string into letters correctly as c-o-m-p-u-t-e-r-g-g-a-m-e but then incorrectly answered that there are 3 g&#x27;s.</div>
             </div>
             
             <div class="explanation-box-negative">
-                <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>Counting the letters in &quot;strawperry&quot; shows only one &#x27;p&#x27; appears. The AI response is therefore incorrect. This is directly verifiable from the text provided, so confidence is very high.</div>
+                <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The string &quot;computerggame&quot; contains exactly two &#x27;g&#x27; characters: c o m p u t e r g g a m e. The AI response’s own letter breakdown shows only two g&#x27;s, so its answer of 3 is incorrect.</div>
             </div>
 
             <div class="explanation-box-negative">
                 <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The user asked for the number of &#x27;p&#x27;s in the word &#x27;strawperry&#x27;. The word &#x27;strawperry&#x27; contains exactly one &#x27;p&#x27;, but the AI response incorrectly states that there are two. Therefore, the AI response does not correctly answer the user&#x27;s question.</div>
+                <div>The LLM incorrectly states that there are 3 &#x27;g&#x27;s in the word &#x27;computerggame&#x27;. There are only 2 &#x27;g&#x27;s in the provided string.</div>
             </div>
             
             
@@ -448,7 +448,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-04-30 16:28:48</div>
+                    <div class="field-value">2026-05-18 01:24:24</div>
                 </div>
                 
             </div>
@@ -483,41 +483,41 @@
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[1.0, 1.617633671457952e-08]</div>
+                <div class="field-value">[0.9999961853027344, 3.7724953472206835e-06]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[1.0, 2.20095208725013e-09]</div>
+                <div class="field-value">[0.999997615814209, 2.3835195861465763e-06]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[1.0, 2.994626768781927e-10]</div>
+                <div class="field-value">[0.9999984502792358, 1.5059414408824523e-06]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[4587.0, 6739.0]</div>
+                    <div class="field-value">[8159.0, 9164.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">2048.0</div>
+                    <div class="field-value">235.0</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">2048.0</div>
+                    <div class="field-value">235.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">2048</div>
+                    <div class="field-value">235</div>
                 </div>                               
             </div>
             
@@ -526,21 +526,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.16252464056015015</div>
+                    <div class="field-value">0.36850059032440186</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.18059521913528442</div>
+                    <div class="field-value">0.38204991817474365</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.1986657977104187</div>
+                    <div class="field-value">0.39559924602508545</div>
                 </div>
             </div>
 
@@ -549,7 +549,7 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[7.074323654174805, -7.400810718536377]</div>
+                    <div class="field-value">[3.0848960876464844, -3.1125595569610596]</div>
                 </div>
             </div>
         </div>
@@ -568,21 +568,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">3.3118863105773926</div>
+                    <div class="field-value">17.74595832824707</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
+                    <div class="field-value">[0.9270761013031006, 0.9011152386665344]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">14937</div>
+                    <div class="field-value">19814</div>
                 </div>
             </div>
         </div>
@@ -590,12 +590,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">how many ps are there in &quot;strawperry&quot;</div>
+            <div class="prompt-box">how many gs are in &quot;computerggame&quot;</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">There are 2 p&#x27;s in &quot;strawperry.&quot;</div>
+            <div class="document-box">Reference [1, internal reasoning]: The string &quot;computerggame&quot; can be broken down letter by letter: c-o-m-p-u-t-e-r-g-g-a-m-e; Answer: There are 3 g&#x27;s in &quot;computerggame&quot; (two consecutive g&#x27;s after &quot;computer&quot; and one more in &quot;game&quot;).</div>
         </div>
         
         <div class="separator"></div>
@@ -620,12 +620,12 @@
                 </div>
                 
                 <div class="explanation-box-negative">
-                    <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>The question asked for the total number of vowels in the string &quot;Hello AI.&quot; The AI response said the count was 3 and listed e, o, and I while skipping A.</div>
+                    <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked to count the vowel letters in the input string &quot;Hello AI.&quot; The AI response claimed the total is 3, counting e, o, and I, while explicitly skipping A.</div>
                 </div>
                 <div class="explanation-box-negative">
-                    <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>The response is verifiably incorrect. In &quot;Hello AI.&quot;, the vowels are e, o, A, and I, for a total of 4. This is an objective character-counting task based on the provided text and does not depend on opinion or recent information.</div>
+                    <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The response is incorrect: using the stated case-insensitive vowel definition, &quot;Hello AI.&quot; contains four vowels: e, o, A, and I. The AI response even notes that A was mistakenly skipped, so it does not faithfully answer the instruction.</div>
                 </div>
     
                 <div class="explanation-box-negative">

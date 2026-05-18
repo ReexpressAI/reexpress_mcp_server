@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.4.0)</span>
         </div>
 
         <div class="section">
@@ -418,18 +418,18 @@
             </div>
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The question asks what caused a sqlite3 binding error (&#x27;parameter 12: type Tensor is not supported&#x27;) when inserting rows into a SQLite database, and how to fix it. The AI response explains that parameter 12 is `label_int`, that `label_int` comes from `model.train_labels` via `retrieve_model_documents_ids`, and that those labels are likely PyTorch tensor scalars rather than Python integers. It recommends converting the label to `int` before insertion, e.g. `train_document_id_2_label[document_id] = int(label)`.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The user asked for a Python function `read_json_lines(filename)` that reads one JSON object per non-empty line and returns a list of dictionaries. The AI response provided a correct implementation using `json.loads` line by line, skipping blank lines, and returning the parsed objects.</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The response correctly traces parameter 12 to `label_int` using the shown INSERT order, and the data flow in the provided code supports that `label_int` is coming from `model.train_labels` without conversion. The proposed fix—convert the tensor scalar to a Python `int` before calling sqlite3—is the standard and correct remedy. This verification is based on the provided code plus stable internal knowledge about PyTorch tensor iteration and sqlite3 parameter binding.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The provided function directly satisfies the request: it opens the file, iterates through lines, skips empty/whitespace-only lines, parses each remaining line as JSON, and returns a list. Given the stated assumption that each line contains a JSON object, the parsed values will be dictionaries. This is based on standard Python behavior and does not depend on subjective judgment or recent information.</div>
             </div>
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The LLM accurately identifies that &#x27;label_int&#x27; is the 12th parameter being inserted into the SQLite database. It correctly traces the source of this variable to &#x27;model.train_labels&#x27;, which yields 0-d torch tensors upon iteration. Finally, it provides the correct and practical fix: casting the tensor to a Python integer using `int()` or `.item()` before storing it in the dictionary or passing it to the database query.</div>
+                <div>The AI response accurately provides the requested Python function `read_json_lines` using standard file I/O and the `json` module to parse each non-empty line as a dictionary.</div>
             </div>
             
             
@@ -448,7 +448,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-04-30 15:07:57</div>
+                    <div class="field-value">2026-05-18 02:30:41</div>
                 </div>
                 
             </div>
@@ -483,41 +483,41 @@
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[2.046902550885063e-15, 1.0]</div>
+                <div class="field-value">[0.007733653299510479, 0.9922663569450378]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[7.685216221919769e-16, 1.0]</div>
+                <div class="field-value">[0.00537743978202343, 0.9946225881576538]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[4.544646223000989e-16, 1.0]</div>
+                <div class="field-value">[0.003736390732228756, 0.9962635636329651]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[1948.0, 3033.0]</div>
+                    <div class="field-value">[4283.0, 5137.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">199.0</div>
+                    <div class="field-value">32.0</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">199.0</div>
+                    <div class="field-value">32.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">199</div>
+                    <div class="field-value">32</div>
                 </div>                               
             </div>
             
@@ -526,21 +526,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.9573996067047119</div>
+                    <div class="field-value">0.24821358919143677</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.9851291179656982</div>
+                    <div class="field-value">0.2669144868850708</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">1.0</div>
+                    <div class="field-value">0.28561538457870483</div>
                 </div>
             </div>
 
@@ -549,7 +549,7 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-3.4807729721069336, 3.1806225776672363]</div>
+                    <div class="field-value">[-2.549862861633301, 2.996192455291748]</div>
                 </div>
             </div>
         </div>
@@ -568,21 +568,21 @@
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">3.3118863105773926</div>
+                    <div class="field-value">17.74595832824707</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
+                    <div class="field-value">[0.9270761013031006, 0.9011152386665344]</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">14941</div>
+                    <div class="field-value">19817</div>
                 </div>
             </div>
         </div>
@@ -590,108 +590,159 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">A Python script aux_construct_document_db.py constructs a SQLite document database. When run, it produced this error:
-
-Successfully loaded ReexpressAI/OpenVerification1, which is the current version from HF Hub.
-Support set size: 14936
-Traceback (most recent call last):
-  File &quot;.../aux_construct_document_db.py&quot;, line 161, in &lt;module&gt;
-    main()
-  File &quot;.../aux_construct_document_db.py&quot;, line 151, in main
-    init_db(database_file=options.database_file, ...)
-  File &quot;.../aux_construct_document_db.py&quot;, line 91, in init_db
-    success = db.add_document(
-  File &quot;.../mcp_utils_sqlite_document_db_controller.py&quot;, line 121, in add_document
-    cursor.execute(&#x27;&#x27;&#x27;
-sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported
-
-Relevant code from aux_construct_document_db.py:
-
-def retrieve_model_documents_ids(options):
-    model = utils_model.load_model_torch(options.model_dir, torch.device(&quot;cpu&quot;), load_for_inference=True)
-    assert len(model.train_uuids) == len(set(model.train_uuids)), &quot;Unexpected Error: The training documents ids are not unique.&quot;
-    print(f&quot;Support set size: {len(model.train_uuids)}&quot;)
-    train_uuids = model.train_uuids
-    train_labels = model.train_labels
-    train_document_id_2_label = {}
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = label
-    return train_document_id_2_label
-
-In init_db:
-    label_int = train_document_id_2_label[document_id]
-    ...
-    success = db.add_document(
-        document_id=document_id,
-        model1_summary=model1_summary,
-        model1_explanation=model1_explanation,
-        model2_explanation=model2_explanation,
-        model3_explanation=&#x27;&#x27;,
-        model4_explanation=&#x27;&#x27;,
-        model1_classification_int=model1_classification_int,
-        model2_classification_int=model2_classification_int,
-        model3_classification_int=0,
-        model4_classification_int=0,
-        agreement_model_classification_int=agreement_classification_int,
-        label_int=label_int,
-        label_was_updated_int=0,
-        document_source=document_source,
-        info=f&quot;{model1_label},{model2_label}&quot;,
-        user_question=user_question,
-        ai_response=ai_response
-    )
-
-Relevant code from mcp_utils_sqlite_document_db_controller.py add_document method:
-
-    cursor.execute(&#x27;&#x27;&#x27;
-        INSERT INTO documents (
-            document_id, model1_summary, model1_explanation, model2_explanation,
-            model3_explanation, model4_explanation, model1_classification_int, model2_classification_int,
-            model3_classification_int, model4_classification_int, agreement_model_classification_int,
-            label_int, label_was_updated_int, document_source, info,
-            user_question, ai_response
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    &#x27;&#x27;&#x27;, (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation,
-          model4_explanation,
-          model1_classification_int, model2_classification_int,
-          model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int,
-          label_was_updated_int, document_source, info,
-          user_question, ai_response))
-
-What is causing the error and how should it be fixed?</div>
+            <div class="prompt-box">Construct a Python function read_json_lines that takes as input a filename and returns a list of dictionary objects, one for each non-empty line. Assume the file contains one json object per line.</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, mcp_utils_sqlite_document_db_controller.py, lines 121-128]: The INSERT statement column ordering is &quot;document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation, model4_explanation, model1_classification_int, model2_classification_int, model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int, label_was_updated_int, document_source, info, user_question, ai_response&quot;. Counting positionally, label_int is parameter 12.
+            <div class="document-box">Reference [1, internal knowledge; Python standard library `json` module documentation]: The `json.loads(s)` function parses a JSON-formatted string `s` and returns the corresponding Python object (a dict for JSON objects).
+Reference [2, internal knowledge; Python file I/O semantics]: Iterating over a file object opened in text mode yields one line at a time (including the trailing newline character) and reads lazily, which is memory-efficient for large files. `str.strip()` removes leading/trailing whitespace including newline characters, so an empty/blank line strips to `&quot;&quot;`, which is falsy and can be skipped.
+Reference [3, internal knowledge; JSONL/NDJSON format convention]: The JSON Lines format stores one JSON value (typically an object) per line, with `\n` (or `\r\n`) line separators. Reading is therefore naturally a line-by-line parse.
 
-Reference [2, error traceback from user]: &quot;sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot; at line 121 of mcp_utils_sqlite_document_db_controller.py inside cursor.execute. This identifies parameter 12 as a torch.Tensor that sqlite3 cannot bind.
+Answer:
+```python
+import json
 
-Reference [3, aux_construct_document_db.py, retrieve_model_documents_ids]: &quot;train_uuids = model.train_uuids; train_labels = model.train_labels; train_document_id_2_label = {}; for document_id, label in zip(train_uuids, train_labels): train_document_id_2_label[document_id] = label&quot;. The label values come directly from model.train_labels with no type conversion.
+def read_json_lines(filename):
+    &quot;&quot;&quot;Read a JSONL file and return a list of dicts, one per non-empty line.&quot;&quot;&quot;
+    results = []
+    with open(filename, &#x27;r&#x27;, encoding=&#x27;utf-8&#x27;) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                results.append(json.loads(line))
+    return results
+```
 
-Reference [4, aux_construct_document_db.py, init_db]: &quot;label_int = train_document_id_2_label[document_id]&quot; then &quot;success = db.add_document(..., label_int=label_int, ...)&quot;. The dict value flows directly into add_document without conversion.
-
-Reference [5, internal knowledge, PyTorch tensor iteration]: Iterating a 1-D torch.Tensor yields 0-d torch.Tensor elements, not Python ints. sqlite3&#x27;s parameter binding does not support torch.Tensor types.
-
-Reference [6, internal knowledge, Python int() on tensors]: int(torch.tensor(5)) returns the Python int 5. Calling int() on either a 0-d torch.Tensor or a Python int produces a Python int safely, making it a robust conversion.
-
-Reference [7, aux_construct_document_db.py, init_db]: &quot;model1_classification_int = row[f&#x27;{model1_string_indicator_name}_verification_classification&#x27;]&quot; and similarly for model2. These come from HuggingFace dataset rows, which typically yield Python ints or numpy scalars (both bindable by sqlite3), not torch tensors. So they are not the source of this specific error.
-
-Answer: The error &quot;Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot; occurs because parameter 12 in the INSERT in mcp_utils_sqlite_document_db_controller.py&#x27;s add_document corresponds to label_int. The value is a torch.Tensor because retrieve_model_documents_ids stores the elements of model.train_labels directly into the dict without conversion, and iterating a torch.Tensor yields 0-d tensors. sqlite3 cannot bind torch.Tensor objects.
-
-Minimal fix: convert at dict insertion in retrieve_model_documents_ids:
-
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = int(label)
-
-int() works on both 0-d tensors and Python ints. Equivalently label.item() works if the value is guaranteed to be a tensor.
-
-Optional defensive measure: model1_classification_int and model2_classification_int come from HF dataset rows and are likely Python ints/numpy scalars (bindable), but wrapping them in int(...) costs nothing and prevents future surprises.</div>
+Notes:
+- `line.strip()` handles trailing newlines and skips blank or whitespace-only lines (satisfying the &quot;non-empty line&quot; requirement).
+- Iterating over the file object (`for line in f`) reads lazily, so this works on large files without loading everything into memory.
+- The `with` statement ensures the file is closed properly even if an exception is raised.
+- If tolerance for malformed lines is desired, wrap `json.loads(line)` in `try` / `except json.JSONDecodeError`.</div>
         </div>
         
         <div class="separator"></div>
         
-        <div class="section" style="margin-left: 40px;"> The nearest match is not available. </div>
+        
+        <div class="nearest-match-box">
+            <div class="section" style="margin-left: 40px;">
+                <div class="section-title">Nearest Match in Training</div>
+                
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Successfully Verified (Prediction)</div>
+                        <div class="field-value">
+                            <span class="tag tag-positive">True</span>
+                        </div>
+                    </div>
+        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">True Label</div>
+                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                    </div>
+                </div>
+                
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked to implement `DataObject.from_json` so it validates a non-empty dictionary, creates a `DataObject`, assigns `type` and `value` from the dictionary, and returns it. The AI response provided a complete implementation matching these requirements, using `isinstance(json_dict, dict)` and `.get()` for the fields, along with an explanation.</div>
+                </div>
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The response correctly implements the requested method: it rejects empty or non-dictionary inputs, creates a `DataObject`, assigns `type` and `value` from the JSON dictionary, and returns the instance. The only minor difference from the prompt’s sample code is using `isinstance` instead of exact `type(...) == dict`, which is generally acceptable and arguably more Pythonic. This is not subjective and does not depend on recent information.</div>
+                </div>
+    
+                <div class="explanation-box-positive">
+                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                    <div>The LLM output correctly implements the requested functionality. It checks if the input is a non-empty dictionary, creates a new instance, sets the properties using `.get()`, and returns the instance. It follows all the instructions faithfully.</div>
+                </div>
+                
+                
+                
+                <div class="section">
+                    <div class="section-title">Prompt</div>
+                    <div class="prompt-box">You are tasked with implementing a class method for a Python class called `DataObject`. The method, `from_json`, should take a JSON dictionary as input and return an instance of `DataObject` with its attributes set based on the values in the JSON dictionary.
+
+The `DataObject` class has the following attributes:
+- `type`: A string representing the type of the data.
+- `value`: A value associated with the data.
+
+The `from_json` method should perform the following tasks:
+1. Check if the input `json_dict` is a non-empty dictionary. If it&#x27;s not, or if it&#x27;s not a dictionary, the method should return `None`.
+2. If the input `json_dict` is valid, create a new instance of `DataObject`.
+3. Set the `type` attribute of the new instance to the value associated with the key &quot;type&quot; in the `json_dict`.
+4. Set the `value` attribute of the new instance to the value associated with the key &quot;value&quot; in the `json_dict`.
+5. Return the newly created `DataObject` instance.
+
+Your task is to complete the implementation of the `from_json` method in the `DataObject` class according to the given specifications.
+
+```python
+class DataObject:
+    def __init__(self):
+        self.type = None
+        self.value = None
+
+    @staticmethod
+    def from_json(json_dict):
+        if not json_dict or type(json_dict) != dict:
+            return None
+        new_data_object = DataObject()
+        new_data_object.type = json_dict.get(&quot;type&quot;)
+        new_data_object.value = json_dict.get(&quot;value&quot;)
+        return new_data_object
+```</div>
+                </div>
+    
+                <div class="section">
+                    <div class="section-title">AI Response</div>
+                    <div class="document-box">To solve this problem, we need to implement a method within a Python class that constructs an instance of the class from a given JSON dictionary. The method must validate the input and then set the object&#x27;s attributes based on the values in the JSON dictionary.
+
+### Approach
+
+1. **Validation Check**: The method first ensures the input is a non-empty dictionary. If the input is not a dictionary or is an empty dictionary, the method returns `None`.
+2. **Instance Creation**: If the input is valid, a new instance of the class is created.
+3. **Attribute Assignment**: The method then sets the class attributes based on the values associated with specific keys (&quot;type&quot; and &quot;value&quot;) in the JSON dictionary. If these keys are missing, the attributes are set to `None`.
+4. **Return Instance**: Finally, the method returns the newly created instance with its attributes set.
+
+### Solution Code
+
+```python
+class DataObject:
+    def __init__(self):
+        self.type = None
+        self.value = None
+
+    @staticmethod
+    def from_json(json_dict):
+        if not json_dict or not isinstance(json_dict, dict):
+            return None
+        new_data_object = DataObject()
+        new_data_object.type = json_dict.get(&quot;type&quot;)
+        new_data_object.value = json_dict.get(&quot;value&quot;)
+        return new_data_object
+```
+
+### Explanation
+
+- **Validation Check**: The method uses `isinstance` to check if the input is a dictionary and ensures it is not empty. This is done using a single conditional statement that combines these checks.
+- **Instance Creation**: If the input passes the validation, a new instance of `DataObject` is created using the class constructor.
+- **Attribute Assignment**: The method uses the `get` method of dictionaries to safely retrieve values for &quot;type&quot; and &quot;value&quot; keys. This ensures that `None` is used if the keys are not present.
+- **Return Instance**: The method returns the newly created and configured instance of `DataObject`.
+
+This approach ensures that the method handles various edge cases, such as missing keys or invalid input types, gracefully and efficiently.</div>
+                </div>
+                <div class="field-grid">        
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document ID</div>
+                        <div class="field-value">pos_734516_938b559e-e5a8-4324-9af2-c3ef4fed182e</div>
+                    </div>
+                    <div class="field-box" style="margin-bottom: 20px;">
+                        <div class="field-label">Document Source</div>
+                        <div class="field-value">OpenVerification1: openthoughts</div>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    
 
         <div class="separator"></div>
 

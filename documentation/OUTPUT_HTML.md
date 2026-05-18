@@ -23,4 +23,5 @@ Examples:
 - [Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_pos_example.html)
 - [Verified but confidence `<= 89%`](example_output/html_output_examples/current_reexpression_pos_and_lower_confidence_example.html)
 - [NOT Verified with confidence `>= 90%`](example_output/html_output_examples/current_reexpression_neg_example.html)
-- [Out-of-distribution](example_output/html_output_examples/current_reexpression_ood.html)
+- [Out-of-distribution](example_output/html_output_examples/current_reexpression_pos_ood_example.html)
+- [Out-of-distribution](example_output/html_output_examples/current_reexpression_neg_ood_example.html)

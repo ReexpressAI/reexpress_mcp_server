@@ -1,5 +1,11 @@
 # Changelog: Reexpress Model-Context-Protocol (MCP) Server
 
+## What's new in version 2.4.0
+
+The model card is available [here](documentation/model_cards/model_card_v240.pdf).
+
+Version 2.4.0 uses gpt-5.5-2026-04-23 and gemini-3.1-pro-preview as the generative models. As with 2.3.0.preview, gemini-embedding-2 replaces the local granite-3.3-8b-instruct model as the agreement representation model. This greatly simplifies running the Server, since you no longer need to locally run a multi-billion parameter model. Additionally, we have also expanded the OpenVerification1 dataset with new examples. See the [Model Card](documentation/model_cards/model_card_v240.pdf) for details. 
+
 ## What's new in version 2.3.0.preview
 
 The model card is available [here](documentation/model_cards/model_card_v230_preview.pdf).
