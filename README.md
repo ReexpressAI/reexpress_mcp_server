@@ -71,6 +71,8 @@ A copy of our system demonstration paper "Introspectable, Updatable, and Uncerta
 
 The model card for version 2.4.0, which highlights the changes since the system demonstration paper, is available [here](documentation/model_cards/model_card_v240.pdf).
 
+![CAIS 2026 system demonstration poster.](documentation/system_demonstration_paper/poster/reexpress_mcp_server_demo_paper_poster_cais_2026.png)
+
 ## Citation
 
 If you find this software useful, consider citing the following peer-reviewed papers:
