@@ -91,11 +91,23 @@ If you find this software useful, consider citing the following peer-reviewed pa
 ```
 
 ```
-@misc{Schmaltz-2026-ReexpressMCPServer,
-      title={Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following}, 
-      author={Allen Schmaltz},
-      year={2026},
-      note={To appear in the \emph{1st ACM Conference on AI and Agentic Systems: Demos (ACM CAIS'26 Demos)}, San Jose, CA, USA.},
+@inproceedings{Schmaltz-2026-ReexpressMCPServer,
+author = {Schmaltz, Allen},
+title = {Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following},
+year = {2026},
+isbn = {9798400724152},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3786335.3813214},
+doi = {10.1145/3786335.3813214},
+abstract = {In this system demonstration paper, we introduce an open-source implementation for training and testing Similarity-Distance-Magnitude (SDM) estimators for the task of binary classification of instruction-following of closed-weight language models (LMs). This SDM estimator provides an approximately conditional estimate of the predictive uncertainty over instruction-following, conditional on multiple closed-weight LMs and the representation space of an open-weight model. While it would be more robust to use as input to the SDM estimator the hidden-states of the underlying models, this indirect, compositional proxy is more reliable than verbalized uncertainty and adds a means of auditing the predictions against data with known labels. We release the code as an MCP Server to simplify adding interpretability-by-exemplar and locally updatable, uncertainty-aware instruction-following to agent-based pipelines. We further release OpenVerification1, a balanced set of over two million examples of instruction-following and associated rationales from recent closed-weight LMs, for bootstrapping domain-specific estimators. Finally, we discuss limitations of estimating the predictive uncertainty without access to the hidden-states of the tool-calling LM and provide practical guidance for applications.},
+booktitle = {Proceedings of the ACM Conference on AI and Agentic Systems},
+pages = {1259–1269},
+numpages = {11},
+keywords = {Approximately conditional calibration, Interpretability-by-exemplar, Classification of instruction-following, Model ensembles},
+location = {
+},
+series = {CAIS '26}
 }
 ```
 
