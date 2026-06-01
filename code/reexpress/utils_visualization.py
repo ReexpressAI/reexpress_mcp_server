@@ -33,20 +33,30 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         successfully_verified_html_class = "positive"
     else:
         successfully_verified_html_class = "negative"
-    is_high_reliability_region = prediction_meta_data.get("is_high_reliability_region", False)
-    # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+
+    # OOD also takes into account d == 0. (See note in mcp_utils_test.test(),
+    # which checks for constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES.)
     is_ood = prediction_meta_data.get("is_ood", True)
     is_ood_html_class = "positive" if not is_ood else "negative"
 
     try:
-        sdm_output_for_predicted_class = \
-            prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
-    except:
-        sdm_output_for_predicted_class = 0.0
+        if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+            calibration_reliability = \
+                mcp_utils_test.get_calibration_reliability_label(
+                    is_high_reliability_region=prediction_meta_data.get("is_high_reliability_region_lower", False),
+                    is_ood=is_ood,
+                    sdm_output_for_predicted_class=
+                    prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()[predicted_class])
 
-    calibration_reliability = \
-        mcp_utils_test.get_calibration_reliability_label(is_high_reliability_region, is_ood,
-                                                         sdm_output_for_predicted_class=sdm_output_for_predicted_class)
+        else:
+            calibration_reliability = \
+                mcp_utils_test.get_calibration_reliability_label(
+                    is_high_reliability_region=prediction_meta_data.get("is_high_reliability_region", False),
+                    is_ood=is_ood,
+                    sdm_output_for_predicted_class=
+                    prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class])
+    except:
+        calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
 
     # Model Level
     try:

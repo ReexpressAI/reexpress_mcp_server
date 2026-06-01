@@ -112,7 +112,8 @@ def format_sdm_estimator_output_for_mcp_tool(prediction_meta_data_dict,
             prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class]
         is_high_reliability_region = prediction_meta_data["is_high_reliability_region"]
 
-    # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
+    # OOD also takes into account d == 0. (See note in mcp_utils_test.test(),
+    # which checks for constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES.)
     is_ood = prediction_meta_data["is_ood"]
     calibration_reliability = \
         get_calibration_reliability_label(is_high_reliability_region, is_ood,
