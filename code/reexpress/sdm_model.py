@@ -410,9 +410,8 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     def set_high_reliability_region_thresholds(self, calibration_sdm_outputs: torch.Tensor,
                                                calibration_rescaled_similarity_values: torch.Tensor,
                                                true_labels: torch.Tensor):
-
-        assert self.alpha >= (1.0 / self.numberOfClasses), \
-            f"ERROR: --alpha must be greater than 1/(total number of classes)"
+        assert self.alpha > 0.5, \
+            f"ERROR: --alpha must be greater than 1/2"
         trueClass_To_sdm_outputs_non_ood = {}
 
         for label in range(self.numberOfClasses):
