@@ -34,8 +34,7 @@ def main():
                              "This can (and should) typically be larger than the training batch size for efficiency.")
     parser.add_argument("--learning_rate", default=0.00001, type=float, help="learning rate")
 
-    parser.add_argument("--alpha", default=constants.defaultCdfAlpha, type=float, help="alpha in (0,1), "
-                                                                                       "typically 0.9 or 0.95")
+    parser.add_argument("--alpha", default=constants.defaultCdfAlpha, type=float, help="alpha in (0.5,1]")
     parser.add_argument("--maxQAvailableFromIndexer", default=constants.maxQAvailableFromIndexer, type=int,
                         help="max q considered")
     parser.add_argument("--use_training_set_max_label_size_as_max_q", default=False, action='store_true',

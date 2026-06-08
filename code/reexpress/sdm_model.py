@@ -359,8 +359,20 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         return 0.0  # conservative (no information about class, so always included)
 
     def calculateOutputThresholdsAdaptive(self, trueClass_To_rescaled_OutputCDF_non_ood, all_bins):
+        # Alg. 1 in 'SDM Activations'.
         # Note: trueClass_To_rescaled_OutputCDF_non_ood must have values from a
         # categorical distribution for this to be valid.
+
+        # Note: If additional resolution is needed via multiple concurrent alpha values, a conservative option would be
+        # to successively exclude the points in each higher region when running Alg. 1 for the next lower alpha value.
+        # A point would then be assigned to the region of the most conservative (i.e., closer to 1) alpha
+        # in which it is a member. This is not currently implemented here. (The interpretation of the region would
+        # then be different for the regions constructed from alpha values less than
+        # that which is nearest 1: It would correspond to ~"at least the given alpha when excluding all points
+        # in the higher regions", which we leave to future work.) If this is desired, an implementation
+        # (and interpretation) detail to keep in mind is that the resulting q'_min values may not be finite for all
+        # chosen alpha values for a given dataset/model; in other words, some of the resulting ~"HR at the given alpha"
+        # regions may not be defined (as in the case of a single HR region).
         if len(all_bins) is None:
             print(constants.ERROR_MESSAGES_NO_THRESHOLD_FOUND)
             return
@@ -410,8 +422,8 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     def set_high_reliability_region_thresholds(self, calibration_sdm_outputs: torch.Tensor,
                                                calibration_rescaled_similarity_values: torch.Tensor,
                                                true_labels: torch.Tensor):
-        assert self.alpha > 0.5, \
-            f"ERROR: --alpha must be greater than 1/2"
+        assert 0.5 < self.alpha <= 1.0, \
+            f"ERROR: Alg. 1 in 'SDM Activations' requires --alpha to be in (0.5, 1.0]"
         trueClass_To_sdm_outputs_non_ood = {}
 
         for label in range(self.numberOfClasses):
@@ -490,7 +502,9 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         alpha = 1 - self.alpha  # Note how alpha is defined
         assert alpha < 0.5, "ERROR: The alpha value is likely misspecified. " \
                             "Check that it should not be 1-(the provided value). If such a low alpha value is " \
-                            "desired, comment this assert."
+                            "desired, comment this assert. Note that " \
+                            "set_high_reliability_region_thresholds() (Alg. 1 in 'SDM Activations') expects " \
+                            "self.alpha to be > 0.5."
 
         # Process all classes
         for label in range(self.numberOfClasses):
