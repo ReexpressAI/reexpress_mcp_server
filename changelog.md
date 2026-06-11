@@ -1,5 +1,9 @@
 # Changelog: Reexpress Model-Context-Protocol (MCP) Server
 
+## What's new in version 2.4.1
+
+The version 2.4.1 release is identical to version 2.4.0 (including the model), but ensures the optional HTML output uses the SDM_HR^lower estimator for the confidence bin label at the top of the page when constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES is True. This does not impact the output to the tool-calling LM (or the estimator details elsewhere in the generated HTML). Version 2.4.1 replaces the release binary for version 2.4.0.
+
 ## What's new in version 2.4.0
 
 The model card is available [here](documentation/model_cards/model_card_v240.pdf).
