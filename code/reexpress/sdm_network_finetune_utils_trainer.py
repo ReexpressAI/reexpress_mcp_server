@@ -728,7 +728,7 @@ class GenerateAndVerifyTrainer(Trainer):
                 # the LLM parameters are frozen.
                 sdm_verification_layer_pointer.add_to_support_batch(
                     torch.tensor(support_set_update_labels),
-                    predicted_labels=support_predictions.squeeze(),  # squeeze() since keepdim=True above
+                    predicted_labels=support_predictions.squeeze(-1),  # squeeze(-1) since keepdim=True above
                     document_ids=support_set_update_document_ids,
                     exemplar_vectors=support_exemplar_vectors)
             # print(f"Updated support with {len(support_set_update_labels)} new instances.")
