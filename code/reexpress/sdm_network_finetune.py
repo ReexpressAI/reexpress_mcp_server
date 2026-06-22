@@ -373,12 +373,20 @@ def main():
     generation_saver = GenerationSaverCallback(args.generation_save_dir)
     verification_layer_callback = VerificationLayerCallback(args.verification_model_dir, options=options, rng=rng)
 
-    no_tokens = tokenizer.encode('No', add_special_tokens=False)
-    yes_tokens = tokenizer.encode('Yes', add_special_tokens=False)
-
-    if len(no_tokens) != 1 or len(yes_tokens) != 1:
-        logger.error("'Yes'/'No' are not single tokens! This will break verification.")
-        raise ValueError("Tokenizer incompatible - 'Yes'/'No' must be single tokens")
+    try:
+        no_token_id = tokenizer.vocab['No']
+        yes_token_id = tokenizer.vocab['Yes']
+        if no_token_id != 3782 or yes_token_id != 8241:
+            # Note that for 'microsoft/Phi-3.5-mini-instruct'
+            # no_tokens = tokenizer.encode('No', add_special_tokens=False)
+            # yes_tokens = tokenizer.encode('Yes', add_special_tokens=False)
+            # are different token ids, since those add the implicit underscore. Our formatting does not have spaces
+            # within the <verified>Yes|No</verified> XML tags. These are used in the version that only applies
+            # the SDM regularization terms to the Yes|No token id.
+            raise ValueError("unexpected token ids")
+    except (KeyError, ValueError) as e:
+        raise KeyError(
+            "Tokenizer incompatible - 'Yes'/'No' are assumed to be from 'microsoft/Phi-3.5-mini-instruct'") from e
 
     # Create custom trainer with verification
     trainer = GenerateAndVerifyTrainer(
@@ -390,8 +398,8 @@ def main():
         data_collator=data_collator,
         # processing_class=tokenizer,
         tokenizer=tokenizer,  # see comment in class definition
-        no_token_id=no_tokens[0],
-        yes_token_id=yes_tokens[0],
+        no_token_id=no_token_id,
+        yes_token_id=yes_token_id,
         mask_prefix=args.mask_prefix,
         mask_until_pattern=args.mask_until_pattern,
         model_max_length=args.max_length,

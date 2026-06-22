@@ -214,6 +214,8 @@ def main():
 
     accelerator = Accelerator()
     device = accelerator.device
+    if device.type == 'cuda' and device.index is None:  # if accelerate launch --num_processes=1
+        device = torch.device(f'cuda:{torch.cuda.current_device()}')
     rank = accelerator.process_index
     world_size = accelerator.num_processes
 
