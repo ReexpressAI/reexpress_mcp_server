@@ -146,6 +146,11 @@ def main():
     # Resume training
     parser.add_argument("--resume_from_checkpoint", type=str, help="Resume from checkpoint")
 
+    # SDM loss/reward options
+    parser.add_argument("--disable_intra_epoch_support_set_dynamic_updates", default=False, action='store_true',
+                        help="If not provided, by default, "
+                             "the support set (D_tr for the SDM activation) will be dynamically updated "
+                             f"with exemplar vectors during training.")
 
     #####################
     #### SDM verification layer arguments
@@ -405,6 +410,7 @@ def main():
         model_max_length=args.max_length,
         generation_probability_during_training=args.generation_probability_during_training,
         reset_generations_every_round=not args.do_not_reset_generations_every_round,
+        enable_intra_epoch_support_set_dynamic_updates=not args.disable_intra_epoch_support_set_dynamic_updates,
         generation_config={
             "max_new_tokens": args.max_generation_new_tokens,
             "do_sample": False,

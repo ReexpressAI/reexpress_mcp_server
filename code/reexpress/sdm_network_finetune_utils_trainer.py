@@ -54,12 +54,20 @@ class GenerateAndVerifyTrainer(Trainer):
             options=None,
             generation_probability_during_training=0.5,
             reset_generations_every_round=True,
+            enable_intra_epoch_support_set_dynamic_updates=True,
             *args,
             **kwargs
     ):
 
         super().__init__(*args, **kwargs)
 
+        self.enable_intra_epoch_support_set_dynamic_updates = enable_intra_epoch_support_set_dynamic_updates
+        if self.enable_intra_epoch_support_set_dynamic_updates:
+            print(f"The support set (D_tr for the SDM activation) will be dynamically updated "
+                  f"with exemplar vectors during training.")
+        else:
+            print(f"The support set (D_tr for the SDM activation) will NOT be dynamically updated "
+                  f"with exemplar vectors during training.")
         self.tokenizer = tokenizer
         self.mask_prefix = mask_prefix
         self.mask_until_pattern = mask_until_pattern
@@ -76,6 +84,9 @@ class GenerateAndVerifyTrainer(Trainer):
         # Get token IDs for Yes/No (based on get_verification_embedding.py)
         self.no_token_id = no_token_id or self.tokenizer.vocab['No']
         self.yes_token_id = yes_token_id or self.tokenizer.vocab['Yes']
+
+        if self.no_token_id != 3782 or self.yes_token_id != 8241:
+            raise ValueError("Unexpected token ids. This version assumes 'microsoft/Phi-3.5-mini-instruct'")
 
         # Setup generation saving
         self.generation_save_dir = generation_save_dir or kwargs.get('args').output_dir
@@ -397,7 +408,7 @@ class GenerateAndVerifyTrainer(Trainer):
             "labels": labels
         }
 
-    def re_collate(self, features):
+    def re_collate(self, features, return_verification_token_index=False):
         # Use tokenizer's built-in padding for input_ids and attention_mask
         batch = self.tokenizer.pad(
             [{"input_ids": f["input_ids"],
@@ -409,6 +420,8 @@ class GenerateAndVerifyTrainer(Trainer):
         # Handle labels separately
         max_length = batch["input_ids"].shape[1]
         padded_labels = []
+        if return_verification_token_index:
+            verification_token_indexes = []
         for f in features:
             labels = f["labels"]
             padding_length = max_length - len(labels)
@@ -417,8 +430,21 @@ class GenerateAndVerifyTrainer(Trainer):
                 torch.full((padding_length,), -100, dtype=labels.dtype)
             ])
             padded_labels.append(padded)
+            if return_verification_token_index:
+                # This assumes that if self.yes_token_id and self.no_token_id exist, they are indeed the rightmost,
+                # which is reasonable for the purposes here given that this operates on the labels, over which a
+                # mask has already been applied.
+                mask = (labels == self.yes_token_id) | (labels == self.no_token_id)
+                position_idx = mask.nonzero(as_tuple=True)[0]
+                if position_idx.numel():
+                    last_position = position_idx[-1].item()
+                else:
+                    last_position = -100
+                verification_token_indexes.append(last_position)
 
         batch["labels"] = torch.stack(padded_labels)
+        if return_verification_token_index:
+            batch["verification_token_indexes"] = torch.tensor(verification_token_indexes)
         return batch
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
@@ -720,10 +746,8 @@ class GenerateAndVerifyTrainer(Trainer):
             assert support_rescaled_similarities.shape[0] == verification_embedding__is_support_set.shape[0]
             assert support_rescaled_similarities.shape[1] == 1
 
-            # update running support set on this device:
-            if False and in_training:
-                # This is not currently used, but we provide it as an example that may be useful as a tradeoff
-                # between full retraining of the verification layer every epoch.
+            # Optionally update running support set on this device:
+            if self.enable_intra_epoch_support_set_dynamic_updates and in_training:
                 # Note: Local support updates are not relevant for the validation set, since
                 # the LLM parameters are frozen.
                 sdm_verification_layer_pointer.add_to_support_batch(
@@ -779,8 +803,7 @@ class GenerateAndVerifyTrainer(Trainer):
                 device=device,
                 dtype=support_sdm_outputs_at_reward_label_index.dtype
             )
-            # These additional structures are constructed for reference analysis, but are not used in the
-            # loss calculation:
+            # Depending on the loss/reward chosen, not all of these statistics are used:
             combined_rescaled_similarities = torch.zeros(
                 batch_size,
                 1,  # always 1
@@ -853,7 +876,7 @@ class GenerateAndVerifyTrainer(Trainer):
                 combined_q_values = not_support_dataset_q_values.to(device)
                 combined_distance_quantile = not_support_distance_quantile_per_class[:, 0, None].to(device)
         # update padding:
-        updated_features_on_cpu = self.re_collate(updated_features)
+        updated_features_on_cpu = self.re_collate(updated_features, return_verification_token_index=True)
 
         if self.use_cross_entropy:
             assert False, "For cross entropy, use self._compute_baseline_cross_entropy_loss_with_train_time_generations"
@@ -881,6 +904,113 @@ class GenerateAndVerifyTrainer(Trainer):
                      combined_q_values, combined_distance_quantile,
                      combined_sdm_outputs_at_reward_label_index,
                      batch_size, device, return_outputs=False, in_training=True):
+        """
+        This version applies the standard SDM loss to the Yes or No token positions within the final
+        <verified></verified> XML tag. The Yes/No token positions are required to be in
+        updated_features_on_cpu["verification_token_indexes"]. All other positions (including if
+        "verification_token_indexes" for a given batch sequence has the missing value -100) are calculated
+        with a standard, non-regularized cross-entropy loss (q=e-2, d=1).
+        Unlike get_sdm_loss_for_use_as_token_wise_approximate_reward, this is
+        primarily intended to be used in the case of the exemplar vectors
+        (which determine q and d) being the hidden-states of the LM itself (rather than a 1-d CNN adaptor, which can
+        always be subsequently added after post-training to enable fast local modifications).
+        """
+        if in_training:
+            model.train()
+        else:
+            model.eval()
+        # Get raw logits without computing loss
+        outputs = model(
+            input_ids=updated_features_on_cpu["input_ids"].to(device),
+            attention_mask=updated_features_on_cpu["attention_mask"].to(device),
+            labels=None,  # Don't pass labels to avoid automatic loss computation,
+            return_dict=True
+        )
+        # Get the raw logits - shape: (batch_size, seq_len, vocab_size)
+        shifted_seq_length = outputs.logits.shape[1] - 1
+        labels = updated_features_on_cpu["labels"].to(device)
+
+        # Shift for causal LM: predict next token
+        # Remove last logit position and first label position
+        shifted_logits = outputs.logits[:, :-1, :].contiguous()  # (B, L-1, V)
+        shifted_labels = labels[:, 1:].contiguous()  # (B, L-1)
+        vocab_size = shifted_logits.size(-1)
+
+        # --- Instance-wise regularization, applied ONLY at the Yes/No output position within the
+        # <verified></verified> suffix XML ---
+        # Standard softmax/cross-entropy is used except for the Yes/No token:
+        #   distance_quantile = 1          -> logits are left unscaled (d*f == f)
+        #   q_value           = (e - 2)    -> soft_sdm_max adds 2, giving base e (standard softmax)
+        # At the single Yes/No position (per batch instance) we instead use the
+        # instance-specific d (Distance quantile) and q (Similarity).
+        default_q_value = torch.e - sdm_verification_layer_pointer.q_rescale_offset
+
+        # Flatten logits to the shape soft_sdm_max consumes. This is a view; the only
+        # (B*(L-1), V) allocation happens at the d*f multiply below.
+        flat_logits = shifted_logits.reshape(-1, vocab_size)  # (B*(L-1), V)
+        num_rows = flat_logits.size(0)
+
+        # Per-row regularizers, built directly in flat form (each is a single column).
+        flat_distance_quantile = torch.ones(
+            num_rows, 1, device=device, dtype=combined_distance_quantile.dtype
+        )
+        flat_q_values = torch.full(
+            (num_rows, 1), default_q_value, device=device, dtype=combined_q_values.dtype
+        )
+
+        # verification_token_indexes hold the position of the Yes/No token in labels
+        # (== position in input_ids, since labels is an unshifted masked copy), or -100 when
+        # no unmasked Yes/No token was found. The logit that *predicts*
+        # that token sits one position to the left, so we shift the index by 1 to line it
+        # up with shifted_logits / shifted_labels. The flattened, shifted row index is:
+        #     flat_index = b * shifted_seq_length + (p_b - 1)
+        verification_token_indexes = \
+            updated_features_on_cpu["verification_token_indexes"].to(device)  # (B,)
+        target_positions = verification_token_indexes - 1  # shift by 1
+        # Skip -100 (no token) and guard the degenerate p == 0 case (would index -1).
+        valid_mask = (verification_token_indexes != -100) & (target_positions >= 0)
+
+        valid_rows = torch.arange(batch_size, device=device)[valid_mask]
+        flat_indices = valid_rows * shifted_seq_length + target_positions[valid_mask]
+
+        # # Comment these lines for production
+        # _yn = shifted_labels.reshape(-1)[flat_indices]
+        # assert ((_yn == self.yes_token_id) | (_yn == self.no_token_id)).all(), \
+        #     "verification index offset misaligned with shifted_labels"
+
+        flat_distance_quantile[flat_indices, 0] = combined_distance_quantile.reshape(-1)[valid_rows]
+        flat_q_values[flat_indices, 0] = combined_q_values.reshape(-1)[valid_rows]
+
+        # d * f: rows with d == 1 are unchanged; only the Yes/No rows are scaled.
+        shifted_distance_times_logits = flat_logits * flat_distance_quantile  # (B*(L-1), V)
+
+        # Compute log probabilities in SDM space, with per-position d*f and q.
+        batch_sdm_log = \
+            sdm_verification_layer_pointer.soft_sdm_max(
+                shifted_distance_times_logits,  # (B*(L-1), V)
+                flat_q_values,  # (B*(L-1), 1)
+                distance_quantile_per_class=None,
+                log=True, change_of_base=True)  # (B*(L-1), V)
+
+        total_loss = F.nll_loss(
+            batch_sdm_log,  # (B*(L-1), V)
+            shifted_labels.reshape(-1),  # (B*(L-1),)
+            ignore_index=-100
+        )
+
+        return (total_loss, outputs) if return_outputs else total_loss
+
+
+    def get_sdm_loss_for_use_as_token_wise_approximate_reward(self, model, sdm_verification_layer_pointer,
+                                                              updated_features_on_cpu, combined_rescaled_similarities,
+                                                              combined_q_values, combined_distance_quantile,
+                                                              combined_sdm_outputs_at_reward_label_index,
+                                                              batch_size, device, return_outputs=False,
+                                                              in_training=True):
+        """
+        This was an earlier version that used the memory layer to estimate a per-token reward applied via a
+        change-of-base to all non-masked tokens.
+        """
         # combined_rescaled_similarities, combined_q_values,
         # combined_distance_quantile are not currently used, but are included as args for
         # debugging/analysis
@@ -920,6 +1050,7 @@ class GenerateAndVerifyTrainer(Trainer):
         )
 
         return (total_loss, outputs) if return_outputs else total_loss
+
 
     def _compute_baseline_cross_entropy_loss_with_train_time_generations(self,
                                                                          model, inputs, return_outputs=False,
