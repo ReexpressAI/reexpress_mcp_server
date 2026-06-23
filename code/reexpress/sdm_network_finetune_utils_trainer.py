@@ -55,6 +55,7 @@ class GenerateAndVerifyTrainer(Trainer):
             generation_probability_during_training=0.5,
             reset_generations_every_round=True,
             enable_intra_epoch_support_set_dynamic_updates=True,
+            next_token_loss_type=0,
             *args,
             **kwargs
     ):
@@ -62,12 +63,21 @@ class GenerateAndVerifyTrainer(Trainer):
         super().__init__(*args, **kwargs)
 
         self.enable_intra_epoch_support_set_dynamic_updates = enable_intra_epoch_support_set_dynamic_updates
-        if self.enable_intra_epoch_support_set_dynamic_updates:
-            print(f"The support set (D_tr for the SDM activation) will be dynamically updated "
-                  f"with exemplar vectors during training.")
-        else:
-            print(f"The support set (D_tr for the SDM activation) will NOT be dynamically updated "
-                  f"with exemplar vectors during training.")
+        self.next_token_loss_type = next_token_loss_type
+        assert self.next_token_loss_type in [0, 1]
+        if not self.use_cross_entropy and not self.use_dpo:
+            if self.enable_intra_epoch_support_set_dynamic_updates:
+                print(f"The support set (D_tr for the SDM activation) will be dynamically updated "
+                      f"with exemplar vectors during training.")
+            else:
+                print(f"The support set (D_tr for the SDM activation) will NOT be dynamically updated "
+                      f"with exemplar vectors during training.")
+            if self.next_token_loss_type == 0:
+                print(f"Using the token-wise approximate reward for regularization: "
+                      f"get_sdm_loss_for_use_as_token_wise_approximate_reward()")
+            elif self.next_token_loss_type == 1:
+                print(f"Applying the SDM regularization to the No/Yes token within the <verified></verified> XML tags.")
+
         self.tokenizer = tokenizer
         self.mask_prefix = mask_prefix
         self.mask_until_pattern = mask_until_pattern
@@ -893,11 +903,20 @@ class GenerateAndVerifyTrainer(Trainer):
             # )
             # return (outputs.loss, outputs) if return_outputs else outputs.loss
         else:
-            return self.get_sdm_loss(model, sdm_verification_layer_pointer,
-                                     updated_features_on_cpu, combined_rescaled_similarities,
-                                     combined_q_values, combined_distance_quantile,
-                                     combined_sdm_outputs_at_reward_label_index,
-                                     batch_size, device, return_outputs=return_outputs, in_training=in_training)
+            if self.next_token_loss_type == 0:
+                return self.get_sdm_loss_for_use_as_token_wise_approximate_reward(model, sdm_verification_layer_pointer,
+                                         updated_features_on_cpu, combined_rescaled_similarities,
+                                         combined_q_values, combined_distance_quantile,
+                                         combined_sdm_outputs_at_reward_label_index,
+                                         batch_size, device, return_outputs=return_outputs, in_training=in_training)
+            elif self.next_token_loss_type == 1:
+                return self.get_sdm_loss(model, sdm_verification_layer_pointer,
+                                         updated_features_on_cpu, combined_rescaled_similarities,
+                                         combined_q_values, combined_distance_quantile,
+                                         combined_sdm_outputs_at_reward_label_index,
+                                         batch_size, device, return_outputs=return_outputs, in_training=in_training)
+            else:
+                assert False
 
     def get_sdm_loss(self, model, sdm_verification_layer_pointer,
                      updated_features_on_cpu, combined_rescaled_similarities,
@@ -910,10 +929,6 @@ class GenerateAndVerifyTrainer(Trainer):
         updated_features_on_cpu["verification_token_indexes"]. All other positions (including if
         "verification_token_indexes" for a given batch sequence has the missing value -100) are calculated
         with a standard, non-regularized cross-entropy loss (q=e-2, d=1).
-        Unlike get_sdm_loss_for_use_as_token_wise_approximate_reward, this is
-        primarily intended to be used in the case of the exemplar vectors
-        (which determine q and d) being the hidden-states of the LM itself (rather than a 1-d CNN adaptor, which can
-        always be subsequently added after post-training to enable fast local modifications).
         """
         if in_training:
             model.train()
@@ -1008,7 +1023,7 @@ class GenerateAndVerifyTrainer(Trainer):
                                                               batch_size, device, return_outputs=False,
                                                               in_training=True):
         """
-        This was an earlier version that used the memory layer to estimate a per-token reward applied via a
+        This uses the memory layer to estimate a per-token reward applied via a
         change-of-base to all non-masked tokens.
         """
         # combined_rescaled_similarities, combined_q_values,

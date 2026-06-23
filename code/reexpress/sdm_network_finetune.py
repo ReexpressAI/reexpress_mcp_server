@@ -147,10 +147,14 @@ def main():
     parser.add_argument("--resume_from_checkpoint", type=str, help="Resume from checkpoint")
 
     # SDM loss/reward options
-    parser.add_argument("--disable_intra_epoch_support_set_dynamic_updates", default=False, action='store_true',
-                        help="If not provided, by default, "
-                             "the support set (D_tr for the SDM activation) will be dynamically updated "
+    parser.add_argument("--enable_intra_epoch_support_set_dynamic_updates", default=False, action='store_true',
+                        help="If provided, the support set (D_tr for the SDM activation) will be dynamically updated "
                              f"with exemplar vectors during training.")
+    parser.add_argument("--next_token_loss_type", type=int, default=0,
+                        help="Only applicable if the flags for --use_cross_entropy and --use_dpo are absent."
+                             "next_token_loss_type=0 uses the token-wise approximate reward for regularization."
+                             "next_token_loss_type=1 applies the SDM regularization to the No/Yes token within the "
+                             "<verified></verified> XML tags.")
 
     #####################
     #### SDM verification layer arguments
@@ -410,7 +414,8 @@ def main():
         model_max_length=args.max_length,
         generation_probability_during_training=args.generation_probability_during_training,
         reset_generations_every_round=not args.do_not_reset_generations_every_round,
-        enable_intra_epoch_support_set_dynamic_updates=not args.disable_intra_epoch_support_set_dynamic_updates,
+        enable_intra_epoch_support_set_dynamic_updates=args.enable_intra_epoch_support_set_dynamic_updates,
+        next_token_loss_type=args.next_token_loss_type,
         generation_config={
             "max_new_tokens": args.max_generation_new_tokens,
             "do_sample": False,
