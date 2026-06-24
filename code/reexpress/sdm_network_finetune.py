@@ -155,7 +155,17 @@ def main():
                              "next_token_loss_type=0 uses the token-wise approximate reward for regularization."
                              "next_token_loss_type=1 applies the SDM regularization to the No/Yes token within the "
                              "<verified></verified> XML tags.")
-
+    # Research Experiment/Comparison options
+    parser.add_argument("--only_positive_examples", action="store_true", default=False,
+                        help="For standard CE loss, only see positive examples. This would be an unusual modeling "
+                             "choice in practice (since the model always sees a final <verified>Yes</verified>), but "
+                             "it is intended as a challenge case to examine the behavior of a post-hoc SDM activation "
+                             "layer that needs to relearn the decision boundary given the frozen LM weights.")
+    parser.add_argument("--disable_negative_masking", action="store_true", default=False,
+                        help="For standard CE loss, this disables the contrastive masking. This is not intended for "
+                             "real use for generation since the model will learn to generate incorrect "
+                             "completions. Instead, it is intended to examine the behavior of a post-hoc "
+                             "SDM activation layer given the frozen LM weights trained this way.")
     #####################
     #### SDM verification layer arguments
     #####################
@@ -416,6 +426,8 @@ def main():
         reset_generations_every_round=not args.do_not_reset_generations_every_round,
         enable_intra_epoch_support_set_dynamic_updates=args.enable_intra_epoch_support_set_dynamic_updates,
         next_token_loss_type=args.next_token_loss_type,
+        only_positive_examples=args.only_positive_examples,
+        disable_negative_masking=args.disable_negative_masking,
         generation_config={
             "max_new_tokens": args.max_generation_new_tokens,
             "do_sample": False,

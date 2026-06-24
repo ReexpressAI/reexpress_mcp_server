@@ -56,6 +56,8 @@ class GenerateAndVerifyTrainer(Trainer):
             reset_generations_every_round=True,
             enable_intra_epoch_support_set_dynamic_updates=True,
             next_token_loss_type=0,
+            only_positive_examples=False,
+            disable_negative_masking=False,
             *args,
             **kwargs
     ):
@@ -65,18 +67,6 @@ class GenerateAndVerifyTrainer(Trainer):
         self.enable_intra_epoch_support_set_dynamic_updates = enable_intra_epoch_support_set_dynamic_updates
         self.next_token_loss_type = next_token_loss_type
         assert self.next_token_loss_type in [0, 1]
-        if not self.use_cross_entropy and not self.use_dpo:
-            if self.enable_intra_epoch_support_set_dynamic_updates:
-                print(f"The support set (D_tr for the SDM activation) will be dynamically updated "
-                      f"with exemplar vectors during training.")
-            else:
-                print(f"The support set (D_tr for the SDM activation) will NOT be dynamically updated "
-                      f"with exemplar vectors during training.")
-            if self.next_token_loss_type == 0:
-                print(f"Using the token-wise approximate reward for regularization: "
-                      f"get_sdm_loss_for_use_as_token_wise_approximate_reward()")
-            elif self.next_token_loss_type == 1:
-                print(f"Applying the SDM regularization to the No/Yes token within the <verified></verified> XML tags.")
 
         self.tokenizer = tokenizer
         self.mask_prefix = mask_prefix
@@ -142,6 +132,33 @@ class GenerateAndVerifyTrainer(Trainer):
             self.reference_model_needs_init = True
         else:
             self.reference_model_needs_init = False
+
+        # experimental settings
+        self.only_positive_examples = only_positive_examples
+        self.disable_negative_masking = disable_negative_masking
+
+        if not self.use_cross_entropy and not self.use_dpo:
+            if self.enable_intra_epoch_support_set_dynamic_updates:
+                print(f"The support set (D_tr for the SDM activation) will be dynamically updated "
+                      f"with exemplar vectors during training.")
+            else:
+                print(f"The support set (D_tr for the SDM activation) will NOT be dynamically updated "
+                      f"with exemplar vectors during training.")
+            if self.next_token_loss_type == 0:
+                print(f"Using the token-wise approximate reward for regularization: "
+                      f"get_sdm_loss_for_use_as_token_wise_approximate_reward()")
+            elif self.next_token_loss_type == 1:
+                print(f"Applying the SDM regularization to the No/Yes token within the <verified></verified> XML tags.")
+
+        if self.only_positive_examples:
+            assert self.use_cross_entropy
+            print(f"WARNING: Research comparison option not intended for typical use: "
+                  f"The cross-entropy loss will only see positive examples.")
+        if self.disable_negative_masking:
+            assert self.use_cross_entropy
+            assert not self.only_positive_examples, f"Masking is only relevant in the contrastive setting."
+            print(f"WARNING: Research comparison option not intended for typical use: "
+                  f"The cross-entropy loss will not use contrastive masking.")
 
     def load_existing_generations(self):
         """Load consolidated generations from previous runs"""
@@ -1114,7 +1131,7 @@ class GenerateAndVerifyTrainer(Trainer):
 
             # Half the time, always correct:
             # if (not model.training) or (random.random() < 0.5):
-            if random.random() < 0.5:
+            if self.only_positive_examples or (not self.only_positive_examples and random.random() < 0.5):
                 updated_features.append(
                     {
                         "input_ids": input_ids[i].cpu(),
@@ -1200,7 +1217,11 @@ class GenerateAndVerifyTrainer(Trainer):
                     random.shuffle(error_candidates)
                     assistant_text = error_candidates[0]
                     # print(f"Hard negative prompt: {prompt_text}\n\nAssistant: {assistant_text}\n\n----------")
-                    updated_input_dict = self.get_ids_with_padding(prompt_text, assistant_text)
+                    if self.disable_negative_masking:
+                        updated_input_dict = \
+                            self.get_ids_with_padding_but_no_negative_mask(prompt_text, assistant_text)
+                    else:
+                        updated_input_dict = self.get_ids_with_padding(prompt_text, assistant_text)
                     # print(f"updated_dict: {assistant_text}, {updated_input_dict}")
                     updated_features.append(updated_input_dict)
 
