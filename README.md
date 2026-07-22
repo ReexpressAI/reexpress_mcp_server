@@ -78,36 +78,44 @@ The model card for version 2.4.0, which highlights the changes since the system 
 If you find this software useful, consider citing the following peer-reviewed papers:
 
 ```
-@misc{Schmaltz-2025-SimilarityDistanceMagnitudeActivations,
-      title={Similarity-Distance-Magnitude Activations}, 
-      author={Allen Schmaltz},
-      year={2025},
-      eprint={2509.12760},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2509.12760},
-      note={To appear in \emph{Findings of the Association for Computational Linguistics: ACL 2026}, San Diego, CA, USA.},
+@inproceedings{Schmaltz-2026-SimilarityDistanceMagnitudeActivations,
+    title = "Similarity-Distance-Magnitude Activations",
+    author = "Schmaltz, Allen",
+    editor = "Liakata, Maria  and
+      Moreira, Viviane P.  and
+      Zhang, Jiajun  and
+      Jurgens, David",
+    booktitle = "Findings of the {A}ssociation for {C}omputational {L}inguistics: {ACL} 2026",
+    month = jul,
+    year = "2026",
+    address = "San Diego, California, United States",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.findings-acl.1109/",
+    doi = "10.18653/v1/2026.findings-acl.1109",
+    pages = "22037--22057",
+    ISBN = "979-8-89176-395-1",
+    abstract = "We introduce the Similarity-Distance-Magnitude (SDM) activation function, a more robust and interpretable formulation of the standard softmax activation function, adding Similarity (i.e., correctly predicted depth-matches into training) awareness and Distance-to-training-distribution awareness to the existing output Magnitude (i.e., decision-boundary) awareness, and enabling interpretability-by-exemplar via dense matching. We further introduce the SDM estimator, based on a data-driven partitioning of the class-wise empirical CDFs via the SDM activation, to control the class- and prediction-conditional accuracy among selective classifications. When used as the final-layer activation over pre-trained language models for selective classification, the SDM estimator is more robust to covariate shifts and out-of-distribution inputs than existing calibration methods using softmax activations, while remaining informative over in-distribution data."
 }
 ```
 
 ```
 @inproceedings{Schmaltz-2026-ReexpressMCPServer,
-author = {Schmaltz, Allen},
-title = {Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following},
-year = {2026},
-isbn = {9798400724152},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3786335.3813214},
-doi = {10.1145/3786335.3813214},
-abstract = {In this system demonstration paper, we introduce an open-source implementation for training and testing Similarity-Distance-Magnitude (SDM) estimators for the task of binary classification of instruction-following of closed-weight language models (LMs). This SDM estimator provides an approximately conditional estimate of the predictive uncertainty over instruction-following, conditional on multiple closed-weight LMs and the representation space of an open-weight model. While it would be more robust to use as input to the SDM estimator the hidden-states of the underlying models, this indirect, compositional proxy is more reliable than verbalized uncertainty and adds a means of auditing the predictions against data with known labels. We release the code as an MCP Server to simplify adding interpretability-by-exemplar and locally updatable, uncertainty-aware instruction-following to agent-based pipelines. We further release OpenVerification1, a balanced set of over two million examples of instruction-following and associated rationales from recent closed-weight LMs, for bootstrapping domain-specific estimators. Finally, we discuss limitations of estimating the predictive uncertainty without access to the hidden-states of the tool-calling LM and provide practical guidance for applications.},
-booktitle = {Proceedings of the ACM Conference on AI and Agentic Systems},
-pages = {1259–1269},
-numpages = {11},
-keywords = {Approximately conditional calibration, Interpretability-by-exemplar, Classification of instruction-following, Model ensembles},
-location = {
-},
-series = {CAIS '26}
+    author = {Schmaltz, Allen},
+    title = {Introspectable, Updatable, and Uncertainty-aware Classification of Language Model Instruction-following},
+    year = {2026},
+    isbn = {9798400724152},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3786335.3813214},
+    doi = {10.1145/3786335.3813214},
+    abstract = {In this system demonstration paper, we introduce an open-source implementation for training and testing Similarity-Distance-Magnitude (SDM) estimators for the task of binary classification of instruction-following of closed-weight language models (LMs). This SDM estimator provides an approximately conditional estimate of the predictive uncertainty over instruction-following, conditional on multiple closed-weight LMs and the representation space of an open-weight model. While it would be more robust to use as input to the SDM estimator the hidden-states of the underlying models, this indirect, compositional proxy is more reliable than verbalized uncertainty and adds a means of auditing the predictions against data with known labels. We release the code as an MCP Server to simplify adding interpretability-by-exemplar and locally updatable, uncertainty-aware instruction-following to agent-based pipelines. We further release OpenVerification1, a balanced set of over two million examples of instruction-following and associated rationales from recent closed-weight LMs, for bootstrapping domain-specific estimators. Finally, we discuss limitations of estimating the predictive uncertainty without access to the hidden-states of the tool-calling LM and provide practical guidance for applications.},
+    booktitle = {Proceedings of the ACM Conference on AI and Agentic Systems},
+    pages = {1259–1269},
+    numpages = {11},
+    keywords = {Approximately conditional calibration, Interpretability-by-exemplar, Classification of instruction-following, Model ensembles},
+    location = {
+    },
+    series = {CAIS '26}
 }
 ```
 
