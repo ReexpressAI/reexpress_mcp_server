@@ -12,16 +12,22 @@ import utils_update
 import utils_calibrate
 
 def main():
-    parser = argparse.ArgumentParser(description="-----[Train and eval sdm estimators]-----")
-    # Note that not all options are currently implemented and/or used in this research codebase. See the
-    # Tutorials for replicating the paper's experiments, rather than the argument help messages and in-line comments
-    # in the code, which may not reflect the currently released research codebase version.
+    parser = argparse.ArgumentParser(allow_abbrev=False, description="-----[Train and eval sdm estimators]-----")
+
     parser.add_argument("--input_training_set_file", default="",
-                        help=".jsonl format")
+                        help=".jsonl format, or a converted dataset directory "
+                             "(see convert_to_reexpress_dataset.py)")
     parser.add_argument("--input_calibration_set_file", default="",
-                        help=".jsonl format")
+                        help=".jsonl format, or a converted dataset directory "
+                             "(see convert_to_reexpress_dataset.py)")
     parser.add_argument("--input_eval_set_file", default="",
-                        help=".jsonl format")
+                        help=".jsonl format, or a converted dataset directory "
+                             "(see convert_to_reexpress_dataset.py)")
+    parser.add_argument("--eval_on_best_iteration_calibration_split", default=False, action='store_true',
+                        help="Evaluate on the calibration split of the best training iteration, reconstructed "
+                             "from the split indices saved in model_dir/best_iteration_data. (Available when "
+                             "training used converted dataset directories as input.) --input_eval_set_file "
+                             "is ignored in this case.")
 
     parser.add_argument("--class_size", default=2, type=int, help="class_size")
     parser.add_argument("--seed_value", default=0, type=int, help="seed_value")
@@ -34,7 +40,6 @@ def main():
                              "This can (and should) typically be larger than the training batch size for efficiency.")
     parser.add_argument("--learning_rate", default=0.00001, type=float, help="learning rate")
 
-    parser.add_argument("--alpha", default=constants.defaultCdfAlpha, type=float, help="alpha in (0.5,1]")
     parser.add_argument("--maxQAvailableFromIndexer", default=constants.maxQAvailableFromIndexer, type=int,
                         help="max q considered")
     parser.add_argument("--use_training_set_max_label_size_as_max_q", default=False, action='store_true',
@@ -59,9 +64,9 @@ def main():
                         help="Include this flag if the eval set is the training set. "
                              "This ignores the first match when calculating uncertainty, under the assumption that "
                              "the first match is identity.")
-    parser.add_argument("--recalibrate_with_updated_alpha", default=False, action='store_true',
+    parser.add_argument("--recalibrate_with_updated_alpha_resolution", default=False, action='store_true',
                         help="This will update the model in the main directory, updating "
-                             "q'_min based on --alpha. However, note that the corresponding values for each "
+                             "based on --alpha_resolution. However, note that the corresponding values for each "
                              "iteration (and the global statistics) do not get updated, since we do not currently "
                              "save the calibration data for every iteration.")
     parser.add_argument("--load_train_and_calibration_from_best_iteration_data_dir",
@@ -71,27 +76,31 @@ def main():
                         help="Typically only use this if you have already standardized/normalized the embeddings. "
                              "Our default approach is to mean center based on the training set embeddings. This is "
                              "a global normalization that is applied in the forward of sdm_model.")
-    parser.add_argument("--continue_training",
-                        default=False, action='store_true', help="")
     parser.add_argument("--do_not_resave_shuffled_data",
                         default=False, action='store_true', help="")
     parser.add_argument("--exemplar_vector_dimension", default=constants.keyModelDimension, type=int, help="")
 
     parser.add_argument("--is_sdm_network_verification_layer",
-                        default=False, action='store_true', help="")
+                        default=False, action='store_true',
+                        help="We have moved the full-parameter fine-tuning to another repo. "
+                             "This flag, if used, will simply have the effect of saving the distance CDF "
+                             "structures for the training set, which are not needed at test-time for predicting "
+                             "over held-out sets, but may be of interest for analysis purposes.")
 
     parser.add_argument("--label_error_file", default="",
-                        help="If provided, possible label annotation errors (in HR but y != prediction) are saved, "
+                        help="If provided, possible label annotation errors "
+                             "(in the most conservative HR region but y != prediction) are saved, "
                              "sorted by the SDM(z')_prediction probability.")
     parser.add_argument("--predictions_in_high_reliability_region_file", default="",
-                        help="If provided, instances with predictions in the High Reliability region are saved, "
-                             "sorted by the SDM(z')_prediction probability.")
+                        help="If provided, instances with predictions in the most conservative High Reliability region "
+                             "are saved, sorted by the SDM(z')_prediction probability.")
     parser.add_argument("--label_error_hr_lower_file", default="",
-                        help="If provided, possible label annotation errors (in HR_lower but y != prediction) "
+                        help="If provided, possible label annotation errors "
+                             "(in the most conservative HR_lower region but y != prediction) "
                              "are saved, sorted by the SDM_lower(z')_prediction probability.")
     parser.add_argument("--predictions_in_high_reliability_region_lower_file", default="",
-                        help="If provided, instances with predictions in the High Reliability LOWER region are saved, "
-                             "sorted by the SDM_lower(z')_prediction probability.")
+                        help="If provided, instances with predictions in the most conservative High Reliability "
+                             "LOWER region are saved, sorted by the SDM_lower(z')_prediction probability.")
     parser.add_argument("--prediction_output_file", default="",
                         help="If provided, output predictions are saved to this file "
                              "in the order of the input file.")
@@ -112,9 +121,6 @@ def main():
                         help="")
     parser.add_argument("--ood_support_file", default="",
                         help="")
-    parser.add_argument("--is_baseline_adaptor",
-                        default=False, action='store_true',
-                        help="Use this option to train and test a baseline adaptor using cross-entropy and softmax.")
     parser.add_argument("--construct_results_latex_table_rows",
                         default=False, action='store_true',
                         help="")
@@ -122,25 +128,15 @@ def main():
     parser.add_argument("--print_timing",
                         default=False, action='store_true',
                         help="Used for profiling training.")
-    # ensemble parameters:
+    parser.add_argument("--alpha_resolution", default=constants.defaultAlphaResolution, type=float,
+                        help="Resolution of the nested high-reliability regions: Alg. 1 is run at "
+                             "alpha = 1 - k*alpha_resolution for k = 1, 2, ..., while alpha > 0.5, successively  "
+                             "excluding the points in every higher region with a finite q'_min.")
+
+    # Options not yet implemented in this version:
     parser.add_argument("--eval_ensemble", default=False, action='store_true', help="")
-    parser.add_argument("--eval_ensemble_start_iteration", default=-1, type=int, help="")
-    parser.add_argument("--eval_ensemble_end_iteration", default=-1, type=int, help="")
-    parser.add_argument("--eval_ensemble_label_error_file", default="",
-                        help="If provided, possible label annotation errors (in HR but y != prediction) are saved, "
-                             "sorted by the SDM(z')_prediction probability.")
-    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_file", default="",
-                        help="If provided, instances with predictions in the High Reliability region are saved, "
-                             "sorted by the SDM(z')_prediction probability.")
-    parser.add_argument("--eval_ensemble_label_error_hr_lower_file", default="",
-                        help="If provided, possible label annotation errors (in HR_lower but y != prediction) "
-                             "are saved, sorted by the SDM_lower(z')_prediction probability.")
-    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_lower_file", default="",
-                        help="If provided, instances with predictions in the High Reliability LOWER region are saved, "
-                             "sorted by the SDM_lower(z')_prediction probability.")
-    parser.add_argument("--eval_ensemble_prediction_output_file", default="",
-                        help="If provided, output predictions are saved to this file "
-                             "in the order of the input file.")
+    parser.add_argument("--continue_training",
+                        default=False, action='store_true', help="")
 
     options = parser.parse_args()
 
@@ -153,54 +149,25 @@ def main():
     if options.is_training_support:
         assert options.batch_eval
 
+    assert not options.eval_ensemble, "--eval_ensemble is not yet implemented in this streamlined version. " \
+                                      "See release v2.4.1 of the Reexpress MCP Server for an example of " \
+                                      "an ensemble approach."
     assert not options.continue_training, "Not implemented"
 
     main_device = torch.device(options.main_device)
     print(f"The model will use {main_device} as the main device.")
 
     if not options.eval_only:
-        if options.is_baseline_adaptor:
-            import baseline_utils_train_iterative_main
-            baseline_utils_train_iterative_main.train_iterative_main(options, rng, main_device=main_device)
-        else:
-            utils_train_iterative_main.train_iterative_main(options, rng, main_device=main_device)
+        utils_train_iterative_main.train_iterative_main(options, rng, main_device=main_device)
 
-    if options.recalibrate_with_updated_alpha:
+    if options.recalibrate_with_updated_alpha_resolution:
         print(f"Reloading best model to calibrate based on the provided alpha value.")
         utils_calibrate.calibrate_to_determine_high_reliability_region(options, model_dir=options.model_dir)
 
-    if options.is_baseline_adaptor:
-        import baseline_utils_test
-        baseline_utils_test.test(options, main_device)
-    else:
-        utils_test_batch.test(options, main_device)
+    utils_test_batch.test(options, main_device)
 
-        if options.eval_ensemble:
-            import os
-            import utils_test_batch_ensemble
-            id2ensemble_stats = {}
-            total_models_in_ensemble = \
-                len(list(range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1)))
-            print(f"------------------------------------------------------------------------------------------")
-            print(f"---------------Beginning Ensemble Evaluation of {total_models_in_ensemble} models---------------")
-            for iteration in range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1):
-                iteration_model_dir = os.path.join(options.model_dir, str(iteration))
-                print(f"------------------------------------------------------------------------------------------")
-                print(f"---------------Processing Ensemble Shuffle Index {iteration_model_dir}---------------")
-                id2ensemble_stats = \
-                    utils_test_batch.test(options, main_device,
-                                          iteration_model_dir=iteration_model_dir, id2ensemble_stats=id2ensemble_stats)
-            utils_test_batch_ensemble.test(options, id2ensemble_stats=id2ensemble_stats,
-                                           numberOfClasses=options.class_size,
-                                           maxQAvailableFromIndexer=options.maxQAvailableFromIndexer,
-                                           total_models_in_ensemble=total_models_in_ensemble)
     if options.update_support_set_with_eval_data:
-        assert not options.is_baseline_adaptor
         utils_update.batch_support_update(options, main_device)
-
-    if options.construct_results_latex_table_rows:
-        if options.is_baseline_adaptor:
-            print(f"To print the LaTeX tables for the baseline adaptor, use the baseline evaluation script.")
 
 
 if __name__ == "__main__":

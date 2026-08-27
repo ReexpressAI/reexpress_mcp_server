@@ -54,8 +54,6 @@ balancedAccuracyDescription = \
     "Balanced Accuracy is the average of the Accuracy for each class. It is generally more informative as a single composite metric than overall Accuracy when there is class imbalance."
 
 
-defaultCdfAlpha: float = 0.95
-defaultCdfThresholdTolerance: float = 0.001
 defaultQMax: int = 25
 minReliablePartitionSize: int = 100  # When the partition size is less than this value, we treat the calibration reliability as the lowest possible. Additional, some additional visual queues can be provided to the user (such as highlighting the size) to draw attention to the user.
 
@@ -63,6 +61,11 @@ defaultDistanceQuantile: float = 0.05
 
 # ModelControl
 keyModelDimension = 1000
+
+# Resolution of the nested high-reliability regions: Alg. 1 in 'SDM Activations' is run at
+# alpha = 1 - k*alpha_resolution, for k = 1, 2, ..., while alpha > 0.5 (as required by Alg. 1).
+# The default of 0.05 results in the ladder [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55].
+defaultAlphaResolution = 0.01
 
 def floatProbToDisplaySignificantDigits(floatProb: float) -> str:
     intProb = int(floatProb*100.0)
@@ -73,15 +76,12 @@ def floatProbToDisplaySignificantDigits(floatProb: float) -> str:
 ##### ProgramIdentifiers
 ProgramIdentifiers_mainProgramName = "Reexpress"
 ProgramIdentifiers_mainProgramNameShort = "Reexpress"
-ProgramIdentifiers_version = "2.0.0"
+ProgramIdentifiers_version = "2.5.0"
 
 
 ##### Storage keys
 STORAGE_KEY_version = "version"
 STORAGE_KEY_uncertaintyModelUUID = "uncertaintyModelUUID"
-STORAGE_KEY_alpha = "alpha"
-STORAGE_KEY_hr_class_conditional_accuracy = "hr_class_conditional_accuracy"
-STORAGE_KEY_cdfThresholdTolerance = "cdfThresholdTolerance"
 STORAGE_KEY_maxQAvailableFromIndexer = "maxQAvailableFromIndexer"
 STORAGE_KEY_minReliableCumulativePartitionSize = "minReliableCumulativePartitionSize"
 STORAGE_KEY_numberOfClasses = "numberOfClasses"
@@ -92,8 +92,6 @@ STORAGE_KEY_exemplar_vector_dimension = "exemplar_vector_dimension"
 STORAGE_KEY_embedding_size = "embedding_size"
 STORAGE_KEY_calibration_training_stage = "calibration_training_stage"
 STORAGE_KEY_calibration_is_ood_indicators = "calibration_is_ood_indicators"
-STORAGE_KEY_min_rescaled_similarity_to_determine_high_reliability_region = \
-    "min_rescaled_similarity_to_determine_high_reliability_region"
 
 # STORAGE_KEY_non_odd_thresholds = "non_odd_thresholds"  # now saving as tensor
 STORAGE_KEY_trueClass_To_dCDF = "trueClass_To_dCDF"
@@ -127,9 +125,14 @@ STORAGE_KEY_qdfLabelMarginalCategory_To_AcceptanceStatsOutputType_acceptanceIter
 # global summary statistics:
 STORAGE_KEY_globalUncertaintyModelUUID = "globalUncertaintyModelUUID"
 STORAGE_KEY_min_rescaled_similarity_across_iterations = "min_rescaled_similarity_across_iterations"
+STORAGE_KEY_max_hr_region_alpha_across_iterations = "max_hr_region_alpha_across_iterations"
 # STORAGE_KEY_predicted_class_to_bin_to_median_output_magnitude_of_iteration = \
 #     "predicted_class_to_bin_to_median_output_magnitude_of_iteration"
 # STORAGE_KEY_cauchy_quantile = "cauchy_quantile"
+STORAGE_KEY_alpha_resolution = "alpha_resolution"
+# List of dicts, sorted descending by alpha, each with keys
+# "alpha", "min_rescaled_similarity", and "output_thresholds" (a list of numberOfClasses floats):
+STORAGE_KEY_hr_regions = "hr_regions"
 
 FILENAME_UNCERTAINTY_STATISTICS = "meta.json"
 FILENAME_UNCERTAINTY_STATISTICS_AGGREGATE = "meta_aggregate.json"
@@ -153,9 +156,33 @@ FILENAME_UNCERTAINTY_STATISTICS_calibration_uuids = "calibration_uuids.json"
 FILENAME_UNCERTAINTY_STATISTICS_calibration_sdm_outputs = "calibration_sdm_outputs.pt"
 FILENAME_UNCERTAINTY_STATISTICS_calibration_rescaled_similarity_values = "calibration_rescaled_similarity_values.pt"
 
-FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds = "hr_output_thresholds.pt"
-
 FILENAME_GLOBAL_UNCERTAINTY_STATISTICS_JSON = "global_uncertainty_statistics.json"
+
+# Converted (binary) dataset directory format, produced by convert_to_reexpress_dataset.py. The input
+# embeddings are stored as a raw little-endian float32 tensor file (read lazily via torch.from_file), with the
+# remaining (small) fields in a torch-serialized metadata dictionary. Documents (and any retained additional
+# fields) are stored as JSON lines, read only when needed (e.g., for the eval output files).
+DATASET_FORMAT_version = "reexpress_dataset_v1"
+FILENAME_DATASET_METADATA = "dataset_metadata.pt"
+FILENAME_DATASET_INPUT_EMBEDDINGS = "input_embeddings.bin"
+FILENAME_DATASET_DOCUMENTS = "documents.jsonl"
+FILENAME_DATASET_ADDITIONAL_FIELDS = "additional_fields.jsonl"
+STORAGE_KEY_DATASET_format = "format"
+STORAGE_KEY_DATASET_n = "n"
+STORAGE_KEY_DATASET_input_dim = "input_dim"
+STORAGE_KEY_DATASET_input_composition = "input_composition"
+STORAGE_KEY_DATASET_labels = "labels"
+STORAGE_KEY_DATASET_uuids = "uuids"
+STORAGE_KEY_DATASET_has_documents = "has_documents"
+STORAGE_KEY_DATASET_has_additional_fields = "has_additional_fields"
+STORAGE_KEY_DATASET_additional_field_names = "additional_field_names"
+# Best-iteration split persistence (indices into the converted source directories, rather than duplicated
+# data copies):
+FILENAME_BEST_ITERATION_SPLIT_INDICES = "best_iteration_split_indices.pt"
+STORAGE_KEY_SPLIT_train_indices = "train_indices"
+STORAGE_KEY_SPLIT_calibration_indices = "calibration_indices"
+STORAGE_KEY_SPLIT_source_directories = "source_directories"
+
 
 DIRNAME_RUNNING_LLM_WEIGHTS_DIR = "non_finalized_llm_weights"
 
@@ -314,7 +341,7 @@ MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
 MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
 REEXPRESS_MCP_SERVER_VERSION_KEY = "mcp_server_version"
-REEXPRESS_MCP_SERVER_VERSION = "2.4.1"  # see also ProgramIdentifiers_version for the classifier
+REEXPRESS_MCP_SERVER_VERSION = "2.5.0"  # see also ProgramIdentifiers_version for the classifier
 
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,

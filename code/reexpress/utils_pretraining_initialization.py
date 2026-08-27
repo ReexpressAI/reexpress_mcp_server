@@ -1,5 +1,7 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 
+# Note: This has not been tested with the most recent version of the code and assumes a previous data format.
+
 import constants
 import utils_model
 
@@ -27,6 +29,7 @@ def pretrain(options, model=None, model_dir=None,
              train_labels=None,
              pretraining_learning_rate=None,
              return_min_held_out_balanced_loss=False, main_device=None, use_main_device=False):
+    assert False, "This has not yet been updated with the streamlined version of the codebase."
     device_label = "main_device"
     if use_main_device:
         assert main_device is not None
@@ -34,12 +37,9 @@ def pretrain(options, model=None, model_dir=None,
     else:
         device_label = "aux_device"
         current_device = torch.device(options.aux_device)
-    if options.is_baseline_adaptor:
-        total_epochs = options.epoch
-        print(f"Training baseline CNN adaptor for {total_epochs} epochs on {current_device} ({device_label})")
-    else:
-        total_epochs = options.pretraining_initialization_epochs
-        print(f"Pretraining initialization for {total_epochs} epochs on {current_device} ({device_label})")
+
+    total_epochs = options.pretraining_initialization_epochs
+    print(f"Pretraining initialization for {total_epochs} epochs on {current_device} ({device_label})")
     assert model is not None
     model = model.to(current_device)
 

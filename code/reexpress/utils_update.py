@@ -11,6 +11,9 @@ import utils_preprocess
 
 
 def batch_support_update(options, main_device):
+    if main_device != torch.device('cpu'):
+        print(f"Batch support set updates currently requires running on cpu. Use --main_device='cpu'. Exiting.")
+        exit()
     if options.skip_updates_already_in_support:
         # In this case, we also need to load the calibration set document id's.
         model = utils_model.load_model_torch(options.model_dir, main_device, load_for_inference=False)
@@ -52,7 +55,8 @@ def batch_support_update(options, main_device):
     utils_model.save_support_set_updates(model, options.model_dir)
     print(f"Updated support set cardinality: {model.support_index.ntotal}")
     print(f"Note that this does not update the distance quantiles, nor the thresholds on the HR region. "
-          f"This is intended for small, local changes. For more substantive changes, retrain the model.")
+          f"This is intended for small, local changes. For more substantive changes, retrain and recalibrate the "
+          f"model, which also involves reshuffling the training and calibration sets.")
     if options.skip_updates_already_in_support:
         print(f"Count of skipped document id's already in the support set or calibration set: "
               f"{count_already_present_documents}")

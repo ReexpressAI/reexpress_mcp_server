@@ -1,5 +1,6 @@
 # Copyright Reexpress AI, Inc. All rights reserved.
 import copy
+import os
 
 import torch
 
@@ -32,6 +33,98 @@ def print_summary(header_label, list_to_process, total=None):
             f"\tout of {len(list_to_process)}")
 
 
+def get_accuracy_cell(outcomes):
+    # outcomes is a list of booleans; the rendered cell is "accuracy (count)", with "--" for an empty list:
+    if len(outcomes) == 0:
+        return "-- (0)"
+    return f"{np.mean(outcomes):.4f} ({len(outcomes)})"
+
+
+def format_ascii_table(header_row, rows):
+    # Renders an aligned ASCII table: the first column is left-aligned; all other columns are right-aligned.
+    all_rows = [header_row] + rows
+    column_widths = [max(len(str(row[column_i])) for row in all_rows) for column_i in range(len(header_row))]
+
+    def format_row(row):
+        formatted_cells = []
+        for column_i, cell in enumerate(row):
+            cell = str(cell)
+            formatted_cells.append(cell.ljust(column_widths[column_i]) if column_i == 0
+                                   else cell.rjust(column_widths[column_i]))
+        return " | ".join(formatted_cells)
+    lines = [format_row(header_row), "-+-".join("-" * column_width for column_width in column_widths)]
+    for row in rows:
+        lines.append(format_row(row))
+    return "\n".join(lines)
+
+
+def print_per_region_conditional_accuracy_table(table_label, hr_regions, per_region_outcomes, numberOfClasses):
+    # Prints the class- (i.e., true-label-) conditional, prediction-conditional, and marginal accuracy of the
+    # eval instances assigned to each nested high-reliability region, with the final row ("none (0.)")
+    # collecting the instances not assigned to any region (which the caller treats as maximally uncertain).
+    # The rows partition the evaluated instances.
+    print(table_label)
+    print(f"    Cells: accuracy (n). y=c conditions on the true label; pred=c conditions on the predicted "
+          f"label.")
+    header_row = ["alpha", "marginal"]
+    header_row.extend([f"y={label}" for label in range(numberOfClasses)])
+    header_row.extend([f"pred={label}" for label in range(numberOfClasses)])
+    rows = []
+    for region_alpha in [hr_region["alpha"] for hr_region in hr_regions] + [0.0]:
+        outcomes = per_region_outcomes[region_alpha]
+        row = ["none (0.)" if region_alpha == 0.0 else f"{region_alpha}"]
+        row.append(get_accuracy_cell(outcomes["marginal"]))
+        row.extend([get_accuracy_cell(outcomes["by_true"][label]) for label in range(numberOfClasses)])
+        row.extend([get_accuracy_cell(outcomes["by_pred"][label]) for label in range(numberOfClasses)])
+        rows.append(row)
+    print(format_ascii_table(header_row, rows))
+
+
+def get_accuracy_and_proportion_cell(outcomes, total_instances):
+    # outcomes is a list of booleans; the rendered cell is "accuracy (percent_of_total%=count)", where the
+    # percentage is out of the total evaluated instances, with "--" for an empty list:
+    if len(outcomes) == 0:
+        return f"-- (0.0%=0)"
+    return f"{np.mean(outcomes):.4f} ({100 * len(outcomes) / total_instances:.1f}%={len(outcomes)})"
+
+
+def print_cumulative_region_conditional_accuracy_table(table_label, hr_regions, per_region_outcomes,
+                                                       numberOfClasses, total_instances):
+    # The cumulative counterpart to print_per_region_conditional_accuracy_table(): each row "alpha >= x" is
+    # the union of the instances assigned to the regions with alpha >= x (i.e., unions of rungs down the
+    # ladder), which is the operating-point view for a caller that accepts any region at or above a given
+    # alpha. The parenthetical percentage in each cell is the count as a proportion of the total evaluated
+    # instances, so within a row, the y=c (and, respectively, pred=c) percentages sum to the marginal
+    # percentage. The complement of the final row is the set of instances not assigned to any region.
+    print(table_label)
+    print(f"    Cells: accuracy (percent of the {total_instances} evaluated instances=n). y=c conditions on "
+          f"the true label; pred=c conditions on the predicted label.")
+    if len(hr_regions) == 0:
+        print(f"    (No recorded regions.)")
+        return
+    header_row = ["alpha", "marginal"]
+    header_row.extend([f"y={label}" for label in range(numberOfClasses)])
+    header_row.extend([f"pred={label}" for label in range(numberOfClasses)])
+    cumulative_outcomes = {"marginal": [],
+                           "by_true": {label: [] for label in range(numberOfClasses)},
+                           "by_pred": {label: [] for label in range(numberOfClasses)}}
+    rows = []
+    for hr_region in hr_regions:
+        region_outcomes = per_region_outcomes[hr_region["alpha"]]
+        cumulative_outcomes["marginal"].extend(region_outcomes["marginal"])
+        for label in range(numberOfClasses):
+            cumulative_outcomes["by_true"][label].extend(region_outcomes["by_true"][label])
+            cumulative_outcomes["by_pred"][label].extend(region_outcomes["by_pred"][label])
+        row = [f">= {hr_region['alpha']}"]
+        row.append(get_accuracy_and_proportion_cell(cumulative_outcomes["marginal"], total_instances))
+        row.extend([get_accuracy_and_proportion_cell(cumulative_outcomes["by_true"][label], total_instances)
+                    for label in range(numberOfClasses)])
+        row.extend([get_accuracy_and_proportion_cell(cumulative_outcomes["by_pred"][label], total_instances)
+                    for label in range(numberOfClasses)])
+        rows.append(row)
+    print(format_ascii_table(header_row, rows))
+
+
 def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None):
     print(f"###############Beginning of evaluation###############")
     if iteration_model_dir is None:
@@ -53,10 +146,10 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
               f"Train from scratch or run --options.recalibrate_with_updated_alpha. Exiting.")
         exit()
 
-    if model.alpha != options.alpha:
-        print(f"The alpha value used for calibration was {model.alpha}, but "
-              f"{options.alpha} was requested. "
-              f"Run --options.recalibrate_with_updated_alpha to recalibrate based on the new value. "
+    if model.alpha_resolution != options.alpha_resolution:
+        print(f"The alpha_resolution used for calibration was {model.alpha_resolution}, but "
+              f"{options.alpha_resolution} was requested. "
+              f"Run --options.recalibrate_with_updated_alpha_resolution to recalibrate based on the new value. "
               f"Exiting.")
         exit()
 
@@ -67,28 +160,31 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
         print("--options.is_training_support was provided, so the calculations of Similarity will assume the "
               "first match is identity.")
 
-    print(f"Reference: Across iterations: Rescaled Similarity (q') to determine the high reliability region:"
-          f" {global_uncertainty_statistics.min_rescaled_similarity_across_iterations}")
-
-    print(f"Rescaled Similarity (q') to determine the high reliability region: "
-          f"{model.min_rescaled_similarity_to_determine_high_reliability_region}")
     global_uncertainty_statistics.validate_min_rescaled_similarities()
 
-    hr_output_thresholds = model.hr_output_thresholds.detach().cpu().tolist()
-    print(f"Thresholds (psi) to determine the high reliability region: "
-          f"{hr_output_thresholds}")
+    hr_region_stats = model.get_most_conservative_high_reliability_region_stats()
+    alpha_prime = hr_region_stats["most_conservative_hr_alpha"]
+    print(f"For this chosen model iteration:")
+    print(f'\tMost conservative alpha to determine the high reliability region: {alpha_prime}, '
+          f'\n\tCorresponding q\'_min: {hr_region_stats["most_conservative_hr_min_rescaled_similarity"]},'
+          f'\n\tCorresponding class-wise thresholds (psi): {hr_region_stats["most_conservative_hr_output_thresholds"]}')
 
     print(f"Embedding summary stats (for normalization): {model.training_embedding_summary_stats}")
-    print(f"Estimated class-conditional accuracy over calibration for the High Reliability region: "
-          f"{model.hr_class_conditional_accuracy}")
-    alpha_prime = options.alpha
-    print(f"alpha={alpha_prime}")
-    test_meta_data, _ = \
-        utils_preprocess.get_metadata_lines(options, options.input_eval_set_file,
-                                            reduce=False,
-                                            use_embeddings=options.use_embeddings,
-                                            concat_embeddings_to_attributes=options.concat_embeddings_to_attributes,
-                                            calculate_summary_stats=False, is_training=False)
+
+    if getattr(options, "eval_on_best_iteration_calibration_split", False):
+        # Evaluate on the calibration split of the best training iteration, reconstructed from the split
+        # indices saved during training with converted dataset directories as input
+        # (--input_eval_set_file is ignored in this case):
+        print(f"Evaluating on the best-iteration calibration split reconstructed from "
+              f"{os.path.join(options.model_dir, 'best_iteration_data')}")
+        test_meta_data = utils_preprocess.load_best_iteration_calibration_split(options.model_dir)
+    else:
+        test_meta_data, _ = \
+            utils_preprocess.get_metadata_lines(options, options.input_eval_set_file,
+                                                reduce=False,
+                                                use_embeddings=options.use_embeddings,
+                                                concat_embeddings_to_attributes=options.concat_embeddings_to_attributes,
+                                                calculate_summary_stats=False, is_training=False)
     test_embeddings = test_meta_data["embeddings"]
     test_labels = torch.tensor(test_meta_data["labels"])
     assert test_embeddings.shape[0] == test_labels.shape[0]
@@ -197,6 +293,20 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
         prediction_conditional_accuracy_filtered__softmax_of_f_by_alpha_prime[label] = []
         prediction_conditional_accuracy_filtered__sdm_by_alpha_prime[label] = []
 
+    # Per-region (nested alpha ladder) conditional accuracy summary stats, for the tables printed at the end
+    # of evaluation. The keys are the exact region alpha values (which are exactly representable, so the
+    # per-instance "hr_region_alpha"/"hr_region_alpha_lower" values match exactly), with the key 0.0
+    # collecting the instances not assigned to any region:
+    per_region_outcomes__sdm_by_hr_region = {}
+    per_region_outcomes__sdm_by_hr_region_lower = {}
+    for region_alpha in [hr_region["alpha"] for hr_region in model.hr_regions] + [0.0]:
+        for per_region_outcomes in (per_region_outcomes__sdm_by_hr_region,
+                                    per_region_outcomes__sdm_by_hr_region_lower):
+            per_region_outcomes[region_alpha] = {
+                "marginal": [],
+                "by_true": {label: [] for label in range(model.numberOfClasses)},
+                "by_pred": {label: [] for label in range(model.numberOfClasses)}}
+
     # for plotting
     # all_prediction_meta_data = []
     # end for plotting
@@ -267,6 +377,17 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
         class_conditional_accuracy[true_test_label].append(predicted_class == true_test_label)
         prediction_conditional_accuracy[predicted_class].append(predicted_class == true_test_label)
 
+        # Per-region (nested alpha ladder) summary stats, keyed by the exact assigned region alpha
+        # (0.0 for instances not assigned to any region):
+        for assigned_region_alpha, per_region_outcomes in (
+                (prediction_meta_data["hr_region_alpha"], per_region_outcomes__sdm_by_hr_region),
+                (prediction_meta_data["hr_region_alpha_lower"], per_region_outcomes__sdm_by_hr_region_lower)):
+            per_region_outcomes[assigned_region_alpha]["marginal"].append(predicted_class == true_test_label)
+            per_region_outcomes[assigned_region_alpha]["by_true"][true_test_label].append(
+                predicted_class == true_test_label)
+            per_region_outcomes[assigned_region_alpha]["by_pred"][predicted_class].append(
+                predicted_class == true_test_label)
+
         if prediction_meta_data["is_ood"]:
             class_conditional_accuracy__is_ood_sdm[true_test_label].append(predicted_class == true_test_label)
         if not prediction_meta_data["is_ood"] and not prediction_meta_data["is_high_reliability_region"]:
@@ -291,8 +412,8 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
             json_obj["sdm_output_d_upper"] = \
                 prediction_meta_data['sdm_output_d_upper'].detach().cpu().numpy().tolist()
             # convenience for constructing/analyzing ensembles:
-            json_obj["hr_output_thresholds"] = hr_output_thresholds
-            json_obj["q_prime_min"] = model.min_rescaled_similarity_to_determine_high_reliability_region
+            json_obj["hr_region_alpha"] = prediction_meta_data["hr_region_alpha"]
+            json_obj["hr_region_alpha_lower"] = prediction_meta_data["hr_region_alpha_lower"]
 
         if prediction_meta_data["is_high_reliability_region"]:  # HR region
             class_conditional_accuracy_filtered__sdm_by_hr_region[true_test_label].append(
@@ -609,4 +730,25 @@ def test(options, main_device, iteration_model_dir=None, id2ensemble_stats=None)
                     latex_rows_dict_no_reject, latex_rows_dict_softmax_f,
                     latex_rows_dict_softmax_df, latex_rows_dict_sdm, latex_rows_dict_sdm_hr,
                     latex_rows_dict_sdm_hr_lower)
+
+    for hr_region in model.hr_regions:
+        print(hr_region)
+
+    print("")
+    print_per_region_conditional_accuracy_table(
+        'Per-region conditional accuracy: HR region assignment ("hr_region_alpha")',
+        model.hr_regions, per_region_outcomes__sdm_by_hr_region, model.numberOfClasses)
+    print("")
+    print_per_region_conditional_accuracy_table(
+        'Per-region conditional accuracy: HR^{lower} region assignment ("hr_region_alpha_lower")',
+        model.hr_regions, per_region_outcomes__sdm_by_hr_region_lower, model.numberOfClasses)
+    print("")
+    print_cumulative_region_conditional_accuracy_table(
+        'Cumulative conditional accuracy: HR region assignment ("hr_region_alpha")',
+        model.hr_regions, per_region_outcomes__sdm_by_hr_region, model.numberOfClasses, test_set_size)
+    print("")
+    print_cumulative_region_conditional_accuracy_table(
+        'Cumulative conditional accuracy: HR^{lower} region assignment ("hr_region_alpha_lower")',
+        model.hr_regions, per_region_outcomes__sdm_by_hr_region_lower, model.numberOfClasses, test_set_size)
+
     return id2ensemble_stats

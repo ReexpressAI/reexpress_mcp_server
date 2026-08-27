@@ -20,18 +20,35 @@ from collections import namedtuple
 #     Note that the class-wise CDFs for d_nearest are calculated excluding q=0 instances, which are considered OOD.
 #     They are considered OOD because with q=0, the distance to the nearest match is undefined,
 #     since the nearest match is not a similar instance, by definition.
-# 2. Calculate the thresholds (over calibration) to detect the high-reliability region. This will result in
-#    a min threshold on q' (the rescaled Similarity value) and class-wise output thresholds.
+# 2. Calculate the thresholds (over calibration) to detect the high-reliability regions. In this version, we
+#    consider multiple regions (corresponding to decreasing values of alpha, each time re-running Alg. 1). I.e., this
+#    is a descending-alpha loop: Alg. 1 is run at alpha = 1 - alpha_resolution, and if q'_min is finite, the
+#    (alpha, q'_min, class-wise output thresholds) triple is recorded and the calibration points that are
+#    members of that region (q' >= q'_min with a singleton prediction set via the thresholds, exactly as at
+#    test-time) are excluded; Alg. 1 is then altogether re-run at the next lower alpha (decremented by
+#    alpha_resolution) as if those points are gone, continuing while alpha > 0.5 (as required by Alg. 1).
+#    Rungs of the ladder without a finite q'_min are skipped without exclusion. (To put it another way, if alpha=0.9,
+#    but a suitable q'_min is not found, alpha is decremented and Alg. 1 is rerun again with that lower value of
+#    alpha.) Alg. 1 determines the region
+#    boundaries: the q'_min and threshold values of lower alpha regions may be higher or lower than those of
+#    the higher HR regions. The recorded regions in self.hr_regions are the sole source of the region
+#    parameters (the alpha values, the class-wise output thresholds, and the per-region q'_min values).
+#    This is described in the research note "Nested Similarity-Distance-Magnitude Estimators".
 # 3. Collect the sample size summary statistics. The effective sample
 #    size is assumed to be increasing in q', class-wise over the calibration set. In high-risk settings, it is
 #    recommended to also explicitly take into account the error from the effective sample size.
 #
 # At test-time (as calculated for a single instance in `single_pass_forward`):
-#     1. Calculate the SDM High Reliability region (centroid and lower).
+#     1. Calculate the SDM High Reliability region (centroid and lower), as well as the nested-region
+#         assignments ("hr_region_alpha" and "hr_region_alpha_lower"): the most conservative (i.e., closest
+#         to 1) alpha among the recorded regions whose gates the instance passes, with 0 indicating that no
+#         region's gates pass. For each region, the DKW error term used for the lower assignment is pinned to
+#         that region's alpha.
 #     2. The non-rejected points from (1) are those suitable for final decision-making. If needed to triage the
 #         remedial actions of the rejected points, the output from sdm() can be used directly with the
 #         understanding that the estimates are of unspecified reliability. The
-#         points with floor(q') == 0 are strictly OOD.
+#         points with floor(q') == 0 and/or d=0 are strictly OOD, but the typical convention is to also treat any
+#         point not assigned to a class- and prediction-conditional region with alpha > 0.5 to also be effectively OOD.
 
 
 ModelCalibrationTrainingStage = namedtuple("ModelCalibrationTrainingStage",
@@ -47,18 +64,17 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                  train_labels,
                  train_predicted_labels,
                  train_uuids,
-                 cdfThresholdTolerance: float = constants.defaultCdfThresholdTolerance,
                  exemplar_vector_dimension: int = constants.keyModelDimension,
                  trueClass_To_dCDF = None,
                  trueClass_To_qCumulativeSampleSizeArray = None,
-                 hr_output_thresholds = None,
-                 hr_class_conditional_accuracy: float = 0.0,
-                 alpha: float = constants.defaultCdfAlpha,
                  maxQAvailableFromIndexer: int = constants.maxQAvailableFromIndexer,
                  calibration_training_stage: int = 0,
-                 min_rescaled_similarity_to_determine_high_reliability_region: int = torch.inf,
                  training_embedding_summary_stats = None,
                  is_sdm_network_verification_layer=False,
+                 # Resolution of the nested high-reliability regions: Alg. 1 is run at
+                 # alpha = 1 - k*alpha_resolution for k = 1, 2, ..., while alpha > 0.5.
+                 alpha_resolution: float = constants.defaultAlphaResolution,
+                 hr_regions=None,
                  # the following can be None at test-time to save memory, if desired:
                  calibration_labels = None,
                  calibration_predicted_labels = None,
@@ -74,7 +90,6 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
         self.version = version
         self.uncertaintyModelUUID = uncertaintyModelUUID
-        self.cdfThresholdTolerance = cdfThresholdTolerance  # TODO: This is no longer used.
         self.numberOfClasses = numberOfClasses
 
         # If shuffled, all must be shuffled together.
@@ -96,7 +111,10 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         if calibration_is_ood_indicators is None:
             self.calibration_is_ood_indicators = []
         else:
-            self.calibration_is_ood_indicators = calibration_is_ood_indicators  # list: 0 == not OOD; 1 == is OOD
+            # The semantics of "OOD" (as used elsewhere in eval) has changed from earlier versions, but
+            # specifically, this list records for reference during training:
+            # 0 if q != 0 and 1 if q == 0
+            self.calibration_is_ood_indicators = calibration_is_ood_indicators
 
         if trueClass_To_dCDF is None:
             self.trueClass_To_dCDF = {}
@@ -117,16 +135,17 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
         self.q_rescale_offset = constants.q_rescale_offset  # This typically should not change.
         self.ood_limit = constants.ood_limit  # This typically should not change.
-        self.min_rescaled_similarity_to_determine_high_reliability_region = \
-            min_rescaled_similarity_to_determine_high_reliability_region
 
-        self.hr_output_thresholds = hr_output_thresholds
-        if self.hr_output_thresholds is None:
-            self.hr_output_thresholds = torch.zeros(self.numberOfClasses)
-
-        # hr_class_conditional_accuracy is applied per-class, but the value itself is constant across classes.
-        self.hr_class_conditional_accuracy = hr_class_conditional_accuracy
-        self.alpha = alpha
+        self.alpha_resolution = alpha_resolution
+        # Nested high-reliability regions ("alpha ladder"), sorted descending by alpha. Each element is a dict:
+        # {"alpha": float, "min_rescaled_similarity": float,
+        #  "output_thresholds": torch.Tensor of shape [numberOfClasses]}.
+        # self.hr_regions is the sole source of the region parameters (the alpha values, the class-wise output
+        # thresholds, and the per-region q'_min values). See calculateOutputThresholdsAdaptive().
+        if hr_regions is None:
+            self.hr_regions = []
+        else:
+            self.hr_regions = hr_regions
 
         self.exemplar_vector_dimension = exemplar_vector_dimension
         self.embedding_size = embedding_size
@@ -154,6 +173,16 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     @property
     def on_gpu(self):
         return self.device.type == 'cuda'
+
+    def get_most_conservative_high_reliability_region_stats(self):
+        if len(self.hr_regions) > 0:
+            return {"most_conservative_hr_alpha": self.hr_regions[0]["alpha"],
+                    "most_conservative_hr_output_thresholds": self.hr_regions[0]["output_thresholds"],
+                    "most_conservative_hr_min_rescaled_similarity": self.hr_regions[0]["min_rescaled_similarity"]}
+        else:
+            return {"most_conservative_hr_alpha": 0.0,
+                    "most_conservative_hr_output_thresholds": torch.zeros(self.numberOfClasses),
+                    "most_conservative_hr_min_rescaled_similarity": torch.inf}
 
     def increment_model_calibration_training_stage(self, set_value=None):
         self.calibration_training_stage = set_value
@@ -355,34 +384,49 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
     def getCdfThresholdForClass(self, normalized_output_for_true_class, alpha):
         if len(normalized_output_for_true_class) > 0:
-            return max(self.get_quantile(normalized_output_for_true_class, 1 - alpha), 0.0)
+            # Note: round() guards against float accumulation in the quantile proportion (e.g.,
+            # 1 - 0.9 = 0.09999999999999998), which would otherwise truncate the quantile index down by one
+            # order statistic in get_quantile() for some alpha values:
+            return max(self.get_quantile(normalized_output_for_true_class, round(1 - alpha, 10)), 0.0)
         return 0.0  # conservative (no information about class, so always included)
 
-    def calculateOutputThresholdsAdaptive(self, trueClass_To_rescaled_OutputCDF_non_ood, all_bins):
-        # Alg. 1 in 'SDM Activations'.
+    def get_ladder_alphas(self):
+        # The descending alpha values at which Alg. 1 in 'SDM Activations' is run to construct the nested
+        # high-reliability regions: alpha = 1 - k*self.alpha_resolution, for k = 1, 2, ..., stopping before
+        # alpha <= 0.5, since Alg. 1 requires alpha in (0.5, 1.0]. For example, with the default
+        # alpha_resolution of 0.05: [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55].
+        assert 0.0 < self.alpha_resolution < 0.5, \
+            f"ERROR: --alpha_resolution must be in (0, 0.5), so that at least one alpha value " \
+            f"(1 - k*alpha_resolution, for k = 1, 2, ...) is in (0.5, 1.0], as required by Alg. 1 in " \
+            f"'SDM Activations'"
+        ladder_alphas = []
+        k = 1
+        while True:
+            # Round to guard against float accumulation (e.g., 0.55000000000000004):
+            candidate_alpha = round(1.0 - k * self.alpha_resolution, 10)
+            if candidate_alpha <= 0.5:
+                break
+            ladder_alphas.append(candidate_alpha)
+            k += 1
+        return ladder_alphas
+
+    def calculateOutputThresholdsForAlpha(self, trueClass_To_rescaled_OutputCDF_non_ood, all_bins, alpha):
+        # The single-alpha search of Alg. 1 in 'SDM Activations', over the provided (possibly residual) points.
         # Note: trueClass_To_rescaled_OutputCDF_non_ood must have values from a
         # categorical distribution for this to be valid.
-
-        # Note: If additional resolution is needed via multiple concurrent alpha values, a conservative option would be
-        # to successively exclude the points in each higher region when running Alg. 1 for the next lower alpha value.
-        # A point would then be assigned to the region of the most conservative (i.e., closer to 1) alpha
-        # in which it is a member. This is not currently implemented here. (The interpretation of the region would
-        # then be different for the regions constructed from alpha values less than
-        # that which is nearest 1: It would correspond to ~"at least the given alpha when excluding all points
-        # in the higher regions", which we leave to future work.) If this is desired, an implementation
-        # (and interpretation) detail to keep in mind is that the resulting q'_min values may not be finite for all
-        # chosen alpha values for a given dataset/model; in other words, some of the resulting ~"HR at the given alpha"
-        # regions may not be defined (as in the case of a single HR region).
-        if len(all_bins) is None:
-            print(constants.ERROR_MESSAGES_NO_THRESHOLD_FOUND)
-            return
+        # Note: This function destructively reduces the provided trueClass_To_rescaled_OutputCDF_non_ood
+        # structure (as an optimization, since the candidate bins are ascending), so the caller should provide
+        # a (shallow) per-rung copy if the structure is to be reused, as in calculateOutputThresholdsAdaptive().
+        # No class properties are set here; this returns the tuple (q'_min, thresholds, diagnostics), with
+        # (torch.inf, None, diagnostics) if no finite q'_min obtains the class-wise thresholds at the given
+        # alpha. The diagnostics dictionary records the best achievable value (over the candidate bins) of the
+        # minimum class-wise threshold, which determines acceptance (torch.all(thresholds >= alpha) is
+        # equivalent to torch.min(thresholds) >= alpha), so that skipped rungs of the nested construction are
+        # inspectable (see calculateOutputThresholdsAdaptive()).
         all_bins = list(set(all_bins))
         all_bins.sort()
-        # Reset the existing class properties, if present:
-        self.hr_class_conditional_accuracy = 0.0
-        self.hr_output_thresholds = torch.zeros(self.numberOfClasses)
-        self.min_rescaled_similarity_to_determine_high_reliability_region = torch.inf
-
+        diagnostics = {"best_min_class_threshold": -torch.inf, "best_candidate_bin": None,
+                       "best_output_thresholds": None}
         for candidate_bin in all_bins:
             trueClass_To_CDF = {}
             for trueLabel in range(self.numberOfClasses):
@@ -403,27 +447,134 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                 if trueLabel in trueClass_To_CDF:
                     rescaled_outputs = trueClass_To_CDF[trueLabel]
                     threshold = self.getCdfThresholdForClass(normalized_output_for_true_class=rescaled_outputs,
-                                                             alpha=self.alpha)
+                                                             alpha=alpha)
                     thresholds[trueLabel] = threshold
-            if torch.all(thresholds >= self.alpha):
-                self.hr_output_thresholds = thresholds
-                self.min_rescaled_similarity_to_determine_high_reliability_region = candidate_bin
-                self.hr_class_conditional_accuracy = self.alpha
-                print(
-                    f"Min rescaled Similarity to achieve class-conditional accuracy of {self.alpha}: "
-                    f"{self.min_rescaled_similarity_to_determine_high_reliability_region}")
-                print(f"Thresholds: {self.hr_output_thresholds}")
-                print(f"Class-conditional accuracy estimate: {self.hr_class_conditional_accuracy}")
-                break
+            min_class_threshold = torch.min(thresholds).item()
+            if min_class_threshold > diagnostics["best_min_class_threshold"]:
+                diagnostics["best_min_class_threshold"] = min_class_threshold
+                diagnostics["best_candidate_bin"] = candidate_bin
+                diagnostics["best_output_thresholds"] = thresholds
+            if torch.all(thresholds >= alpha):
+                return candidate_bin, thresholds, diagnostics
+        return torch.inf, None, diagnostics
 
-        if self.hr_class_conditional_accuracy == 0.0:
+    def calculateOutputThresholdsAdaptive(self, trueClass_To_rescaled_OutputCDF_non_ood, all_bins,
+                                          calibration_sdm_outputs=None,
+                                          calibration_rescaled_similarity_values=None):
+        # Alg. 1 in 'SDM Activations', run as a descending-alpha loop to construct nested high-reliability
+        # regions: Alg. 1 is run at each alpha of get_ladder_alphas() (from the most to the least conservative)
+        # over the residual points. If q'_min is finite at a given alpha, the
+        # (alpha, q'_min, class-wise output thresholds) triple is recorded in self.hr_regions, and the
+        # calibration points that are members of the recorded region (i.e., q' >= q'_min with a singleton
+        # prediction set determined by the thresholds, exactly as at test-time; see
+        # get_high_reliability_region_indicator_vectorized()) are excluded, with Alg. 1 then re-run over the
+        # remaining points at the next lower alpha. If q'_min is not finite at a given alpha, no points are
+        # excluded and the search continues at the next lower alpha. At test-time, a point is assigned to the
+        # region of the most conservative (i.e., closest to 1) alpha whose gates it passes (see
+        # get_hr_region_alpha_vectorized()).
+        # This is described in the research note "Nested Similarity-Distance-Magnitude Estimators".
+        assert calibration_sdm_outputs is not None and calibration_rescaled_similarity_values is not None, \
+            f"ERROR: The full calibration SDM outputs and rescaled Similarity values are required to " \
+            f"determine region membership (for exclusion) when constructing the nested regions."
+        assert calibration_sdm_outputs.dim() == 2 and \
+               calibration_sdm_outputs.shape[1] == self.numberOfClasses, \
+            f"Expected calibration_sdm_outputs of shape [N, numberOfClasses], got " \
+            f"{calibration_sdm_outputs.shape}"
+        # Normalize to a 1-D tensor (e.g., accepting a column vector of shape [N, 1]). This is required, as
+        # a non-1-D tensor would otherwise silently broadcast to an [N, N] mask in the vectorized membership
+        # evaluation below (via [N] & [N, 1]), which would incorrectly exclude every calibration point:
+        calibration_rescaled_similarity_values = calibration_rescaled_similarity_values.reshape(-1)
+        assert calibration_rescaled_similarity_values.shape[0] == calibration_sdm_outputs.shape[0], \
+            f"Expected one rescaled Similarity value per calibration row: " \
+            f"{calibration_rescaled_similarity_values.shape[0]} vs {calibration_sdm_outputs.shape[0]}"
+        # Reset the existing class properties, if present:
+        self.hr_regions = []
+        if all_bins is None or len(all_bins) == 0:
+            print(constants.ERROR_MESSAGES_NO_THRESHOLD_FOUND)
+            return
+        # Predictions over the calibration set, for determining region membership:
+        # Edge case: Note that elsewhere, we take care to use the argmax of the underlying (unrescaled) logits as the
+        # predicted class, since flips are possible when going to parity. However, it's ok here, since such
+        # cases will not survive thresholding, since alpha is required to be > 0.5.
+        calibration_predictions = torch.argmax(calibration_sdm_outputs, dim=1)
+
+        residual_trueClass_To_rescaled_OutputCDF_non_ood = {}
+        for trueLabel in trueClass_To_rescaled_OutputCDF_non_ood:
+            residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel] = \
+                list(trueClass_To_rescaled_OutputCDF_non_ood[trueLabel])
+
+        for ladder_alpha in self.get_ladder_alphas():
+            # The candidate bins are the rescaled Similarity values present among the residual points:
+            residual_bins = []
+            for trueLabel in residual_trueClass_To_rescaled_OutputCDF_non_ood:
+                for tuple_of_output_and_rescaled_similarity in \
+                        residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel]:
+                    residual_bins.append(tuple_of_output_and_rescaled_similarity[1])
+            if len(residual_bins) == 0:
+                # all points have been excluded by the higher regions
+                print(f"The residual is empty (all remaining calibration points were members of the higher "
+                      f"regions); ending the nested search before alpha={ladder_alpha}.")
+                break
+            # A per-rung shallow copy, since calculateOutputThresholdsForAlpha() reduces its argument:
+            rung_trueClass_To_rescaled_OutputCDF_non_ood = {}
+            for trueLabel in residual_trueClass_To_rescaled_OutputCDF_non_ood:
+                rung_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel] = \
+                    list(residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel])
+            residual_class_sizes = \
+                [len(residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel])
+                 for trueLabel in sorted(residual_trueClass_To_rescaled_OutputCDF_non_ood)]
+            min_rescaled_similarity, thresholds, diagnostics = \
+                self.calculateOutputThresholdsForAlpha(rung_trueClass_To_rescaled_OutputCDF_non_ood,
+                                                       residual_bins, ladder_alpha)
+            if min_rescaled_similarity != torch.inf:
+                self.hr_regions.append({"alpha": ladder_alpha,
+                                        "min_rescaled_similarity": min_rescaled_similarity,
+                                        "output_thresholds": thresholds})
+                # Exclude the members of the recorded region before continuing to the next lower alpha. The
+                # membership criteria exactly match those applied at test-time:
+                _, is_region_member, _ = self.get_high_reliability_region_indicator_vectorized(
+                    rescaled_similarities=calibration_rescaled_similarity_values,
+                    batch_sdm_outputs=calibration_sdm_outputs,
+                    predictions=calibration_predictions,
+                    min_rescaled_similarity=min_rescaled_similarity,
+                    hr_output_thresholds=thresholds,
+                    hr_class_conditional_accuracy=ladder_alpha)
+                is_region_member_list = is_region_member.tolist()
+                for trueLabel in residual_trueClass_To_rescaled_OutputCDF_non_ood:
+                    residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel] = \
+                        [tuple_of_output_and_rescaled_similarity for tuple_of_output_and_rescaled_similarity in
+                         residual_trueClass_To_rescaled_OutputCDF_non_ood[trueLabel]
+                         if not is_region_member_list[tuple_of_output_and_rescaled_similarity[2]]]
+                print(
+                    f"Min rescaled Similarity to achieve class-conditional accuracy of {ladder_alpha}: "
+                    f"{min_rescaled_similarity} "
+                    f"(searched residual with per-class sizes {residual_class_sizes})")
+                print(f"Thresholds: {thresholds}")
+            else:
+                print(f"No finite min rescaled Similarity found at alpha={ladder_alpha}; continuing to the "
+                      f"next lower alpha without excluding points. "
+                      f"(Searched residual with per-class sizes {residual_class_sizes}; the best achievable "
+                      f"minimum class-wise threshold was {diagnostics['best_min_class_threshold']} at "
+                      f"q'={diagnostics['best_candidate_bin']}, with class-wise thresholds "
+                      f"{diagnostics['best_output_thresholds']} there, against the required {ladder_alpha}.)")
+
+        if len(self.hr_regions) > 0:
+            print(f"Class-conditional accuracy estimate of the most conservative region: "
+                  f"{self.hr_regions[0]['alpha']}")
+            print(f"Total nested high-reliability regions: {len(self.hr_regions)}, with alpha values: "
+                  f"{[hr_region['alpha'] for hr_region in self.hr_regions]}")
+        else:
             print(constants.ERROR_MESSAGES_NO_THRESHOLD_FOUND)
 
     def set_high_reliability_region_thresholds(self, calibration_sdm_outputs: torch.Tensor,
                                                calibration_rescaled_similarity_values: torch.Tensor,
                                                true_labels: torch.Tensor):
-        assert 0.5 < self.alpha <= 1.0, \
-            f"ERROR: Alg. 1 in 'SDM Activations' requires --alpha to be in (0.5, 1.0]"
+        # Note: The alpha values of the nested regions are determined by self.alpha_resolution (validated in
+        # get_ladder_alphas(), called via calculateOutputThresholdsAdaptive() below); each is in (0.5, 1.0], as
+        # required by Alg. 1 in 'SDM Activations'.
+        assert 0.0 < self.alpha_resolution < 0.5, \
+            f"ERROR: --alpha_resolution must be in (0, 0.5)"
+
         trueClass_To_sdm_outputs_non_ood = {}
 
         for label in range(self.numberOfClasses):
@@ -433,9 +584,10 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         self.eval()
         with torch.no_grad():
             self.calibration_is_ood_indicators = []  # reset OOD indicators, if present
-            for calibration_sdm_output, calibration_rescaled_similarity_value, true_label in zip(
+            for dataset_row_index, (calibration_sdm_output, calibration_rescaled_similarity_value, true_label) \
+                    in enumerate(zip(
                     calibration_sdm_outputs,
-                    calibration_rescaled_similarity_values, true_labels):
+                    calibration_rescaled_similarity_values, true_labels)):
                 true_label = true_label.item()
                 is_ood = False
                 floor_rescaled_similarity = int(calibration_rescaled_similarity_value.item())
@@ -447,7 +599,10 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                     trueClass_To_sdm_outputs_non_ood[true_label].append(
                         (
                             calibration_sdm_output[true_label].item(),
-                            calibration_rescaled_similarity_value.item()
+                            calibration_rescaled_similarity_value.item(),
+                            # the dataset row index, for region-membership exclusion when constructing the
+                            # nested regions (see calculateOutputThresholdsAdaptive()):
+                            dataset_row_index
                         )
                     )
                     all_non_ood_rescaled_similarities.append(calibration_rescaled_similarity_value.item())
@@ -457,17 +612,21 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
         assert len(self.calibration_is_ood_indicators) == self.calibration_labels.shape[0]
         total_ood = torch.sum(torch.tensor(self.calibration_is_ood_indicators))
-        print(f"Total OOD instances in the calibration set: {total_ood} "
+        print(f"Total q==0 instances in the calibration set: {total_ood} "
               f"out of {len(self.calibration_is_ood_indicators)}: "
               f"{100*(total_ood.item()/len(self.calibration_is_ood_indicators))}%")
 
         for label in range(self.numberOfClasses):
             trueClass_To_sdm_outputs_non_ood[label].sort(key=lambda x: x[1])  # sort by rescaled similarity
             self.trueClass_To_qCumulativeSampleSizeArray[label].sort()
-        self.calculateOutputThresholdsAdaptive(trueClass_To_sdm_outputs_non_ood, all_non_ood_rescaled_similarities)
+        self.calculateOutputThresholdsAdaptive(trueClass_To_sdm_outputs_non_ood, all_non_ood_rescaled_similarities,
+                                               calibration_sdm_outputs=calibration_sdm_outputs,
+                                               calibration_rescaled_similarity_values=
+                                               calibration_rescaled_similarity_values)
         self.increment_model_calibration_training_stage(set_value=modelCalibrationTrainingStages.complete)
 
-    def get_cumulative_effective_sample_sizes_and_errors_vectorized(self, rescaled_similarities: torch.Tensor):
+    def get_cumulative_effective_sample_sizes_and_errors_vectorized(self, rescaled_similarities: torch.Tensor,
+                                                                    alpha_value: float):
         """Construct a band around the per-class empirical CDFs using the DKW inequality, given the
             modeling assumption that the effective sample is increasing in the rescaled Similarity, class-wise over
             the calibration set.
@@ -476,6 +635,12 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         ----------
         rescaled_similarities : torch.Tensor
             Shape [batch_size] containing rescaled similarity values
+        alpha_value : float
+            The alpha at which the DKW error term is calculated (required; in (0.5, 1.0)). For the nested
+            regions, the error term is pinned to each region's alpha (see
+            get_hr_region_alpha_lower_vectorized()), so more conservative (higher alpha) regions require wider
+            intervals, ceteris paribus. When only the effective sample sizes are needed (they do not depend on
+            alpha_value), any valid alpha may be passed (see get_batch_eval_output_dictionary()).
 
         Returns
         -------
@@ -498,13 +663,12 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         effective_cdf_sample_size_errors = \
             torch.ones(batch_size, self.numberOfClasses, device=self.device)  # default is 1
 
-        # Calculate alpha once
-        alpha = 1 - self.alpha  # Note how alpha is defined
+        alpha = 1 - alpha_value  # Note how alpha is defined
         assert alpha < 0.5, "ERROR: The alpha value is likely misspecified. " \
                             "Check that it should not be 1-(the provided value). If such a low alpha value is " \
-                            "desired, comment this assert. Note that " \
-                            "set_high_reliability_region_thresholds() (Alg. 1 in 'SDM Activations') expects " \
-                            "self.alpha to be > 0.5."
+                            "desired, comment this assert. Note that the nested high-reliability regions " \
+                            "(Alg. 1 in 'SDM Activations') require each alpha to be > 0.5 " \
+                            "(see get_ladder_alphas())."
 
         # Process all classes
         for label in range(self.numberOfClasses):
@@ -831,7 +995,9 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         else:
             return rescaled_similarities, predictions
 
-    def get_high_reliability_region_indicator_vectorized(self, rescaled_similarities, batch_sdm_outputs, predictions):
+    def get_high_reliability_region_indicator_vectorized(self, rescaled_similarities, batch_sdm_outputs, predictions,
+                                                         min_rescaled_similarity=None, hr_output_thresholds=None,
+                                                         hr_class_conditional_accuracy=None):
         """
         Vectorized version to determine high reliability regions for a batch
 
@@ -843,6 +1009,18 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             Shape [batch_size, numberOfClasses] containing SDM outputs
         predictions : torch.Tensor
             Shape [batch_size] containing predicted class indices
+        min_rescaled_similarity : float, or None
+            If None (along with the other two region parameters below), the most conservative recorded region
+            (self.hr_regions[0]) is used, with no recorded regions yielding an all-False
+            is_high_reliability_region (floor_rescaled_similarities and is_ood are returned regardless).
+            Provide a region's value to evaluate membership in that nested region (see
+            get_hr_region_alpha_vectorized()). The three region parameters must be provided together (or all
+            omitted).
+        hr_output_thresholds : torch.Tensor, or None
+            If None, as above. Provide a region's thresholds to evaluate membership in that nested region.
+        hr_class_conditional_accuracy : float, or None
+            If None, as above. Provide a region's alpha to evaluate membership in that nested region. (A value
+            of 0.0 indicates no region is available, in which case all instances are out of the region.)
 
         Returns
         -------
@@ -853,8 +1031,30 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         is_ood : torch.Tensor
             Shape [batch_size] boolean tensor
         """
+        assert rescaled_similarities.dim() == 1, f"Expected 1D tensor, got shape {rescaled_similarities.shape}"
+        assert batch_sdm_outputs.dim() == 2 and batch_sdm_outputs.shape[0] == rescaled_similarities.shape[0], \
+            f"Expected batch_sdm_outputs of shape [batch_size, numberOfClasses], got {batch_sdm_outputs.shape}"
+        assert predictions.dim() == 1 and predictions.shape[0] == rescaled_similarities.shape[0], \
+            f"Expected 1D predictions of length {rescaled_similarities.shape[0]}, got shape {predictions.shape}"
         batch_size = rescaled_similarities.shape[0]
         device = rescaled_similarities.device
+        region_parameters = [min_rescaled_similarity, hr_output_thresholds, hr_class_conditional_accuracy]
+        assert all(parameter is None for parameter in region_parameters) or \
+               all(parameter is not None for parameter in region_parameters), \
+            f"The region parameters (min_rescaled_similarity, hr_output_thresholds, " \
+            f"hr_class_conditional_accuracy) must be provided together, or all omitted (in which case the " \
+            f"most conservative recorded region is used)."
+        if min_rescaled_similarity is None:
+            if len(self.hr_regions) > 0:
+                min_rescaled_similarity = self.hr_regions[0]["min_rescaled_similarity"]
+                hr_output_thresholds = self.hr_regions[0]["output_thresholds"]
+                hr_class_conditional_accuracy = self.hr_regions[0]["alpha"]
+            else:
+                # No recorded regions: is_high_reliability_region is all-False below
+                # (hr_output_thresholds is then never read, given the hr_class_conditional_accuracy > 0.0 and
+                # valid_bins gates):
+                min_rescaled_similarity = torch.inf
+                hr_class_conditional_accuracy = 0.0
 
         # Compute floor of rescaled similarities
         floor_rescaled_similarities = torch.floor(rescaled_similarities).long()
@@ -864,16 +1064,16 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
 
         # Check valid bin condition (not OOD AND rescaled >= min threshold)
         valid_bins = (~is_ood) & (
-                    rescaled_similarities >= self.min_rescaled_similarity_to_determine_high_reliability_region)
+                    rescaled_similarities >= min_rescaled_similarity)
 
         # Initialize high reliability region indicators as False
         is_high_reliability_region = torch.zeros(batch_size, dtype=torch.bool, device=device)
 
         # Only check singleton condition for valid bins
-        if valid_bins.any() and self.hr_class_conditional_accuracy > 0.0:
+        if valid_bins.any() and hr_class_conditional_accuracy > 0.0:
             # Ensure hr_output_thresholds is on the same device
-            thresholds = self.hr_output_thresholds.to(device) if torch.is_tensor(self.hr_output_thresholds) else \
-                torch.tensor(self.hr_output_thresholds, dtype=torch.float32, device=device)
+            thresholds = hr_output_thresholds.to(device) if torch.is_tensor(hr_output_thresholds) else \
+                torch.tensor(hr_output_thresholds, dtype=torch.float32, device=device)
 
             # Create mask where SDM outputs >= thresholds
             # Shape: [batch_size, numberOfClasses]
@@ -897,6 +1097,162 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             is_high_reliability_region = is_singleton
 
         return floor_rescaled_similarities, is_high_reliability_region, is_ood
+
+    def get_hr_region_alpha_vectorized(self, rescaled_similarities, batch_sdm_outputs, predictions):
+        """
+        Assign each instance to the most conservative (i.e., closest to 1) nested high-reliability region
+        whose gates it passes (see calculateOutputThresholdsAdaptive()). The regions in self.hr_regions are
+        sorted descending by alpha, so the first region whose gates pass is the assignment.
+
+        Parameters
+        ----------
+        rescaled_similarities : torch.Tensor
+            Shape [batch_size] containing rescaled similarity values
+        batch_sdm_outputs : torch.Tensor
+            Shape [batch_size, numberOfClasses] containing SDM outputs
+        predictions : torch.Tensor
+            Shape [batch_size] containing predicted class indices
+
+        Returns
+        -------
+        hr_region_alphas : torch.Tensor
+            Shape [batch_size] containing the alpha of the assigned region for each instance, with 0.
+            indicating that no region's gates pass (i.e., a rejected point).
+        """
+        batch_size = rescaled_similarities.shape[0]
+        # float64, so that the exact decimal ladder alpha values (e.g., 0.85) are preserved in the returned
+        # values (and downstream JSON serialization), rather than the nearest float32 (e.g., 0.8500000238...):
+        hr_region_alphas = torch.zeros(batch_size, dtype=torch.float64, device=rescaled_similarities.device)
+        for hr_region in self.hr_regions:
+            _, is_in_region, _ = self.get_high_reliability_region_indicator_vectorized(
+                rescaled_similarities=rescaled_similarities,
+                batch_sdm_outputs=batch_sdm_outputs,
+                predictions=predictions,
+                min_rescaled_similarity=hr_region["min_rescaled_similarity"],
+                hr_output_thresholds=hr_region["output_thresholds"],
+                hr_class_conditional_accuracy=hr_region["alpha"])
+            newly_assigned = is_in_region.to(hr_region_alphas.device) & (hr_region_alphas == 0.)
+            hr_region_alphas[newly_assigned] = hr_region["alpha"]
+        return hr_region_alphas
+
+    def get_hr_region_alpha_lower_vectorized(self, rescaled_similarities, predictions, batch_f, batch_q,
+                                             batch_distance_quantile_per_class):
+        """
+        The lower (DKW-band) counterpart to get_hr_region_alpha_vectorized(): assign each instance to the most
+        conservative nested region whose gates it passes when the Distance quantile is replaced by its lower
+        estimate given the effective sample size. For each region, the DKW error term is pinned to that
+        region's alpha, so more conservative (higher alpha) regions require wider intervals, ceteris paribus,
+        while the less stringent claims of the lower alpha regions are not subjected to vacuously wide bounds.
+        The SDM output, and by extension the rescaled Similarity (q'_{lower}), are recalculated per-region
+        accordingly.
+
+        In addition to the assignment, the per-instance band quantities are returned, selected at the alpha of
+        each instance's assigned region (i.e., the values with which the instance's banded admission actually
+        holds). Instances not assigned to any region reflect maximum uncertainty: the error term is 1 (the
+        maximum, matching the default of get_cumulative_effective_sample_sizes_and_errors_vectorized()), so
+        after clamping, d_lower = 0 and d_upper = 1, the corresponding lower SDM output goes to parity, and
+        q'_{lower} follows accordingly.
+
+        Parameters
+        ----------
+        rescaled_similarities : torch.Tensor
+            Shape [batch_size] containing the (centroid) rescaled similarity values, from which the effective
+            sample sizes are estimated
+        predictions : torch.Tensor
+            Shape [batch_size] containing predicted class indices
+        batch_f : torch.Tensor
+            Shape [batch_size, numberOfClasses] containing the un-normalized logits (z')
+        batch_q : torch.Tensor
+            Shape [batch_size, 1] containing the Similarity (q) values
+        batch_distance_quantile_per_class : torch.Tensor
+            Shape [batch_size, numberOfClasses] containing the (centroid) Distance quantiles
+
+        Returns
+        -------
+        hr_region_alphas_lower : torch.Tensor
+            Shape [batch_size] (float64, so that the exact decimal ladder alpha values are preserved)
+            containing the alpha of the assigned region for each instance, with 0. indicating that no region's
+            gates pass (i.e., a rejected point).
+        selected_effective_cdf_sample_size_error : torch.Tensor
+            Shape [batch_size, numberOfClasses]
+        selected_batch_d_cdf_lower : torch.Tensor
+            Shape [batch_size, numberOfClasses]
+        selected_batch_d_cdf_upper : torch.Tensor
+            Shape [batch_size, numberOfClasses]
+        selected_batch_sdm_d_cdf_lower : torch.Tensor
+            Shape [batch_size, numberOfClasses]
+        selected_batch_sdm_d_cdf_upper : torch.Tensor
+            Shape [batch_size, numberOfClasses]
+        selected_rescaled_similarities_lower : torch.Tensor
+            Shape [batch_size]
+        """
+        batch_size = rescaled_similarities.shape[0]
+        hr_region_alphas_lower = torch.zeros(batch_size, dtype=torch.float64,
+                                             device=rescaled_similarities.device)
+        # Initialize the selected quantities with the maximum-uncertainty band (an error term of 1), which is
+        # retained for any instance that is not assigned to a region:
+        selected_effective_cdf_sample_size_error = torch.ones(batch_size, self.numberOfClasses,
+                                                              device=self.device)
+        selected_batch_d_cdf_lower, selected_batch_d_cdf_upper, \
+            selected_batch_sdm_d_cdf_lower, selected_batch_sdm_d_cdf_upper = \
+            self.get_sdm_output_for_d_cdf_lower_and_upper(
+                batch_effective_cdf_sample_size_error=
+                selected_effective_cdf_sample_size_error.to(batch_f.device),
+                batch_f=batch_f,
+                batch_q=batch_q,
+                batch_distance_quantile_per_class=batch_distance_quantile_per_class)
+        selected_rescaled_similarities_lower, _ = \
+            self.get_rescaled_similarity_for_eval_batch(
+                cached_f_outputs=batch_f,
+                dataset_q_values=batch_q,
+                sdm_outputs=selected_batch_sdm_d_cdf_lower,
+                return_tensors_on_cpu=False)
+        for hr_region in self.hr_regions:
+            _, effective_cdf_sample_size_error = \
+                self.get_cumulative_effective_sample_sizes_and_errors_vectorized(
+                    rescaled_similarities=rescaled_similarities,
+                    alpha_value=hr_region["alpha"])
+            batch_d_cdf_lower, batch_d_cdf_upper, batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper = \
+                self.get_sdm_output_for_d_cdf_lower_and_upper(
+                    batch_effective_cdf_sample_size_error=effective_cdf_sample_size_error.to(batch_f.device),
+                    batch_f=batch_f,
+                    batch_q=batch_q,
+                    batch_distance_quantile_per_class=batch_distance_quantile_per_class)
+            rescaled_similarities_lower, _ = \
+                self.get_rescaled_similarity_for_eval_batch(
+                    cached_f_outputs=batch_f,
+                    dataset_q_values=batch_q,
+                    sdm_outputs=batch_sdm_d_cdf_lower,
+                    return_tensors_on_cpu=False)
+            _, is_in_region_lower, _ = self.get_high_reliability_region_indicator_vectorized(
+                rescaled_similarities=rescaled_similarities_lower,
+                batch_sdm_outputs=batch_sdm_d_cdf_lower,
+                predictions=predictions.to(batch_sdm_d_cdf_lower.device),
+                min_rescaled_similarity=hr_region["min_rescaled_similarity"],
+                hr_output_thresholds=hr_region["output_thresholds"],
+                hr_class_conditional_accuracy=hr_region["alpha"])
+            newly_assigned = is_in_region_lower.to(hr_region_alphas_lower.device) & (hr_region_alphas_lower == 0.)
+            hr_region_alphas_lower[newly_assigned] = hr_region["alpha"]
+            # Select this region's band quantities for the newly assigned instances:
+            newly_assigned_error_device = newly_assigned.to(selected_effective_cdf_sample_size_error.device)
+            selected_effective_cdf_sample_size_error[newly_assigned_error_device] = \
+                effective_cdf_sample_size_error[newly_assigned_error_device]
+            newly_assigned_band_device = newly_assigned.to(selected_batch_d_cdf_lower.device)
+            selected_batch_d_cdf_lower[newly_assigned_band_device] = \
+                batch_d_cdf_lower[newly_assigned_band_device]
+            selected_batch_d_cdf_upper[newly_assigned_band_device] = \
+                batch_d_cdf_upper[newly_assigned_band_device]
+            selected_batch_sdm_d_cdf_lower[newly_assigned_band_device] = \
+                batch_sdm_d_cdf_lower[newly_assigned_band_device]
+            selected_batch_sdm_d_cdf_upper[newly_assigned_band_device] = \
+                batch_sdm_d_cdf_upper[newly_assigned_band_device]
+            newly_assigned_rescaled_device = newly_assigned.to(selected_rescaled_similarities_lower.device)
+            selected_rescaled_similarities_lower[newly_assigned_rescaled_device] = \
+                rescaled_similarities_lower[newly_assigned_rescaled_device]
+        return hr_region_alphas_lower, selected_effective_cdf_sample_size_error, \
+            selected_batch_d_cdf_lower, selected_batch_d_cdf_upper, \
+            selected_batch_sdm_d_cdf_lower, selected_batch_sdm_d_cdf_upper, \
+            selected_rescaled_similarities_lower
 
     def get_sdm_output_for_d_cdf_lower_and_upper(self, batch_effective_cdf_sample_size_error, batch_f, batch_q,
                                                  batch_distance_quantile_per_class):
@@ -931,33 +1287,51 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                     batch_sdm_outputs=sdm_batch_outputs,
                     predictions=predictions.to(sdm_batch_outputs.device))
 
-            cumulative_effective_sample_sizes, effective_cdf_sample_size_error = \
+            # Effective sample sizes (these are alpha-independent; reported for reference). The error term of
+            # the returned pair is discarded here: the per-instance error terms are instead selected at the
+            # alpha of each instance's assigned region below. Since alpha_value only affects the
+            # error term (which is discarded here),
+            # the ladder's most conservative alpha is passed to satisfy the required argument:
+            cumulative_effective_sample_sizes, _ = \
                 self.get_cumulative_effective_sample_sizes_and_errors_vectorized(
-                    rescaled_similarities=rescaled_similarities)
+                    rescaled_similarities=rescaled_similarities,
+                    alpha_value=self.get_ladder_alphas()[0])
 
-            batch_d_cdf_lower, batch_d_cdf_upper, batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper = \
-                self.get_sdm_output_for_d_cdf_lower_and_upper(
-                    batch_effective_cdf_sample_size_error=effective_cdf_sample_size_error.to(batch_f.device),
+            # The current convention assumes self.ood_limit == 0 (e.g., the is_ood return values of the
+            # indicator calls inside the helpers below are equivalent to is_ood_tensor above). We check that
+            # assumption here in case it changes in the future:
+            assert self.ood_limit == 0, "The current convention assumes self.ood_limit == 0."
+            # Nested-region assignments: the most conservative alpha among the recorded regions whose gates
+            # pass, with 0 indicating rejection at all recorded regions. For the lower counterpart, the DKW
+            # error term is pinned to each region's alpha, and the per-instance band quantities
+            # (effective_cdf_sample_size_error, batch_d_cdf_lower/upper, batch_sdm_d_cdf_lower/upper, and
+            # rescaled_similarities_lower) are those of each instance's assigned region, with instances not
+            # assigned to any region reflecting maximum uncertainty (an error term of 1, so d_lower = 0 and
+            # d_upper = 1 after clamping, with the lower SDM output at parity):
+            hr_region_alpha_tensor = self.get_hr_region_alpha_vectorized(
+                rescaled_similarities=rescaled_similarities,
+                batch_sdm_outputs=sdm_batch_outputs,
+                predictions=predictions.to(sdm_batch_outputs.device))
+            hr_region_alpha_lower_tensor, effective_cdf_sample_size_error, \
+                batch_d_cdf_lower, batch_d_cdf_upper, batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper, \
+                rescaled_similarities_lower = \
+                self.get_hr_region_alpha_lower_vectorized(
+                    rescaled_similarities=rescaled_similarities,
+                    predictions=predictions,
                     batch_f=batch_f,
                     batch_q=batch_q,
                     batch_distance_quantile_per_class=batch_distance_quantile_per_class)
-            # q'_{lower}: Note the use of batch_sdm_d_cdf_lower
-            rescaled_similarities_lower, _ = \
-                self.get_rescaled_similarity_for_eval_batch(
-                    cached_f_outputs=batch_f,
-                    dataset_q_values=batch_q,
-                    sdm_outputs=batch_sdm_d_cdf_lower,
-                    return_tensors_on_cpu=False)
-            # SDM_{HR}^{lower}: Note the use of rescaled_similarities_lower and batch_sdm_d_cdf_lower
-            floor_rescaled_similarity_lower_tensor, is_high_reliability_region_lower_tensor, _ = \
-                self.get_high_reliability_region_indicator_vectorized(
-                    rescaled_similarities=rescaled_similarities_lower,
-                    batch_sdm_outputs=batch_sdm_d_cdf_lower,
-                    predictions=predictions.to(batch_sdm_d_cdf_lower.device))
-            # The final return value is ignored from self.get_high_reliability_region_indicator_vectorized,
-            # because it is equivalent to is_ood_tensor assuming
-            # self.ood_limit == 0. We check that assumption here in cases it changes in the future:
-            assert self.ood_limit == 0, "The current convention assumes self.ood_limit == 0."
+            floor_rescaled_similarity_lower_tensor = torch.floor(rescaled_similarities_lower).long()
+            # The legacy single-region lower indicator is equivalent to assignment to the most conservative
+            # region under the band, since that region's gates (with the DKW error term at its alpha) are
+            # exactly the first test of the descending walk in get_hr_region_alpha_lower_vectorized():
+            if len(self.hr_regions) > 0:
+                is_high_reliability_region_lower_tensor = \
+                    (hr_region_alpha_lower_tensor == self.hr_regions[0]["alpha"])
+            else:
+                is_high_reliability_region_lower_tensor = \
+                    torch.zeros(rescaled_similarities.shape[0], dtype=torch.bool,
+                                device=rescaled_similarities.device)
             results = []
             for rescaled_similarity, sdm_output, prediction, f, q, distance_quantile_per_class, \
                     d0_value, nearest_support_idx_value, floor_rescaled_similarity, is_high_reliability_region, \
@@ -965,7 +1339,9 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                     d_cdf_lower, d_cdf_upper, sdm_output_d_lower, sdm_output_d_upper,\
                     rescaled_similarity_lower, \
                     floor_rescaled_similarity_lower, \
-                    is_high_reliability_region_lower in \
+                    is_high_reliability_region_lower, \
+                    hr_region_alpha, \
+                    hr_region_alpha_lower in \
                     zip(rescaled_similarities, sdm_batch_outputs, predictions, batch_f,
                         batch_q, batch_distance_quantile_per_class,
                         d0_values,
@@ -975,7 +1351,9 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                         batch_sdm_d_cdf_lower, batch_sdm_d_cdf_upper,
                         rescaled_similarities_lower,
                         floor_rescaled_similarity_lower_tensor,
-                        is_high_reliability_region_lower_tensor):
+                        is_high_reliability_region_lower_tensor,
+                        hr_region_alpha_tensor,
+                        hr_region_alpha_lower_tensor):
 
                 prediction_meta_data = {
                         # Similarity value: q:
@@ -992,26 +1370,52 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                         "d": distance_quantile_per_class[0].item(),
                         "sdm_output": sdm_output,  # tensor
                         "rescaled_similarity": rescaled_similarity.item(),
-                        "is_high_reliability_region": is_high_reliability_region.item(),  # bool
-                        # effective sample size across classes (for reference):
-                        "cumulative_effective_sample_sizes": cumulative_effective_sample_sizes_per_class,  # tensor
-                        # floor_rescaled_similarity is an int
-                        "floor_rescaled_similarity": floor_rescaled_similarity.item(),
-                        # is_ood is Bool. Note that when an instance is not
-                        #    is_high_reliability_region, there are two possibilities: It is or isn't
-                        #    is_ood. That is, not all non-is_high_reliability_region instances are OOD.
-                        "is_ood": is_ood.item(),  # bool
                         "top_distance_idx": nearest_support_idx_value.item(),
                         # These use the DKW inequality based on the effective sample size to put bounds on the
-                        # Distance empirical CDFs:
+                        # Distance empirical CDFs, with the error term pinned to the alpha of the region
+                        # assigned under the band (i.e., "hr_region_alpha_lower" below). If the instance is not
+                        # assigned to any region under the band (hr_region_alpha_lower == 0.), these reflect
+                        # maximum uncertainty: an error term of 1, so d_lower = 0 and d_upper = 1 (after
+                        # clamping), with sdm_output_d_lower at parity and rescaled_similarity_lower following
+                        # accordingly:
                         "d_lower": d_cdf_lower[0].item(),
                         "d_upper": d_cdf_upper[0].item(),
                         "sdm_output_d_lower": sdm_output_d_lower,  # tensor
                         "sdm_output_d_upper": sdm_output_d_upper,  # tensor
                         "rescaled_similarity_lower": rescaled_similarity_lower.item(),
+                        # Nested-region assignments: the most conservative (i.e., closest to 1) alpha among
+                        # self.hr_regions whose gates pass, with 0. indicating rejection at all recorded
+                        # regions. When at least one region exists,
+                        # hr_region_alpha == self.hr_regions[0]["alpha"] iff is_high_reliability_region (and
+                        # analogously for the lower counterparts), since the default (single-region) indicator
+                        # evaluates exactly the most conservative recorded region:
+                        "hr_region_alpha": hr_region_alpha.item(),
+                        "hr_region_alpha_lower": hr_region_alpha_lower.item(),
+                        # This is the effective sample size across classes using q'. Note the error term itself
+                        #   is tied to the assigned
+                        #   membership in the alpha (lower) region.
+                        #   Note: There is deliberately no "_lower" counterpart of this field: The effective
+                        #   sample size is anchored at the (centroid) rescaled similarity (Eq. 11 in 'SDM
+                        #   Activations'), and the DKW error terms of Eq. 12. As such, all of the banded
+                        #   ("_lower"/"_upper") quantities above are downstream of this single \hat{n}. A
+                        #   sample size anchored at q'_{lower} would be circular (q'_{lower} depends on the
+                        #   error term, which depends on \hat{n}):
+                        "cumulative_effective_sample_sizes": cumulative_effective_sample_sizes_per_class,  # tensor
+
+                        # TODO: streamline. These are convenience hold-overs from earlier versions (and are
+                        #   currently still used by the eval scripts), but now
+                        #   "hr_region_alpha" and "hr_region_alpha_lower" (and related) are sufficient (from which
+                        #   these values, if needed, can be calculated by the caller).
+                        # floor_rescaled_similarity is an int
+                        "floor_rescaled_similarity": floor_rescaled_similarity.item(),
+                        "is_high_reliability_region": is_high_reliability_region.item(),  # bool
                         "is_high_reliability_region_lower": is_high_reliability_region_lower.item(),  # bool
                         # floor_rescaled_similarity is an int
-                        "floor_rescaled_similarity_lower": floor_rescaled_similarity_lower.item()
+                        "floor_rescaled_similarity_lower": floor_rescaled_similarity_lower.item(),
+                        # "OOD" can also be viewed as the points not assigned to a region, including d=0. This is up to
+                        # the caller. This is_ood simply checks if q==0.
+                        # is_ood is Bool.
+                        "is_ood": is_ood.item(),  # bool
                         }
                 results.append(prediction_meta_data)
             return results
@@ -1144,9 +1548,6 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     def export_properties_to_dict(self):
         json_dict = {constants.STORAGE_KEY_version: self.version,
                      constants.STORAGE_KEY_uncertaintyModelUUID: self.uncertaintyModelUUID,
-                     constants.STORAGE_KEY_hr_class_conditional_accuracy: self.hr_class_conditional_accuracy,
-                     constants.STORAGE_KEY_alpha: self.alpha,
-                     constants.STORAGE_KEY_cdfThresholdTolerance: self.cdfThresholdTolerance,
                      constants.STORAGE_KEY_maxQAvailableFromIndexer: self.maxQAvailableFromIndexer,
                      constants.STORAGE_KEY_numberOfClasses: self.numberOfClasses,
                      constants.STORAGE_KEY_q_rescale_offset: self.q_rescale_offset,
@@ -1155,9 +1556,17 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                      constants.STORAGE_KEY_embedding_size: self.embedding_size,
                      constants.STORAGE_KEY_calibration_training_stage: self.calibration_training_stage,
                      constants.STORAGE_KEY_calibration_is_ood_indicators: self.calibration_is_ood_indicators,
-                     constants.STORAGE_KEY_min_rescaled_similarity_to_determine_high_reliability_region: self.min_rescaled_similarity_to_determine_high_reliability_region,
                      constants.STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_summary_stats: self.training_embedding_summary_stats,
                      constants.STORAGE_KEY_is_sdm_network_verification_layer: self.is_sdm_network_verification_layer,
+                     constants.STORAGE_KEY_alpha_resolution: self.alpha_resolution,
+                     # Nested high-reliability regions, sorted descending by alpha. The output thresholds are
+                     # converted to standard lists for JSON serialization (bit-exactly; see
+                     # import_properties_from_dict() for the inverse):
+                     constants.STORAGE_KEY_hr_regions: [
+                         {"alpha": hr_region["alpha"],
+                          "min_rescaled_similarity": float(hr_region["min_rescaled_similarity"]),
+                          "output_thresholds": [float(threshold) for threshold in hr_region["output_thresholds"]]}
+                         for hr_region in self.hr_regions],
                      }
 
         trueClass_To_dCDF_json_flat = {}
@@ -1179,6 +1588,17 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
     def import_properties_from_dict(self, json_dict, load_for_inference=False):
         # When loading from disk, this must be called after class init before calibrating new data points.
         # Note that in JSON, int dictionary keys become strings
+
+        # The nested regions are the sole persisted source of the region parameters. The float values
+        # round-trip bit-exactly through JSON (binary32 -> binary64 -> shortest-repr decimal string ->
+        # binary64 -> binary32 are all exact conversions), so this is equivalent to persisting torch tensors.
+        self.hr_regions = []
+        for hr_region_json in json_dict[constants.STORAGE_KEY_hr_regions]:
+            self.hr_regions.append({
+                "alpha": hr_region_json["alpha"],
+                "min_rescaled_similarity": hr_region_json["min_rescaled_similarity"],
+                "output_thresholds": torch.tensor(hr_region_json["output_thresholds"], dtype=torch.float32),
+            })
 
         trueClass_To_dCDF_json_flat = json_dict[constants.STORAGE_KEY_trueClass_To_dCDF]
         for trueClass in range(self.numberOfClasses):

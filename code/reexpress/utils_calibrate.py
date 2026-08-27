@@ -55,11 +55,12 @@ def calibrate_to_determine_high_reliability_region(options, model_dir=None):
     assert model_dir is not None
     # reload best epoch
     model = utils_model.load_model_torch(model_dir, torch.device("cpu"))
-    if model.alpha != options.alpha:
-        print(f">>Updating alpha from {model.alpha} (saved with the model) to {options.alpha} based on the "
+    if model.alpha_resolution != options.alpha_resolution:
+        print(f">>Updating model.alpha_resolution from {model.alpha_resolution} (saved with the model) to "
+              f"{options.alpha_resolution} based on the "
               f"provided input arguments. However, note that the global statistics (across iterations) will "
               f"not be updated.<<")
-        model.alpha = options.alpha
+        model.alpha_resolution = options.alpha_resolution
     model.set_high_reliability_region_thresholds(calibration_sdm_outputs=model.calibration_sdm_outputs,
                                                  calibration_rescaled_similarity_values=
                                                  model.calibration_rescaled_similarity_values,
@@ -67,4 +68,5 @@ def calibrate_to_determine_high_reliability_region(options, model_dir=None):
 
     utils_model.save_model(model, model_dir)
     logger.info(f"Model saved to {model_dir} with training and calibration complete. Ready for testing.")
-    return model.min_rescaled_similarity_to_determine_high_reliability_region
+    hr_region_stats = model.get_most_conservative_high_reliability_region_stats()
+    return hr_region_stats["most_conservative_hr_min_rescaled_similarity"], hr_region_stats["most_conservative_hr_alpha"]

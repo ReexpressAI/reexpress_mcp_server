@@ -177,7 +177,9 @@ def load_global_uncertainty_statistics_from_disk(model_dir):
                     globalUncertaintyModelUUID=str(json_dict[constants.STORAGE_KEY_globalUncertaintyModelUUID]),
                     numberOfClasses=int(json_dict[constants.STORAGE_KEY_numberOfClasses]),
                     min_rescaled_similarity_across_iterations= \
-                        [float(x) for x in json_dict[constants.STORAGE_KEY_min_rescaled_similarity_across_iterations]]
+                        [float(x) for x in json_dict[constants.STORAGE_KEY_min_rescaled_similarity_across_iterations]],
+                    max_hr_region_alpha_across_iterations= \
+                        [float(x) for x in json_dict[constants.STORAGE_KEY_max_hr_region_alpha_across_iterations]]
                 )
             print(f"Global uncertainty statistics have been loaded.")
             return global_uncertainty_statistics
@@ -218,9 +220,6 @@ def save_uncertainty_metadata(model, model_dir):
     torch.save(model.calibration_rescaled_similarity_values,
                path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_calibration_rescaled_similarity_values))
 
-    torch.save(model.hr_output_thresholds,
-               path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds))
-
 
 def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
     train_labels = torch.load(
@@ -228,10 +227,6 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
         weights_only=True, map_location=torch.device("cpu"))
     train_predicted_labels = torch.load(
         path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_SUPPORT_PREDICTED),
-        weights_only=True, map_location=torch.device("cpu"))
-
-    hr_output_thresholds = torch.load(
-        path.join(model_dir, constants.FILENAME_UNCERTAINTY_STATISTICS_hr_output_thresholds),
         weights_only=True, map_location=torch.device("cpu"))
 
     train_uuids = []
@@ -282,16 +277,14 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
                         "train_labels": train_labels,
                         "train_predicted_labels": train_predicted_labels,
                         "train_uuids": train_uuids,
-                        "cdfThresholdTolerance": float(json_dict[constants.STORAGE_KEY_cdfThresholdTolerance]),
                         "exemplar_vector_dimension": int(json_dict[constants.STORAGE_KEY_exemplar_vector_dimension]),
                         "trueClass_To_dCDF": None,
                         "trueClass_To_qCumulativeSampleSizeArray": None,
-                        "hr_output_thresholds": hr_output_thresholds,
-                        "hr_class_conditional_accuracy": float(json_dict[constants.STORAGE_KEY_hr_class_conditional_accuracy]),
-                        "alpha": float(json_dict[constants.STORAGE_KEY_alpha]),
+                        # Note: The region parameters (the alpha values, class-wise output thresholds, and
+                        # per-region q'_min values) are persisted solely under STORAGE_KEY_hr_regions and
+                        # reconstituted in import_properties_from_dict():
                         "maxQAvailableFromIndexer": int(json_dict[constants.STORAGE_KEY_maxQAvailableFromIndexer]),
                         "calibration_training_stage": int(json_dict[constants.STORAGE_KEY_calibration_training_stage]),
-                        "min_rescaled_similarity_to_determine_high_reliability_region": float(json_dict[constants.STORAGE_KEY_min_rescaled_similarity_to_determine_high_reliability_region]),
                         "training_embedding_summary_stats":
                             json_dict[constants.STORAGE_KEY_SUMMARY_STATS_EMBEDDINGS_training_embedding_summary_stats],
 
@@ -304,12 +297,15 @@ def load_uncertainty_statistics_from_disk(model_dir, load_for_inference=False):
                         "calibration_sdm_outputs": calibration_sdm_outputs,
                         "calibration_rescaled_similarity_values": calibration_rescaled_similarity_values,
                         "calibration_is_ood_indicators": calibration_is_ood_indicators,
-                        "train_trueClass_To_dCDF": None
+                        "train_trueClass_To_dCDF": None,
+                        "alpha_resolution": float(json_dict[constants.STORAGE_KEY_alpha_resolution]),
+                        "hr_regions": None
                         }
         # the following are added after class init:
         # self.q_rescale_offset,
         # self.ood_limit
         # self.trueClass_To_dCDF
+        # self.hr_regions, via import_properties_from_dict()
         # self.train_trueClass_To_dCDF, if is_sdm_network_verification_layer
         return model_params, json_dict
 

@@ -379,7 +379,7 @@ def train(options, train_embeddings=None, calibration_embeddings=None,
     print(f"Final epoch chosen based on the minimum Balanced SDM loss (over calibration).")
 
     print(f"Reloading best model to calibrate based on the provided alpha value.")
-    min_rescaled_similarity_to_determine_high_reliability_region = \
+    min_rescaled_similarity_to_determine_high_reliability_region, max_hr_region_alpha = \
         utils_calibrate.calibrate_to_determine_high_reliability_region(options, model_dir=model_dir)
     return max_dev_balanced_acc, max_dev_balanced_q, min_dev_balanced_sdm_loss, \
-        min_rescaled_similarity_to_determine_high_reliability_region
+        min_rescaled_similarity_to_determine_high_reliability_region, max_hr_region_alpha

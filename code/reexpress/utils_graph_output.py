@@ -16,6 +16,15 @@ import utils_model
 import constants
 
 
+def get_mean_or_zero(list_to_process):
+    # The graphed selection can be empty (e.g., with a restrictive
+    # --graph_class_and_prediction_conditional_estimates_min_region/_max_region range), in which case the
+    # accuracy prints show 0.0 rather than propagating NaN:
+    if len(list_to_process) == 0:
+        return 0.0
+    return np.mean(list_to_process)
+
+
 class InteractiveScatter:
     def __init__(self, x, y, colors_filtered, linewidth, point_sizes, ids, data_rows, ax):
         self.x = np.array(x)
@@ -108,27 +117,28 @@ class InteractiveScatter:
                 print(f"Coordinates: ({self.x[idx]:.2f}, {self.y[idx]:.2f})")
                 print(f"Row: {self.data_rows[idx]}")
                 # Below, we duplicate the key information from the row to make it easier to read:
+                print(f"{'+' * 14 * 2}\n")
+                print(f"Uncertainty Region (Class- and prediction-conditional):")
+                print(f"Class- and prediction-conditional accuracy estimate >= "
+                      f"{self.data_rows[idx]['hr_region_alpha']}")
+                print(f"Class- and prediction-conditional accuracy estimate "
+                      f"(accounting for sample-size error in distance eCDF) >= "
+                      f"{self.data_rows[idx]['hr_region_alpha_lower']}")
                 print(f"\n{'+' * 14}")
                 print(f"Label == Prediction: {self.data_rows[idx]['label'] == self.data_rows[idx]['prediction']}")
                 print(f"Label: {self.data_rows[idx]['label']}")
                 print(f"Prediction: {self.data_rows[idx]['prediction']}")
-                print(
-                    f"{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: "
-                    f"{self.data_rows[idx]['is_high_reliability_region_lower']}")
-                print(f"p(y|x)_lower: {self.data_rows[idx]['sdm_output_d_lower']}")
-                print(f"{'+' * 14}\n")
                 print(f"p(y|x): {self.data_rows[idx]['sdm_output']}")
-                print(f"{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: "
-                      f"{self.data_rows[idx]['is_high_reliability_region']}")
-                print(f"Rescaled Similarity, lower (q'_lower): {self.data_rows[idx]['rescaled_similarity_lower']}")
+                print(f"p(y|x)_lower: {self.data_rows[idx]['sdm_output_d_lower']}")
                 print(f"Rescaled Similarity (q'): {self.data_rows[idx]['rescaled_similarity']}")
-                print(f"OOD: {self.data_rows[idx]['is_ood']}")
+                print(f"Rescaled Similarity, lower (q'_lower): {self.data_rows[idx]['rescaled_similarity_lower']}")
                 print(f"Effective sample size: {self.data_rows[idx]['cumulative_effective_sample_sizes']}")
                 separator_text = ", "
-                print(f"Similarity (q): {self.data_rows[idx]['q']}{separator_text} "
-                      f"Distance quantile, lower (d_lower): {self.data_rows[idx]['d_lower']}{separator_text} "
-                      f"Distance quantile (d): {self.data_rows[idx]['d']}{separator_text} "
-                      f"Magnitude (f): {self.data_rows[idx]['f']}")
+                print(f"***S-D-M***:")
+                print(f"\tSimilarity (q): {self.data_rows[idx]['q']}\n"
+                      f"\tDistance quantile, lower (d_lower): {self.data_rows[idx]['d_lower']}, "
+                      f"Distance quantile (d): {self.data_rows[idx]['d']}{separator_text}\n"
+                      f"\tMagnitude (f): {self.data_rows[idx]['f']}")
                 print(f"d_nearest: {self.data_rows[idx]['d0']}")
                 print(f"\n{'+' * 14}")
                 print(f"Document:\n{self.data_rows[idx]['document']}")
@@ -199,6 +209,21 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
     point_sizes = []
     is_correct_filtered = []  # Track correct/incorrect for histograms
 
+    # Restriction to a range of uncertainty regions (inclusive on both ends). At the defaults (the options are
+    # None), every point passes (the assigned region alpha values are in [0, 1], with 0.0 indicating no
+    # region), so the behavior of the existing code is unchanged:
+    region_range_is_active = \
+        options.graph_class_and_prediction_conditional_estimates_min_region is not None or \
+        options.graph_class_and_prediction_conditional_estimates_max_region is not None
+    effective_min_region = options.graph_class_and_prediction_conditional_estimates_min_region \
+        if options.graph_class_and_prediction_conditional_estimates_min_region is not None else 0.0
+    effective_max_region = options.graph_class_and_prediction_conditional_estimates_max_region \
+        if options.graph_class_and_prediction_conditional_estimates_max_region is not None else 1.0
+    assert 0.0 <= effective_min_region <= effective_max_region <= 1.0, \
+        f"ERROR: The region range [{effective_min_region}, {effective_max_region}] must satisfy " \
+        f"0 <= min <= max <= 1."
+
+    unassigned_for_label_count = 0  # points with this label assigned to no region (an alpha of 0.0)
     for document in json_lines:
 
         document_id = document["id"]
@@ -211,13 +236,27 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         prediction_probability_lower = document["sdm_output_d_lower"][document["prediction"]]
         # softmax_predicted = torch.softmax(torch.tensor(document["f"]), dim=0)[document["prediction"]]  # reference
 
+        if options.graph_centroid:
+            assigned_region_alpha = document["hr_region_alpha"]
+        else:
+            assigned_region_alpha = document["hr_region_alpha_lower"]
         if options.graph_all_points:
             filter_condition = True
         else:
-            if options.graph_centroid:
-                filter_condition = document["is_high_reliability_region"]
+            if region_range_is_active:
+                # With an active region range, the admitted points are those assigned to ANY recorded region
+                # (an assigned alpha of 0.0 indicates no region), with the range restriction applied below.
+                # (The is_high_reliability_region and is_high_reliability_region_lower fields indicate
+                # membership in the most conservative region only, which would contradict ranges that exclude
+                # that region.)
+                filter_condition = assigned_region_alpha > 0.0
             else:
-                filter_condition = document["is_high_reliability_region_lower"]
+                if options.graph_centroid:
+                    filter_condition = document["is_high_reliability_region"]
+                else:
+                    filter_condition = document["is_high_reliability_region_lower"]
+        filter_condition = filter_condition and \
+            effective_min_region <= assigned_region_alpha <= effective_max_region
         label = document["label"]
         if true_label_to_graph is not None:
             filter_condition = filter_condition and label == true_label_to_graph
@@ -226,6 +265,8 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
             # and 0.7 <= prediction_probability <= 0.8
         if label == true_label_to_graph:
             accuracy_class_conditional.append(document["prediction"] == label)
+            if assigned_region_alpha == 0.0:
+                unassigned_for_label_count += 1
         if filter_condition:
             document_ids_filtered.append(document_id)
             is_correct = document["prediction"] == label
@@ -250,26 +291,44 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
 
         accuracy.append(document["prediction"] == label)
 
-    print(f"Marginal accuracy: {np.mean(accuracy)} out of {len(accuracy)}")
+    print(f"Marginal accuracy: {get_mean_or_zero(accuracy)} out of {len(accuracy)}")
     total_points = len(accuracy)
+    if region_range_is_active:
+        print(f"Restricting the graphed points to the uncertainty regions in "
+              f"[{effective_min_region}, {effective_max_region}] (inclusive), based on "
+              f"{'hr_region_alpha' if options.graph_centroid else 'hr_region_alpha_lower'}: "
+              f"{len(accuracy_filtered)} points remain.")
+        # An assigned alpha of 0.0 is not a region: it indicates the points assigned to NO recorded region
+        # (i.e., the rejections). These are only graphed with --graph_all_points and a range that reaches 0:
+        if effective_min_region == 0.0:
+            if options.graph_all_points:
+                print(f"	(Including the {unassigned_for_label_count} points with this label that are not "
+                      f"assigned to any region, since --graph_all_points was provided and the range "
+                      f"includes 0.)")
+            else:
+                print(f"	(Excluding the {unassigned_for_label_count} points with this label that are not "
+                      f"assigned to any region. Provide --graph_all_points to include them.)")
+        else:
+            print(f"	(Points not assigned to any region are excluded by the range itself, so "
+                  f"--graph_all_points has no effect on the selection here.)")
     if options.graph_all_points:
         print(f"Class-conditional (label={true_label_to_graph}) accuracy: "
-              f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+              f"{get_mean_or_zero(accuracy_filtered)} out of {len(accuracy_filtered)} "
               f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
     else:
         print(
             f"Class-conditional (label={true_label_to_graph}) accuracy: "
-            f"{np.mean(accuracy_class_conditional)} out of {len(accuracy_class_conditional)} "
+            f"{get_mean_or_zero(accuracy_class_conditional)} out of {len(accuracy_class_conditional)} "
             f"({len(accuracy_class_conditional)/total_points if total_points > 0 else 0.0} of all points)")
         if options.graph_centroid:
             print(
                 f"Class-conditional (label={true_label_to_graph}) accuracy, SDM_HR: "
-                f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+                f"{get_mean_or_zero(accuracy_filtered)} out of {len(accuracy_filtered)} "
                 f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
         else:
             print(
                 f"Class-conditional (label={true_label_to_graph}) accuracy, SDM_HR (lower): "
-                f"{np.mean(accuracy_filtered)} out of {len(accuracy_filtered)} "
+                f"{get_mean_or_zero(accuracy_filtered)} out of {len(accuracy_filtered)} "
                 f"({len(accuracy_filtered)/total_points if total_points > 0 else 0.0} of all points)")
 
     # Create figure with subplots
@@ -300,11 +359,22 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         ax_main.set_ylabel(r"$\rm{sdm}(\mathbf{z'})_{\hat{y}}~({\mathrm{lower}})$")
 
     if true_label_to_graph is not None:
+        if region_range_is_active:
+            # The alpha values of the assigned regions are restricted to the provided (inclusive) range:
+            alpha_value_string = r'$\in$' + f"[{effective_min_region}, {effective_max_region}]"
+        else:
+            alpha_value_string = f"={hr_class_conditional_accuracy}"
         if options.graph_all_points:
             latex_string = r'$\alpha$'
+            # Rejections (an assigned region alpha of 0.0) are only actually graphed if the region range
+            # includes 0.0:
+            if effective_min_region == 0.0:
+                rejections_string = " (rejections are also graphed)"
+            else:
+                rejections_string = ""
             fig.suptitle(
                 f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, "
-                f"{latex_string}={hr_class_conditional_accuracy} (rejections are also graphed)",
+                f"{latex_string}{alpha_value_string}{rejections_string}",
                 y=0.98)
         else:
             if options.graph_centroid:
@@ -313,42 +383,82 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
                 latex_string = r'$\rm{SDM}^{\mathrm{lower}}_{\mathrm{HR}} \neq \bot, \alpha$'
             fig.suptitle(
                 f"SDM Predictive Uncertainty,\nGround-truth label = {true_label_to_graph}, "
-                f"{latex_string}={hr_class_conditional_accuracy}",
+                f"{latex_string}{alpha_value_string}",
                 y=0.98)
-        if options.graph_thresholds:
-            latex_threshold_label = r'Class-wise thresholds ($\psi$)'
-            output_thresholds_hline = \
+
+    text_x = None
+    text_y = None
+    # The y-values of any graphed horizontal threshold lines, folded into the explicit y-limits below so that
+    # the lines are not cut off when they fall outside the range of the graphed points:
+    threshold_hline_y_values = []
+    if options.graph_thresholds:
+        latex_min_valid_qbin = r"${q'}_{\mathrm{min}}$"
+        threshold_legend_entries = 0
+        if region_range_is_active:
+            # One (vertical q'_min, horizontal class-wise threshold) line pair per recorded region with an
+            # alpha in the provided (inclusive) range, sharing a color, with one legend entry per region.
+            # Regions without a finite q'_min are simply not recorded in model.hr_regions, so they are
+            # naturally skipped here:
+            covered_hr_regions = [hr_region for hr_region in model.hr_regions
+                                  if effective_min_region <= hr_region["alpha"] <= effective_max_region]
+            if len(covered_hr_regions) == 0:
+                print(f"Note: No recorded high-reliability regions have an alpha within "
+                      f"[{effective_min_region}, {effective_max_region}], so no threshold lines are graphed.")
+            region_line_colors = ["darkblue", "darkorange", "purple", "teal", "saddlebrown", "deeppink",
+                                  "olive", "slategray"]
+            latex_alpha = r'$\alpha$'
+            latex_psi_for_class = r'$\psi_{' + f"{true_label_to_graph}" + r'}$'
+            for region_i, hr_region in enumerate(covered_hr_regions):
+                line_color = region_line_colors[region_i % len(region_line_colors)]
+                region_min_rescaled_similarity = float(hr_region["min_rescaled_similarity"])
+                region_output_threshold = float(hr_region["output_thresholds"][true_label_to_graph])
+                ax_main.axhline(y=region_output_threshold, color=line_color, linestyle=':', linewidth=1.5)
+                threshold_hline_y_values.append(region_output_threshold)
+                ax_main.axvline(x=region_min_rescaled_similarity, color=line_color, linestyle='--',
+                                linewidth=1.5,
+                                label=f"{latex_alpha}={hr_region['alpha']}: "
+                                      f"{latex_min_valid_qbin}{latex_approx_symbol}"
+                                      f"{region_min_rescaled_similarity:.2f}, "
+                                      f"{latex_psi_for_class}{latex_approx_symbol}"
+                                      f"{region_output_threshold:.4f}")
+                threshold_legend_entries += 1
+        else:
+            # The legacy behavior at the default (None) region range: the most conservative recorded region's
+            # class-wise threshold and q'_min, when at least one region exists:
+            if hr_class_conditional_accuracy > 0.0:
+                latex_threshold_label = r'Class-wise thresholds ($\psi$)'
                 ax_main.axhline(y=hr_output_thresholds[true_label_to_graph],
                                 color='orange', linestyle=':', linewidth=2,
                                 label=f"{latex_threshold_label}, "
                                       f"index {true_label_to_graph}"
                                       f"{latex_approx_symbol}"
                                       f"{hr_output_thresholds[true_label_to_graph]:.4f}")
+                ax_main.axvline(x=min_rescaled_similarity_to_determine_high_reliability_region,
+                                color=min_rescaled_similarity_to_determine_high_reliability_region_error_color,
+                                linestyle='--', linewidth=2,
+                                label=f"{latex_min_valid_qbin}"
+                                      f"{latex_approx_symbol}"
+                                      f"{min_rescaled_similarity_to_determine_high_reliability_region:.2f}")
+                threshold_hline_y_values.append(float(hr_output_thresholds[true_label_to_graph]))
+                threshold_legend_entries = 2
+            else:
+                print(f"Note: No recorded high-reliability regions, so the threshold lines are not graphed.")
+        if threshold_legend_entries > 0:
+            if region_range_is_active:
+                legend = ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18),
+                                        ncol=1 if threshold_legend_entries <= 4 else 2, fontsize='small')
+            else:
+                legend = ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=1)
 
-    if options.graph_thresholds:
-        latex_min_valid_qbin = r"${q'}_{\mathrm{min}}$"
-        model_level_q_threshold_line = \
-            ax_main.axvline(x=min_rescaled_similarity_to_determine_high_reliability_region,
-                            color=min_rescaled_similarity_to_determine_high_reliability_region_error_color,
-                            linestyle='--', linewidth=2,
-                            label=f"{latex_min_valid_qbin}"
-                                  f"{latex_approx_symbol}"
-                                  f"{min_rescaled_similarity_to_determine_high_reliability_region:.2f}")
-        # Fixed: Center the legend horizontally by using loc='upper center' with bbox_to_anchor at x=0.5
-        # ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=1)
+            # Get the legend's bounding box in figure coordinates
+            fig.canvas.draw()  # Force a draw to get accurate positions
+            legend_bbox = legend.get_window_extent(renderer=fig.canvas.get_renderer())
+            legend_bbox_fig = legend_bbox.transformed(fig.transFigure.inverted())
 
-        # After creating the legend (line 363)
-        legend = ax_main.legend(loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=1)
-
-        # Get the legend's bounding box in figure coordinates
-        fig.canvas.draw()  # Force a draw to get accurate positions
-        legend_bbox = legend.get_window_extent(renderer=fig.canvas.get_renderer())
-        legend_bbox_fig = legend_bbox.transformed(fig.transFigure.inverted())
-
-        # Use the left edge of the legend for text alignment
-        text_x = legend_bbox_fig.x0
-    else:
-        text_x = None
+            # Use the left edge of the legend for text alignment, and its bottom edge to place the figure
+            # text below the legend (so a taller multi-region legend does not overlap the text):
+            text_x = legend_bbox_fig.x0
+            text_y = legend_bbox_fig.y0
 
     # These counts are to ensure the histogram axes are the same (for quick comparisons of the relative densities)
     top_counts = None
@@ -390,6 +500,11 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
         if not options.graph_all_points:
             # adjust the padding on y
             y_min = min(y_min, 0.95)  # this is to avoid the right histogram from getting cut-off
+            # Any graphed horizontal threshold lines must remain within the explicit limits (which would
+            # otherwise override the autoscaling that accounts for the axhline positions):
+            if len(threshold_hline_y_values) > 0:
+                y_min = min(y_min, min(threshold_hline_y_values))
+                y_max = max(y_max, max(threshold_hline_y_values))
             y_padding = (y_max - y_min) * 0.05  # 5% padding
             # Set tight limits with minimal padding
             ax_main.set_ylim(y_min - y_padding, y_max + y_padding)
@@ -437,16 +552,17 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
 
     # Add figure text
     if text_x is not None:
-        fig.text(text_x + 0.06, 0.09, f"Data: {options.data_label}; Model: {options.model_version_label}",
+        first_text_y = text_y - 0.015
+        fig.text(text_x + 0.06, first_text_y, f"Data: {options.data_label}; Model: {options.model_version_label}",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
-        fig.text(text_x + 0.06, 0.06,
+        fig.text(text_x + 0.06, first_text_y - 0.03,
                  f"(x-axis bins: width {options.x_axis_histogram_width}; "
                  f"y-axis bins: width {options.y_axis_histogram_width})",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        fig.text(text_x + 0.06, 0.03, f"Generated: {timestamp}",
+        fig.text(text_x + 0.06, first_text_y - 0.06, f"Generated: {timestamp}",
                  ha='left', va='top',
                  fontsize=9, style='italic', color='gray')
     else:
@@ -466,11 +582,20 @@ def graph_sdm_estimator_output(options, json_lines, true_label_to_graph=None,
 
     plt.subplots_adjust(left=0.12, right=0.95, bottom=0.12, top=0.92, hspace=0.02, wspace=0.02)
 
+    filename_suffix = "lower"
+    if options.graph_centroid:
+        filename_suffix = "centroid"
+
     if options.save_file_prefix.strip() != "":
-        if options.graph_all_points:
-            suffix_label = f"__class_label_{true_label_to_graph}_all_points.png"
+        if region_range_is_active:
+            # With a provided region range, only a subset of the points is graphed (in both the
+            # --graph_all_points and default cases), so the filename records the (effective) range:
+            suffix_label = f"__class_label_{true_label_to_graph}_restricted_to_region_" \
+                           f"min{effective_min_region}_region_max{effective_max_region}__{filename_suffix}.png"
+        elif options.graph_all_points:
+            suffix_label = f"__class_label_{true_label_to_graph}_all_points__{filename_suffix}.png"
         else:
-            suffix_label = f"__class_label_{true_label_to_graph}_only_admitted.png"
+            suffix_label = f"__class_label_{true_label_to_graph}_only_admitted__{filename_suffix}.png"
         plt.savefig(f'{options.save_file_prefix.strip()}{suffix_label}', dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -483,13 +608,33 @@ def main():
                         help="--prediction_output_file from reexpress.py when running --eval_only")
     parser.add_argument("--class_size", default=2, type=int, help="")
     parser.add_argument("--graph_all_points", default=False, action='store_true',
-                        help="If provided, all points are graphed. "
-                             "The default is to only graph the valid index-conditional points.")
+                        help="If provided, all points are graphed. The default is to only graph "
+                             "the points assigned to the most conservative "
+                             "recorded region. If a region range is provided (see "
+                             "--graph_class_and_prediction_conditional_estimates_min_region/_max_region), the "
+                             "range restricts the graphed points in both cases, and the two cases then only "
+                             "differ when the range includes an alpha of 0.0: with this option, the points "
+                             "not assigned to any region (an assigned alpha of 0.0) are included; without it, "
+                             "they are excluded.")
     parser.add_argument("--graph_centroid", default=False, action='store_true',
                         help="If provided, the y-axis is sdm(z') instead of the default sdm(z')_lower.")
     parser.add_argument("--graph_thresholds", default=False, action='store_true',
                         help="If provided, the threshold on rescaled_similarity and the class-wise thresholds are "
-                             "included in the graph.")
+                             "included in the graph. With the default (unset) region range below, these are the "
+                             "values of the most conservative recorded region; with a provided region range, one "
+                             "line pair is graphed for each recorded region with an alpha in the range.")
+    parser.add_argument("--graph_class_and_prediction_conditional_estimates_min_region", default=None, type=float,
+                        help="If provided (in [0, 1]; effectively defaults to 0), only the points assigned to an "
+                             "uncertainty region with alpha >= this value are graphed, based on "
+                             "'hr_region_alpha' if --graph_centroid is provided, and 'hr_region_alpha_lower' "
+                             "otherwise. (An assigned alpha of 0.0 indicates no region.) When a range is "
+                             "provided without --graph_all_points, the points assigned to ANY recorded region "
+                             "with an alpha in the range are graphed (not only those of the most conservative "
+                             "region); with --graph_all_points, the points not assigned to any region are "
+                             "additionally included when this value is 0.")
+    parser.add_argument("--graph_class_and_prediction_conditional_estimates_max_region", default=None, type=float,
+                        help="If provided (in [0, 1]; effectively defaults to 1), only the points assigned to an "
+                             "uncertainty region with alpha <= this value (inclusive) are graphed, as above.")
     parser.add_argument("--emphasize_wrong_predictions", default=False, action='store_true',
                         help="If provided, the size of incorrect predictions (red points) are "
                              "enlarged for visual emphasis.")
@@ -508,6 +653,15 @@ def main():
                              "'__class_label_X_only_admitted.png' or '__class_label_X_all_points.png'")
 
     options = parser.parse_args()
+
+    if options.graph_all_points:
+        if options.graph_class_and_prediction_conditional_estimates_min_region is not None or \
+            options.graph_class_and_prediction_conditional_estimates_max_region is not None:
+            print(f"This option set is disabled. To set a range, remove --graph_all_points. In the unlikely event you "
+                  f"want to set min_region=0 and a max_region<1 AND want to graph the points not assigned to a region, "
+                  f"comment the following `exit()`.")
+            exit()
+
     # Set higher-resolution for saving
     plt.rcParams.update({
         # 'figure.dpi': 300,
@@ -520,25 +674,27 @@ def main():
           f"Click on a point in the graph to print details (including document text, if available) to the console.")
     start_time = time.time()
     model = utils_model.load_model_torch(options.model_dir, torch.device("cpu"), load_for_inference=True)
-    min_rescaled_similarity_to_determine_high_reliability_region = \
-        model.min_rescaled_similarity_to_determine_high_reliability_region
-    hr_output_thresholds = model.hr_output_thresholds.detach().cpu().tolist()
-    hr_class_conditional_accuracy = model.hr_class_conditional_accuracy
+
+    hr_region_stats = model.get_most_conservative_high_reliability_region_stats()
+    most_conservative_hr_alpha = hr_region_stats["most_conservative_hr_alpha"]
+    most_conservative_hr_output_thresholds = hr_region_stats["most_conservative_hr_output_thresholds"]
+    most_conservative_hr_min_rescaled_similarity = hr_region_stats["most_conservative_hr_min_rescaled_similarity"]
 
     print(f"Current support set cardinality (Note: May differ from that used to generate "
           f"--prediction_output_file if the model has subsequently been updated): {model.support_index.ntotal}")
-    print(f"alpha = {hr_class_conditional_accuracy}")
-    print(f"thresholds = {hr_output_thresholds}")
-    print(f"q'_min: "
-          f"{min_rescaled_similarity_to_determine_high_reliability_region}")
+    print(f"Selection constraints for most conservative region:")
+    print(f"\talpha = {most_conservative_hr_alpha}")
+    print(f"\tClass-wise thresholds = {most_conservative_hr_output_thresholds}")
+    print(f"\tq'_min: "
+          f"{most_conservative_hr_min_rescaled_similarity}")
     json_lines = utils_model.read_jsons_lines_file(options.input_file)
 
     for true_label_to_graph in range(options.class_size):
         graph_sdm_estimator_output(options, json_lines, true_label_to_graph=true_label_to_graph,
                                    min_rescaled_similarity_to_determine_high_reliability_region=
-                                   min_rescaled_similarity_to_determine_high_reliability_region,
-                                   hr_output_thresholds=hr_output_thresholds,
-                                   hr_class_conditional_accuracy=hr_class_conditional_accuracy,
+                                   most_conservative_hr_min_rescaled_similarity,
+                                   hr_output_thresholds=most_conservative_hr_output_thresholds,
+                                   hr_class_conditional_accuracy=most_conservative_hr_alpha,
                                    model=model)
     cumulative_time = time.time() - start_time
     print(f"Cumulative running time: {cumulative_time}")

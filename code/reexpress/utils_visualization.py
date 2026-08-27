@@ -34,49 +34,54 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
     else:
         successfully_verified_html_class = "negative"
 
-    # OOD also takes into account d == 0. (See note in mcp_utils_test.test(),
-    # which checks for constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES.)
-    is_ood = prediction_meta_data.get("is_ood", True)
-    is_ood_html_class = "positive" if not is_ood else "negative"
+    # ---- Model level
+    most_conservative_hr_alpha = prediction_meta_data.get("most_conservative_hr_alpha", 0.0)
+    most_conservative_hr_output_thresholds = prediction_meta_data.get("most_conservative_hr_output_thresholds", "N/A")
+    most_conservative_hr_min_rescaled_similarity = prediction_meta_data.get("most_conservative_hr_min_rescaled_similarity", "N/A")
+    available_hr_regions = prediction_meta_data.get("available_hr_regions", "N/A")
+    support_index_ntotal = prediction_meta_data.get("support_index_ntotal", "N/A")
+    # ----
 
-    try:
-        if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
-            calibration_reliability = \
-                mcp_utils_test.get_calibration_reliability_label(
-                    is_high_reliability_region=prediction_meta_data.get("is_high_reliability_region_lower", False),
-                    is_ood=is_ood,
-                    sdm_output_for_predicted_class=
-                    prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()[predicted_class])
-
-        else:
-            calibration_reliability = \
-                mcp_utils_test.get_calibration_reliability_label(
-                    is_high_reliability_region=prediction_meta_data.get("is_high_reliability_region", False),
-                    is_ood=is_ood,
-                    sdm_output_for_predicted_class=
-                    prediction_meta_data["sdm_output"].detach().cpu().tolist()[predicted_class])
-    except:
-        calibration_reliability = constants.CALIBRATION_RELIABILITY_LABEL_OOD
-
-    # Model Level
-    try:
-        hr_class_conditional_accuracy = prediction_meta_data["hr_class_conditional_accuracy"]
-        min_rescaled_similarity_to_determine_high_reliability_region = \
-            prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]
-        hr_output_thresholds = \
-            prediction_meta_data["hr_output_thresholds"]
-        support_index_ntotal = prediction_meta_data["support_index_ntotal"]
-    except:
-        hr_class_conditional_accuracy = 0.0
-        min_rescaled_similarity_to_determine_high_reliability_region = "N/A"
-        hr_output_thresholds = "N/A"
-        support_index_ntotal = "N/A"
+    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+        highlighted_field_box_html_class_lower = "field-box-highlight"
+        highlighted_field_box_html_class = "field-box"
+    else:
+        highlighted_field_box_html_class_lower = "field-box"
+        highlighted_field_box_html_class = "field-box-highlight"
 
     classification_confidence, classification_confidence_html_class = \
-        mcp_utils_test.get_calibration_confidence_label(calibration_reliability=calibration_reliability,
-                                                        hr_class_conditional_accuracy=hr_class_conditional_accuracy,
+        mcp_utils_test.get_calibration_confidence_label(hr_region_alpha=prediction_meta_data.get("hr_region_alpha", 0.0),
+                                                        most_conservative_hr_alpha=most_conservative_hr_alpha,
+                                                        return_html_class=True)
+    classification_confidence_lower, classification_confidence_lower_html_class = \
+        mcp_utils_test.get_calibration_confidence_label(hr_region_alpha=prediction_meta_data.get("hr_region_alpha_lower", 0.0),
+                                                        most_conservative_hr_alpha=most_conservative_hr_alpha,
                                                         return_html_class=True)
 
+    confidence_block_lower = f"""
+            <div class={highlighted_field_box_html_class_lower} style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate, accounting for sample-size error in the distance eCDF)</div>
+                <div class="field-value"><span class="tag tag-{classification_confidence_lower_html_class}">{classification_confidence_lower}</span></div>
+            </div>
+    """
+    confidence_block = f"""
+            <div class={highlighted_field_box_html_class} style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate)</div>
+                <div class="field-value"><span class="tag tag-{classification_confidence_html_class}">{classification_confidence}</span></div>
+            </div>
+    """
+    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
+        combined_main_confidence_blocks = f"""
+        {confidence_block_lower}
+        {confidence_block}
+        """
+    else:
+        combined_main_confidence_blocks = f"""
+        {confidence_block}
+        {confidence_block_lower}
+        """
+
+    # Additional Model Level
     model1_name = html.escape(constants.MCP_SERVER_MODEL1_NAME)
     model2_name = html.escape(constants.MCP_SERVER_MODEL2_NAME)
     agreement_model_name = html.escape(constants.MCP_SERVER_AGREEMENT_MODEL_NAME)
@@ -127,8 +132,6 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         sdm_output_d_upper = prediction_meta_data["sdm_output_d_upper"].detach().cpu().tolist()
 
         rescaled_similarity_lower = prediction_meta_data["rescaled_similarity_lower"]
-        is_high_reliability_region_lower = prediction_meta_data["is_high_reliability_region_lower"]
-        is_high_reliability_region_lower_html_class = "positive" if is_high_reliability_region_lower else "negative"
     except:
         sdm_output = "N/A"
         is_high_reliability_region = False
@@ -145,15 +148,6 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
         sdm_output_d_upper = "N/A"
 
         rescaled_similarity_lower = "N/A"
-        is_high_reliability_region_lower = False
-        is_high_reliability_region_lower_html_class = "negative"
-
-    if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
-        highlighted_field_box_html_class_lower = "field-box-highlight"
-        highlighted_field_box_html_class = "field-box"
-    else:
-        highlighted_field_box_html_class_lower = "field-box"
-        highlighted_field_box_html_class = "field-box-highlight"
 
     user_question = html.escape(current_reexpression.get(constants.REEXPRESS_QUESTION_KEY, ''))
     ai_response = html.escape(current_reexpression.get(constants.REEXPRESS_AI_RESPONSE_KEY, ''))
@@ -186,12 +180,12 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
     if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
         legend_sdm_estimator_html_block = f"""
-            <p>The classification is in the <span class="tag-highlight">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL_NON_TITLE}</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The classification is assigned a confidence based on the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>.</p>
             <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
         """
     else:
         legend_sdm_estimator_html_block = f"""
-            <p>The classification is in the <span class="tag-highlight">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL_NON_TITLE}</span> when the <span class="tag-highlight">rescaled Similarity (q')</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The classification is assigned a confidence based on the <span class="tag-highlight">rescaled Similarity (q')</span> AND the predictive uncertainty, <span class="tag-highlight">p(y | x)</span>.</p>
             <p>The lower (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>
         """
     html_content_string = f"""
@@ -219,10 +213,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
                 </div>
             </div>
 
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-{classification_confidence_html_class}">{classification_confidence}</span></div>
-            </div>
+            {combined_main_confidence_blocks}
 
             <div class="explanation-box-{model1_html_class}">
                 <div class="explanation-title-{model1_html_class}">Model 1 Summary <span class="model-name">({model1_name})</span></div>
@@ -263,30 +254,6 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">Out-of-Distribution</div>
-                    <div class="field-value">
-                        <span class="tag tag-{is_ood_html_class}">{is_ood}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="field-grid">
-                <div class={highlighted_field_box_html_class_lower}>
-                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}</div>
-                    <div class="field-value">
-                        <span class="tag tag-{is_high_reliability_region_lower_html_class}">{is_high_reliability_region_lower}</span>
-                    </div>
-                </div>
-                <div class={highlighted_field_box_html_class}>
-                    <div class="field-label">{constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}</div>
-                    <div class="field-value">
-                        <span class="tag tag-{is_high_reliability_region_html_class}">{is_high_reliability_region}</span>
-                    </div>
-                </div>
-            </div>
             
             <div class={highlighted_field_box_html_class_lower} style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
@@ -359,32 +326,40 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
                     <div class="field-value">{magnitude}</div>
                 </div>
             </div>
-        </div>
+        </div>   
+    
         <div class="section">
-            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="section-title">SDM Estimator (Model-level) Details: The Model's Highest Available Confidence Region</div>
             <div class="field-grid">
-            
                 <div class="field-box">
                     <div class="field-label">
                         α
                     </div>
-                    <div class="field-value">{hr_class_conditional_accuracy}</div>
+                    <div class="field-value">{most_conservative_hr_alpha}</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">{min_rescaled_similarity_to_determine_high_reliability_region}</div>
+                    <div class="field-value">{most_conservative_hr_min_rescaled_similarity}</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">{hr_output_thresholds}</div>
+                    <div class="field-value">{most_conservative_hr_output_thresholds}</div>
                 </div>
-                
+            </div>
+            <div class="section-title">SDM Estimator (Model-level) Details: Additional</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Resolution of available class- and prediction-conditional accuracy regions 
+                    </div>
+                    <div class="field-value">{available_hr_regions}</div>
+                </div>
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
@@ -416,7 +391,7 @@ def create_html_page(current_reexpression, nearest_match_meta_data=None, nearest
             <div class="legend-content">
                 {legend_model_html_block}
                 {legend_sdm_estimator_html_block}
-                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
+                <p>The estimates are fully described in the peer-reviewed publication <a href="https://doi.org/10.18653/v1/2026.findings-acl.1109" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a> and the research note <a href="https://raw.githubusercontent.com/ReexpressAI/sdm_activations/main/research_notes/nested_sdm_estimators.pdf" target="_blank" rel="noopener noreferrer">"Nested Similarity-Distance-Magnitude Estimators"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

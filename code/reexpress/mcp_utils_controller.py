@@ -246,13 +246,16 @@ class MCPServerStateController:
                         partial_reexpression[constants.REEXPRESS_MODEL2_CONFIDENCE] = -1.0
 
         if formatted_output_string == "":
+            hr_region_stats = self.model_list[0].get_most_conservative_high_reliability_region_stats()
+            most_conservative_hr_alpha = hr_region_stats["most_conservative_hr_alpha"]
             formatted_output_string = (
                 mcp_utils_test.get_formatted_sdm_estimator_output_string(
-                    False, constants.CALIBRATION_RELIABILITY_LABEL_OOD,
+                    False,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     constants.SHORT_EXPLANATION_FOR_CLASSIFICATION_CONFIDENCE__DEFAULT_ERROR,
                     agreement_model_classification=None,
-                    hr_class_conditional_accuracy=self.model_list[0].hr_class_conditional_accuracy))
+                    most_conservative_hr_alpha=most_conservative_hr_alpha,
+                    hr_region_alpha=0.0))
             self.current_reexpression = None
         else:
             partial_reexpression["formatted_output_string"] = formatted_output_string
@@ -295,7 +298,7 @@ class MCPServerStateController:
         # the file names are provided.
         if self.current_reexpression is not None and self.CREATE_HTML_VISUALIZATION and \
                 self.HTML_VISUALIZATION_FILE is not None:
-            try:
+            if True: #try:
                 nearest_match_meta_data_list = self.get_nearest_match_meta_data()
                 nearest_match_meta_data = None
                 if nearest_match_meta_data_list is not None:
@@ -312,7 +315,7 @@ class MCPServerStateController:
                 else:
                     with open(str(html_file_path.as_posix()), 'w', encoding='utf-8') as f:
                         f.write(html_content)
-            except:
+            else: #except:
                 return
 
     def update_model_support(self, label: int) -> str:
@@ -443,6 +446,7 @@ class MCPServerStateController:
                 raise AdaptationError(f"The provided label is not in [0, 1, {data_validator.oodLabel}].", "LABEL_ERROR")
 
             message = f"Successfully added document id {document_id} to the training set database with label: {string_label}. The training set database now contains {model.support_index.ntotal} labeled examples.{add_to_support_db_message}"
+
             return message
         except AdaptationError as e:
             self.current_reexpression = None  # clear the cache to avoid inconsistencies
@@ -464,41 +468,37 @@ class MCPServerStateController:
         files_in_consideration_message = \
             mcp_utils_test.get_files_in_consideration_message(
                 self.current_reexpression[constants.REEXPRESS_ATTACHED_FILE_NAMES]).strip()
+
         if constants.MCP_SERVER_USE_DKW_LOWER_ESTIMATES:
-            hr_region_and_sdm_output_block = f"""
-            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region_lower"]}\n
-            p(y | x)_lower: {prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()}
+            uncertainty_region_text_block = f"""
+            Confidence:\n
+            Class- and prediction-conditional accuracy estimate (accounting for sample-size error in the distance eCDF) >= {prediction_meta_data['hr_region_alpha_lower']}
+            Class- and prediction-conditional accuracy estimate >= {prediction_meta_data['hr_region_alpha']}\n
             """
-        else:
-            hr_region_and_sdm_output_block = f"""
-            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region"]}\n
-            p(y | x): {prediction_meta_data["sdm_output"].detach().cpu().tolist()}
+        else:  # flip the order
+            uncertainty_region_text_block = f"""
+            Confidence:\n
+            Class- and prediction-conditional accuracy estimate >= {prediction_meta_data['hr_region_alpha']}\n
+            Class- and prediction-conditional accuracy estimate (accounting for sample-size error in the distance eCDF) >= {prediction_meta_data['hr_region_alpha_lower']}
             """
-        # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
-        is_ood = prediction_meta_data["is_ood"]
+
         formatted_output_string = f"""
             # Verification Results Details:\n
             {constants.predictedFull}: {constants.MCP_SERVER_VERIFIED_CLASS_LABEL if prediction_meta_data["prediction"] == 1 else constants.MCP_SERVER_NOT_VERIFIED_CLASS_LABEL}\n
-            Out-of-distribution: {is_ood}
-            {hr_region_and_sdm_output_block}
+            {uncertainty_region_text_block}
             ## Additional Uncertainty (instance-level) Details:\n            
             {constants.qFull}: {int(prediction_meta_data["q"])}\n
-            {constants.dQuantileLowerFull}: {prediction_meta_data["d_lower"]}\n
             {constants.dQuantileFull}: {prediction_meta_data["d"]}\n
+            {constants.dQuantileLowerFull}: {prediction_meta_data["d_lower"]}\n
             {constants.fFull}: {prediction_meta_data["f"].detach().cpu().tolist()}\n
-            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LOWER_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region_lower"]}\n
-            {constants.CALIBRATION_HIGH_RELIABILITY_REGION_LABEL_FULL}: {prediction_meta_data["is_high_reliability_region"]}\n
-            p(y | x)_lower: {prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()}\n
             p(y | x): {prediction_meta_data["sdm_output"].detach().cpu().tolist()}\n
-            q'_lower: {prediction_meta_data["rescaled_similarity_lower"]}\n
+            p(y | x)_lower: {prediction_meta_data["sdm_output_d_lower"].detach().cpu().tolist()}\n
             q': {prediction_meta_data["rescaled_similarity"]}\n
+            q'_lower: {prediction_meta_data["rescaled_similarity_lower"]}\n
             Effective sample size (by class): {prediction_meta_data["cumulative_effective_sample_sizes"].detach().cpu().tolist()}\n
             ## File Access:\n
             {files_in_consideration_message}\n
             ## SDM Estimator (Model-level) Details:\n
-            alpha={prediction_meta_data["hr_class_conditional_accuracy"]}\n
-            q'_min={prediction_meta_data["min_rescaled_similarity_to_determine_high_reliability_region"]}\n
-            class-wise output thresholds={prediction_meta_data["hr_output_thresholds"]}\n
             Support/training size={prediction_meta_data["support_index_ntotal"]}\n
             # Verification Results Summary:
             {self.current_reexpression["formatted_output_string"]}
