@@ -1,5 +1,5 @@
 # Reexpress Model-Context-Protocol (MCP) Server
-### For tool-calling LLMs (e.g., Claude Opus 4.7) and MCP clients running on macOS (Tahoe 26 or later on Apple silicon) or Linux
+### For tool-calling LLMs (e.g., Claude Fable 5) and MCP clients running on macOS (Tahoe 26 or later on Apple silicon) or Linux
 
 ### Video overview[^1]: [Here](https://youtu.be/PaWrTFPJv2M)
 
@@ -11,18 +11,20 @@
 
 Reexpress MCP Server is a drop-in solution to add state-of-the-art statistical verification to your complex LLM pipelines, as well as your everyday use of LLMs for search and QA for **software development and data science settings**. It's the first reliable, statistically robust AI second opinion for your AI workflows.
 
-Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. The tool-calling LLM (e.g., Anthropic's LLM model Claude Opus 4.7) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-5.5-2026-04-23, gemini-3.1-pro-preview, and gemini-embedding-2, along with the output from the tool-calling LLM, and calculates a robust estimate of the predictive uncertainty against a database of training and calibration examples from the OpenVerification1 dataset. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability. We also include the training scripts for the model, so that you can run a full retraining when more substantive changes are needed, or you want to use alternative underlying LLMs.
+Simply install the MCP server and then add the Reexpress prompt to the end of your chat text. The tool-calling LLM (e.g., Anthropic's LLM model Claude Fable 5) will then check its response with the provided pre-trained Reexpress [Similarity-Distance-Magnitude (SDM) estimator](#citation), which ensembles gpt-5.5-2026-04-23, gemini-3.1-pro-preview, and gemini-embedding-2, along with the output from the tool-calling LLM, and calculates a robust estimate of the predictive uncertainty against a database of training and calibration examples from the OpenVerification1 dataset. Unique to the Reexpress method, you can easily adapt the model to your tasks: Simply call the ReexpressAddTrue or ReexpressAddFalse tools after a verification has completed, and then future calls to the Reexpress tool will dynamically take your updates into consideration when calculating the verification probability. We also include the training scripts for the model, so that you can run a full retraining when more substantive changes are needed, or you want to use alternative underlying LLMs.
 
 > [!NOTE]
 > In addition to providing you (the user) with a principled estimate of confidence in the output given your instructions, the tool-calling LLM itself can use the verification output to progressively refine its answer, determine if it needs additional outside resources or tools, or has reached an impasse and needs to ask you for further clarification or information. That's what we call **reasoning with SDM verification** --- an entirely new capability in the AI toolkit that we think will open up a much broader range of use-cases for LLMs and LLM agents, for both individuals and enterprises.
 
 Data is only sent via standard LLM API calls to Azure/OpenAI and Google, with the gemini-3.1-pro-preview calls given standard web search access through the API; all of the processing for the SDM estimator is done locally on your computer. Reexpress MCP has a simple and conservative, but effective, file access system: You control which additional files (if any) get sent to the LLM APIs by explicitly specifying files via the file-access tools ReexpressDirectorySet() and ReexpressFileSet().
 
-## What's new in version 2.4.0
+## What's new in version 2.5.0
 
-The model card is available [here](documentation/model_cards/model_card_v240.pdf).
+The version 2.5.0 release implements nested estimators as described in [Research Note: Nested Similarity-Distance-Magnitude Estimators](https://raw.githubusercontent.com/ReexpressAI/sdm_activations/main/research_notes/nested_sdm_estimators.pdf). This approach simply runs the calibration algorithm for descending probability thresholds on the class- and prediction-condition accuracy. The result is that rather than a single region, the vast majority of calibration points can be assigned to a region with a class- and prediction-condition accuracy estimated to be at least some value greater than 0.5. The remaining points not assigned to any region can be viewed as effectively out-of-distribution. The most conservative region retains its interpretation and behavior as before, and we find that the nested regions provide a meaningful ranking for adjudicating the relative probability of the remaining points. 
 
-Version 2.4.0 uses gpt-5.5-2026-04-23 and gemini-3.1-pro-preview as the generative models. As with 2.3.0.preview, gemini-embedding-2 replaces the local granite-3.3-8b-instruct model as the agreement representation model. This greatly simplifies running the Server, since you no longer need to locally run a multi-billion parameter model. Additionally, we have also expanded the OpenVerification1 dataset with new examples. See the [model card](documentation/model_cards/model_card_v240.pdf) for details. 
+Additionally, the code base has been streamlined, with the language model post-training code removed. A separate repo will be released for fine-training the underlying weights of networks.
+
+The released model is otherwise the same as version 2.4.x. It is calibrated using the same data and with gpt-5.5-2026-04-23 and gemini-3.1-pro-preview as the generative models. Refer to the [Version 2.4.0 model card](documentation/model_cards/model_card_v240.pdf) for details.
 
 Additional notes in [changelog.md](changelog.md). 
 

@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.4.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.5.0)</span>
         </div>
 
         <div class="section">
@@ -412,24 +412,34 @@
                 </div>
             </div>
 
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-positive">>= 90%</span></div>
+            
+        
+            <div class=field-box-highlight style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate, accounting for sample-size error in the distance eCDF)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.89</span></div>
             </div>
+    
+        
+            <div class=field-box style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.89</span></div>
+            </div>
+    
+        
 
             <div class="explanation-box-negative">
                 <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The user asked how many letter &#x27;g&#x27;s are in the string &quot;computerggame&quot;. The AI response broke the string into letters correctly as c-o-m-p-u-t-e-r-g-g-a-m-e but then incorrectly answered that there are 3 g&#x27;s.</div>
+                <div>The user asked how many lowercase &#x27;g&#x27; characters are in the string &quot;computerggame&quot;. The AI response claimed there are 3 g&#x27;s, despite listing the letters as containing only two g&#x27;s.</div>
             </div>
             
             <div class="explanation-box-negative">
                 <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The string &quot;computerggame&quot; contains exactly two &#x27;g&#x27; characters: c o m p u t e r g g a m e. The AI response’s own letter breakdown shows only two g&#x27;s, so its answer of 3 is incorrect.</div>
+                <div>The string &quot;computerggame&quot; is c-o-m-p-u-t-e-r-g-g-a-m-e, which contains exactly two lowercase &#x27;g&#x27; characters. The AI response&#x27;s answer of 3 is incorrect.</div>
             </div>
 
             <div class="explanation-box-negative">
                 <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The LLM incorrectly states that there are 3 &#x27;g&#x27;s in the word &#x27;computerggame&#x27;. There are only 2 &#x27;g&#x27;s in the provided string.</div>
+                <div>The string &#x27;computerggame&#x27; contains exactly 2 &#x27;g&#x27;s, but the AI incorrectly states there are 3.</div>
             </div>
             
             
@@ -448,7 +458,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-05-18 01:24:24</div>
+                    <div class="field-value">2026-08-27 21:42:39</div>
                 </div>
                 
             </div>
@@ -456,68 +466,44 @@
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">Out-of-Distribution</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">False</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="field-grid">
-                <div class=field-box-highlight>
-                    <div class="field-label">High-Reliability Region (lower)</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">True</span>
-                    </div>
-                </div>
-                <div class=field-box>
-                    <div class="field-label">High-Reliability Region</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">True</span>
-                    </div>
-                </div>
-            </div>
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.9999961853027344, 3.7724953472206835e-06]</div>
+                <div class="field-value">[0.9995273351669312, 0.0004726967017631978]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.999997615814209, 2.3835195861465763e-06]</div>
+                <div class="field-value">[0.9996861219406128, 0.0003138407482765615]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.9999984502792358, 1.5059414408824523e-06]</div>
+                <div class="field-value">[0.99979168176651, 0.0002083593572024256]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[8159.0, 9164.0]</div>
+                    <div class="field-value">[6903.0, 7946.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">235.0</div>
+                    <div class="field-value">115.0</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">235.0</div>
+                    <div class="field-value">115.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">235</div>
+                    <div class="field-value">115</div>
                 </div>                               
             </div>
             
@@ -526,21 +512,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.36850059032440186</div>
+                    <div class="field-value">0.27085521817207336</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.38204991817474365</div>
+                    <div class="field-value">0.2853494882583618</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.39559924602508545</div>
+                    <div class="field-value">0.29984375834465027</div>
                 </div>
             </div>
 
@@ -549,35 +535,43 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[3.0848960876464844, -3.1125595569610596]</div>
+                    <div class="field-value">[2.9944279193878174, -2.941554069519043]</div>
                 </div>
             </div>
-        </div>
+        </div>   
+    
         <div class="section">
-            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="section-title">SDM Estimator (Model-level) Details: The Model's Highest Available Confidence Region</div>
             <div class="field-grid">
-            
                 <div class="field-box">
                     <div class="field-label">
                         α
                     </div>
-                    <div class="field-value">0.9</div>
+                    <div class="field-value">0.98</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">17.74595832824707</div>
+                    <div class="field-value">1003.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9270761013031006, 0.9011152386665344]</div>
+                    <div class="field-value">[0.9870682954788208, 0.9999830722808838]</div>
                 </div>
-                
+            </div>
+            <div class="section-title">SDM Estimator (Model-level) Details: Additional</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Resolution of available class- and prediction-conditional accuracy regions 
+                    </div>
+                    <div class="field-value">[0.98, 0.97, 0.95, 0.94, 0.93, 0.9, 0.89, 0.83, 0.81, 0.77, 0.74, 0.7, 0.67, 0.64, 0.63, 0.6, 0.59, 0.57, 0.56, 0.55, 0.54, 0.53, 0.52, 0.51]</div>
+                </div>
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
@@ -682,10 +676,10 @@ Hello AI.</div>
                 <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">gemini-embedding-2</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
         
                 
-            <p>The classification is in the <span class="tag-highlight">High-Reliability region (lower)</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The classification is assigned a confidence based on the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>.</p>
             <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
         
-                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
+                <p>The estimates are fully described in the peer-reviewed publication <a href="https://doi.org/10.18653/v1/2026.findings-acl.1109" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a> and the research note <a href="https://raw.githubusercontent.com/ReexpressAI/sdm_activations/main/research_notes/nested_sdm_estimators.pdf" target="_blank" rel="noopener noreferrer">"Nested Similarity-Distance-Magnitude Estimators"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

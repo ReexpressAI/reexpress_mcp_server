@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.4.0)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.5.0)</span>
         </div>
 
         <div class="section">
@@ -408,28 +408,38 @@
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">Successfully Verified (Prediction)</div>
                 <div class="field-value">
-                    <span class="tag tag-positive">True</span>
+                    <span class="tag tag-negative">False</span>
                 </div>
             </div>
 
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-caution"><= 89% (use with caution)</span></div>
+            
+        
+            <div class=field-box-highlight style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate, accounting for sample-size error in the distance eCDF)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.97</span></div>
             </div>
+    
+        
+            <div class=field-box style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.97</span></div>
+            </div>
+    
+        
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The user asked to check whether the SQLite `create_table()` column types match the rest of the Python code. The AI response identified that `label_int` is declared as `TEXT` in the table schema but is typed and treated as an integer elsewhere, and recommended changing it to `INTEGER`.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The user asked whether the attached Python version correctly calculates Median Absolute Deviation. The AI response said yes, claiming the function uses `abs(x - median)` and correctly implements MAD.</div>
             </div>
             
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                <div>The response correctly compares the schema against the function type hints, example usage, and display logic in the provided file. `label_int` is indeed the notable mismatch: declared as `TEXT` in `create_table()` but otherwise treated as an integer. The answer directly addresses the user&#x27;s request.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The attached function actually computes `absolute_deviations = [abs(x + median) for x in data]`, using addition instead of subtraction, so it does not correctly calculate MAD. Only the later printed &#x27;calculation steps&#x27; use `abs(x - median)`, but the returned `mad` value comes from the buggy function. The AI response also falsely claims error handling and multiple test cases that are not present. This assessment is based on the provided attached code and the standard MAD definition.</div>
             </div>
 
-            <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The AI correctly identified the type mismatch for the `label_int` column, which is defined as TEXT in the `create_table` SQL statement but is typed as an `int` in the method signature of `add_document` and treated as an integer elsewhere.</div>
+            <div class="explanation-box-negative">
+                <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                <div>The AI response incorrectly states that the provided code correctly calculates the MAD. In the provided code, the `calculate_mad` function contains a bug where it calculates `abs(x + median)` instead of `abs(x - median)`. Furthermore, the AI hallucinates the presence of error handling and multiple test cases that are not present in the provided script.</div>
             </div>
             
             
@@ -443,12 +453,12 @@
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">File Access</div>
-                    <div class="field-value">The verification model had access to: mcp_utils_sqlite_document_db_controller.py</div>
+                    <div class="field-value">The verification model had access to: mad_calculation_check.py</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-05-18 01:06:04</div>
+                    <div class="field-value">2026-08-27 18:56:03</div>
                 </div>
                 
             </div>
@@ -456,68 +466,44 @@
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">Out-of-Distribution</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">False</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="field-grid">
-                <div class=field-box-highlight>
-                    <div class="field-label">High-Reliability Region (lower)</div>
-                    <div class="field-value">
-                        <span class="tag tag-negative">False</span>
-                    </div>
-                </div>
-                <div class=field-box>
-                    <div class="field-label">High-Reliability Region</div>
-                    <div class="field-value">
-                        <span class="tag tag-negative">False</span>
-                    </div>
-                </div>
-            </div>
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[0.314581036567688, 0.685418963432312]</div>
+                <div class="field-value">[0.9942163228988647, 0.005783705972135067]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[0.26186537742614746, 0.7381346225738525]</div>
+                <div class="field-value">[0.9966526627540588, 0.0033473933581262827]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[0.21520982682704926, 0.7847901582717896]</div>
+                <div class="field-value">[0.9980646967887878, 0.0019353495445102453]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[2900.0, 3517.0]</div>
+                    <div class="field-value">[9634.0, 9910.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">11.4375638961792</div>
+                    <div class="field-value">827.99560546875</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">13.795266151428223</div>
+                    <div class="field-value">841.741455078125</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">33</div>
+                    <div class="field-value">859</div>
                 </div>                               
             </div>
             
@@ -526,21 +512,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.06873340904712677</div>
+                    <div class="field-value">0.13833126425743103</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.09146016836166382</div>
+                    <div class="field-value">0.1530948281288147</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.11418692767620087</div>
+                    <div class="field-value">0.16785839200019836</div>
                 </div>
             </div>
 
@@ -549,35 +535,43 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-1.3023476600646973, 1.8845607042312622]</div>
+                    <div class="field-value">[2.775627374649048, -2.7299389839172363]</div>
                 </div>
             </div>
-        </div>
+        </div>   
+    
         <div class="section">
-            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="section-title">SDM Estimator (Model-level) Details: The Model's Highest Available Confidence Region</div>
             <div class="field-grid">
-            
                 <div class="field-box">
                     <div class="field-label">
                         α
                     </div>
-                    <div class="field-value">0.9</div>
+                    <div class="field-value">0.98</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">17.74595832824707</div>
+                    <div class="field-value">1003.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9270761013031006, 0.9011152386665344]</div>
+                    <div class="field-value">[0.9870682954788208, 0.9999830722808838]</div>
                 </div>
-                
+            </div>
+            <div class="section-title">SDM Estimator (Model-level) Details: Additional</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Resolution of available class- and prediction-conditional accuracy regions 
+                    </div>
+                    <div class="field-value">[0.98, 0.97, 0.95, 0.94, 0.93, 0.9, 0.89, 0.83, 0.81, 0.77, 0.74, 0.7, 0.67, 0.64, 0.63, 0.6, 0.59, 0.57, 0.56, 0.55, 0.54, 0.53, 0.52, 0.51]</div>
+                </div>
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
@@ -590,20 +584,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">I have updated create_table() in /mnt/user-data/uploads/mcp_utils_sqlite_document_db_controller.py. Check that the types match.</div>
+            <div class="prompt-box">What about this version? Does it correctly calculate the MAD?</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, uploaded file, mcp_utils_sqlite_document_db_controller.py, line 57]: In the `CREATE TABLE IF NOT EXISTS documents` statement inside `create_table()`, the column is declared as `label_int TEXT,`.
-
-Reference [2, uploaded file, mcp_utils_sqlite_document_db_controller.py, line 91]: The `add_document()` signature types the parameter as `label_int: int`.
-
-Reference [3, uploaded file, mcp_utils_sqlite_document_db_controller.py, lines 334, 355, 376]: Example usage passes integer literals, e.g. `label_int=1`.
-
-Reference [4, uploaded file, mcp_utils_sqlite_document_db_controller.py, lines 168, 271, 307]: `get_document()`, `get_recent_documents()`, and `get_recently_updated_documents()` include `&#x27;label_int&#x27;` in the set of fields exempted from `html.escape(...)` because they are treated as integers.
-
-Answer: The types do not match. `label_int` is declared `TEXT` in `create_table()` but is treated as an integer everywhere else in the file (column name suffix `_int`, `int` type hint in `add_document()`, integer literals in example usage, and inclusion in the integer-field exemption list in three read methods). The declaration should be `label_int INTEGER`.</div>
+            <div class="document-box">Reference [1, mad.py, doc_index-2, line 28]: &quot;deviations = [abs(x - median) for x in data]&quot;; Reference [2, internal knowledge]: The MAD (Median Absolute Deviation) formula is median(|x_i - median(x)|), which requires calculating absolute deviations by subtracting the median from each data point; Reference [3, mad.py, doc_index-2, lines 31-38]: The code correctly sorts the deviations and calculates the median of those deviations, properly handling both even and odd-length datasets. Answer: Yes, this version correctly calculates the MAD. The corrected formula on line 28 uses subtraction (x - median) instead of addition, which is the proper implementation of the MAD definition. The code also includes proper error handling, clear documentation, and multiple test cases demonstrating correct functionality.</div>
         </div>
         
         <div class="separator"></div>
@@ -617,127 +603,83 @@ Answer: The types do not match. `label_int` is declared `TEXT` in `create_table(
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Successfully Verified (Prediction)</div>
                         <div class="field-value">
-                            <span class="tag tag-positive">True</span>
+                            <span class="tag tag-negative">False</span>
                         </div>
                     </div>
         
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">True Label</div>
-                        <div class="field-value"><span class="tag tag-positive">Verified</span></div>
+                        <div class="field-value"><span class="tag tag-negative">NOT Verified</span></div>
                     </div>
                 </div>
                 
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                    <div>The user asked why sqlite3 reports parameter 12 as an unsupported Tensor when inserting documents and how to fix it. The AI response identified parameter 12 as label_int, traced it to model.train_labels being a PyTorch tensor whose iterated elements are tensors, and recommended converting labels to Python ints before insertion.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked for a Python class to calculate mean, median, and mode. The response provided a StatisticsCalculator class with methods for mean, median, and mode, including empty-list handling.</div>
                 </div>
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
-                    <div>The response correctly counts the INSERT placeholders/arguments and identifies the 12th bound value as label_int. Given the provided code, label_int comes from train_labels without conversion, and PyTorch tensor labels would indeed be unsupported by sqlite3. Converting label to int at dict creation or before db.add_document is an appropriate fix. The answer is based on the provided code plus standard PyTorch/sqlite3 behavior; it does include a minor irrelevant reference to a prior verification turn, but that does not affect the correctness of the diagnosis or fix.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The class mostly addresses the request, but the median implementation is incorrect for even-length lists: it uses sorted_numbers[mid] and sorted_numbers[mid + 1] instead of sorted_numbers[mid - 1] and sorted_numbers[mid]. For a two-element list it will raise an IndexError. Therefore I cannot verify that the response correctly calculates the requested statistics.</div>
                 </div>
     
-                <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                    <div>The LLM accurately identified that parameter 12 in the SQL insert statement corresponds to `label_int`. It correctly deduced that since `train_labels` is a PyTorch tensor, iterating over it yields 0-dimensional tensors, which sqlite3 cannot natively bind. The proposed fix of casting the label to an integer using `int(label)` or `label.item()` is valid and effectively resolves the issue.</div>
+                <div class="explanation-box-negative">
+                    <div class="explanation-title-negative">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
+                    <div>The AI&#x27;s response provides a Python class, but it contains a mathematical bug in the median calculation. For an array with an even number of elements, the method incorrectly averages the element at the midpoint index and the one after it (e.g., indices 2 and 3 for an array of length 4), rather than the element at the midpoint and the one before it (indices 1 and 2). This yields incorrect results for the median.</div>
                 </div>
                 
                 
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Running aux_construct_document_db.py against ReexpressAI/OpenVerification1 produced this error after &quot;Support set size: 14936&quot;:
-
-  File &quot;aux_construct_document_db.py&quot;, line 91, in init_db
-    success = db.add_document(...)
-  File &quot;mcp_utils_sqlite_document_db_controller.py&quot;, line 121, in add_document
-    cursor.execute(&#x27;&#x27;&#x27;
-sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported
-
-The mcp_utils_sqlite_document_db_controller.py file is also attached. Identify the cause and provide a fix.
-
-Relevant code from aux_construct_document_db.py (retrieve_model_documents_ids):
-
-    model = utils_model.load_model_torch(options.model_dir, torch.device(&quot;cpu&quot;), load_for_inference=True)
-    ...
-    train_uuids = model.train_uuids
-    train_labels = model.train_labels
-    train_document_id_2_label = {}
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = label
-    return train_document_id_2_label
-
-And in init_db:
-    label_int = train_document_id_2_label[document_id]
-    ...
-    success = db.add_document(
-        document_id=document_id,
-        model1_summary=model1_summary,
-        model1_explanation=model1_explanation,
-        model2_explanation=model2_explanation,
-        model3_explanation=&#x27;&#x27;,
-        model4_explanation=&#x27;&#x27;,
-        model1_classification_int=model1_classification_int,
-        model2_classification_int=model2_classification_int,
-        model3_classification_int=0,
-        model4_classification_int=0,
-        agreement_model_classification_int=agreement_classification_int,
-        label_int=label_int,
-        label_was_updated_int=0,
-        document_source=document_source,
-        info=f&quot;{model1_label},{model2_label}&quot;,
-        user_question=user_question,
-        ai_response=ai_response
-    )
-
-Relevant code from mcp_utils_sqlite_document_db_controller.py (add_document INSERT, line 121):
-
-    cursor.execute(&#x27;&#x27;&#x27;
-        INSERT INTO documents (
-            document_id, model1_summary, model1_explanation, model2_explanation,
-            model3_explanation, model4_explanation, model1_classification_int, model2_classification_int,
-            model3_classification_int, model4_classification_int, agreement_model_classification_int,
-            label_int, label_was_updated_int, document_source, info,
-            user_question, ai_response
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    &#x27;&#x27;&#x27;, (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation,
-          model4_explanation,
-          model1_classification_int, model2_classification_int,
-          model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int,
-          label_was_updated_int, document_source, info,
-          user_question, ai_response))</div>
+                    <div class="prompt-box">Can you provide a Python class that calculates the mean, median, and mode of a group of numbers?</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">Reference [1, mcp_utils_sqlite_document_db_controller.py, line 121-134, INSERT parameter ordering]: The cursor.execute INSERT in add_document binds parameters in this order: (document_id, model1_summary, model1_explanation, model2_explanation, model3_explanation, model4_explanation, model1_classification_int, model2_classification_int, model3_classification_int, model4_classification_int, agreement_model_classification_int, label_int, label_was_updated_int, document_source, info, user_question, ai_response). Counting positionally, parameter 12 is label_int.
+                    <div class="document-box">class StatisticsCalculator:
+    def __init__(self, numbers):
+        self.numbers = numbers
 
-Reference [2, error message]: &quot;sqlite3.ProgrammingError: Error binding parameter 12: type &#x27;Tensor&#x27; is not supported&quot;. This identifies the failing parameter as position 12 and the offending Python type as torch.Tensor.
+    def mean(self):
+        if not self.numbers:
+            raise ValueError(&quot;Cannot compute mean of an empty list.&quot;)
+        return sum(self.numbers) / len(self.numbers)
 
-Reference [3, aux_construct_document_db.py, retrieve_model_documents_ids]: train_labels = model.train_labels; for document_id, label in zip(train_uuids, train_labels): train_document_id_2_label[document_id] = label. The label values are stored without conversion, taken directly from a torch model attribute.
+    def median(self):
+        if not self.numbers:
+            raise ValueError(&quot;Cannot compute median of an empty list.&quot;)
+        sorted_numbers = sorted(self.numbers)
+        n = len(sorted_numbers)
+        mid = n // 2
+        if n % 2 == 1:
+            return sorted_numbers[mid]
+        else:
+            return (sorted_numbers[mid] + sorted_numbers[mid + 1]) / 2
 
-Reference [4, internal knowledge, PyTorch iteration semantics]: Iterating a 1-D torch.Tensor yields 0-dimensional torch.Tensor elements, not Python ints. So when train_labels is a 1-D tensor, each label in the loop is a 0-d Tensor, which becomes the dict value, and ultimately the label_int kwarg passed into db.add_document.
-
-Reference [5, internal knowledge, sqlite3 type adapters]: Python&#x27;s stdlib sqlite3 module supports binding None, int, float, str, bytes by default. It does not have a built-in adapter for torch.Tensor, so binding a Tensor raises sqlite3.ProgrammingError: type &#x27;Tensor&#x27; is not supported. This matches the observed error verbatim.
-
-Reference [6, internal knowledge, Python/PyTorch int() coercion]: int(x) on a 0-d torch.Tensor (e.g., int(torch.tensor(5))) returns the Python int 5, and int() on a Python int is a no-op returning the same int. So int(label) is safe regardless of whether train_labels is a tensor or a list of ints.
-
-Reference [7, internal reasoning, Reexpress verifier feedback from prior turn]: The earlier verification call flagged that runtime claims depended on utils_model.load_model_torch and the model object&#x27;s attributes, which were not visible at static-review time. The current error confirms exactly that gap: model.train_labels turned out to be a tensor, which static analysis of aux_construct_document_db.py alone could not establish.
-
-Answer: SQL parameter 12 in add_document&#x27;s INSERT (mcp_utils_sqlite_document_db_controller.py line 121) is label_int. The sqlite3 error &quot;type &#x27;Tensor&#x27; is not supported&quot; at parameter 12 means label_int is being passed as a torch.Tensor. The source is retrieve_model_documents_ids in aux_construct_document_db.py: train_labels = model.train_labels is a torch tensor, and iterating it yields 0-d tensors which are stored in train_document_id_2_label and passed unchanged to db.add_document(label_int=...). The minimal fix is to convert at dict insertion time:
-
-    for document_id, label in zip(train_uuids, train_labels):
-        train_document_id_2_label[document_id] = int(label)
-
-int() works on both 0-d tensors and plain Python ints, so this is safe regardless. Equivalently, label.item() works if train_labels is guaranteed to be a tensor. Optionally, also wrap model1_classification_int and model2_classification_int from the HF dataset row in int(...) defensively, though those are likely already plain Python ints.</div>
+    def mode(self):
+        if not self.numbers:
+            raise ValueError(&quot;Cannot compute mode of an empty list.&quot;)
+        frequency = {}
+        for num in self.numbers:
+            frequency[num] = frequency.get(num, 0) + 1
+        max_freq = max(frequency.values())
+        if max_freq == 1:
+            if len(self.numbers) == 1:
+                return [self.numbers[0]]
+            else:
+                return []
+        modes = [num for num, freq in frequency.items() if freq == max_freq]
+        modes.sort()
+        return modes</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">user_added_3d20277d-fb33-4dc9-a616-ab1b051576db</div>
+                        <div class="field-value">neg_1096681_e51aa3f8-289e-4cf0-88d5-1764687350b4</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
-                        <div class="field-value">OpenVerification1_aux_adaptation_examples: attached_documents: No</div>
+                        <div class="field-value">OpenVerification1: openthoughts</div>
                     </div>                
                 </div>
             </div>
@@ -753,10 +695,10 @@ int() works on both 0-d tensors and plain Python ints, so this is safe regardles
                 <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">gemini-embedding-2</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
         
                 
-            <p>The classification is in the <span class="tag-highlight">High-Reliability region (lower)</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The classification is assigned a confidence based on the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>.</p>
             <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
         
-                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
+                <p>The estimates are fully described in the peer-reviewed publication <a href="https://doi.org/10.18653/v1/2026.findings-acl.1109" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a> and the research note <a href="https://raw.githubusercontent.com/ReexpressAI/sdm_activations/main/research_notes/nested_sdm_estimators.pdf" target="_blank" rel="noopener noreferrer">"Nested Similarity-Distance-Magnitude Estimators"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>

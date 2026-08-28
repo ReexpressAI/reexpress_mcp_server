@@ -30,7 +30,7 @@ It's easy to run verification via a simple prompt. `reexpress(user_question: str
 
 ## The Reexpress tool: `reexpress(user_question: str, ai_response: str)`
 
-At the end of your prompt (or alone if referencing a previous assistant response) add:
+At the end of your prompt (or alone if referencing a previous assistant response) add (adjusting the confidence threshold, as desired):
 
 > ```Please verify your final answer with the Reexpress tool. Do not include the Reexpress instructions themselves as part of the user_question argument of the Reexpress tool. Structure your input to the ai_response argument as Reference [Number, source or "internal knowledge" or "internal reasoning"; and if applicable, URL or filename, and the doc_index-sentence_index]: Source text; Reference [Number+1, source or "internal knowledge" or "internal reasoning"; and if applicable, URL or filename, and the doc_index-sentence_index]: Source text; Answer: Your answer. Consider your final answer verified if <successfully_verified> True </successfully_verified> and <confidence> >= 90% </confidence>.```
 
@@ -41,16 +41,13 @@ This will take your previous question and Claude's response, and then ensemble i
 
 ### *The key information the tool will tell you:*
 1. Is the response successfully verified (a binary classification): True or False
-2. Confidence in the prediction (i.e., the probability estimated for the above binary classification):
-	- `>= 90%`
-   - ` <= 89% (use with caution) `
-   - ` < 60% (approaching random chance, so use with caution) `
-   - ` Out-of-distribution (unreliable) `
-3. Informal explanations from each of the API LMs. (1) and (2) above constitute the final verification decision, whereas these explanations are *inputs* to that classifier. Downstream LMs can use these explanations as additional signals, but to avoid conflating these inputs with the final classification decision, we recommend telling the tool-calling LM to do the following: `Consider your final answer verified if <successfully_verified> True </successfully_verified> and <confidence> >= 90% </confidence>.` 
+2. Confidence in the prediction. This is an estimate that the class- and prediction-conditional accuracy is at least the given value (e.g., `>= 98%` or `>= 90%`) (i.e., the conservative probability estimated for the above binary classification). The resolution of the class- and prediction-conditional accuracy regions is estimator-dependent. They are determined automatically by the calibration algorithm with the resolution parameter set to 0.01. In the released model for v2.5.0, the regions are at available at the following resolutions:
+`[0.98, 0.97, 0.95, 0.94, 0.93, 0.9, 0.89, 0.83, 0.81, 0.77, 0.74, 0.7, 0.67, 0.64, 0.63, 0.6, 0.59, 0.57, 0.56, 0.55, 0.54, 0.53, 0.52, 0.51]`. In the event no such estimate can be reliably made given the data and the estimator, the output will indicate `Out-of-distribution (unreliable)`.
+3. Informal explanations from each of the API LMs. (1) and (2) above constitute the final verification decision, whereas these explanations are *inputs* to that classifier. Downstream LMs can use these explanations as additional signals, but to avoid conflating these inputs with the final classification decision, we recommend telling the tool-calling LM to do the following (adjusting the confidence threshold, as desired): `Consider your final answer verified if <successfully_verified> True </successfully_verified> and <confidence> >= 90% </confidence>.` 
 
 ### Example
 
-Our example below is with the simple question: "What is the derivative of ln(x)?"[^1]
+Our example below is with the question to find dy/dx if y = (x^2 + 1)^(sin x)?[^1]
 
 ![Example of output from the Reexpress tool for a simple question using Claude Desktop as the MCP client.](/documentation/example_output/reexpress_tool.png)
 
@@ -59,7 +56,7 @@ Additionally, the HTML page at [example_output/current_reexpression.html](exampl
 ![Screenshot image of the rendered HTML output for the example from the Reexpress tool.](/documentation/example_output/current_reexpression_as_image_top_of_page.png)
 
 
-Here, we see that the SDM estimator has successfully verified Claude's answer, with a probability of at least 90% relative to our [training and calibration sets](/documentation/DATA.md). Typically, we recommend using the tool at that granularity (i.e., is the output verified at a probability of at least 90%, and if not, take additional branching action until it is). 
+Here, we see that the SDM estimator has successfully verified Claude's answer, with a probability of at least 89% relative to our [training and calibration sets](/documentation/DATA.md). 
 
 If we need to further understand the calculation, we can call ReexpressView or look at current_reexpression.html in the model directory. The system demonstration paper and Model Card provide further details on these estimates of the predictive uncertainty.
 
@@ -153,7 +150,7 @@ Recommended prompt:
 (We set our macOS keyboard Text Replacement shortcut to: `r:0`)
 
 > [!TIP]
-> ReexpressAddFalse, ReexpressAddTrue, and ReexpressAddOOD modify the training (support) set without re-training the estimator, which is great for fast, local updates.[^2] When you need to make a large number of updates (> 1000 examples as a rule of thumb, given the size of the base support set here), we recommend re-training/re-calibrating the estimator, which you can do using the code in this repo. All of your added data (with embedding input to the estimator) is saved to `adaptation/running_updates.jsonl` in the model directory, which you can use to re-train the estimator. Note that calls to the main Reexpress tool do not save your data to disk (beyond the one-off HTML file, if enabled, which gets overwritten each call); that only occurs if ReexpressAddFalse, ReexpressAddTrue, or ReexpressAddOOD are called.
+> ReexpressAddFalse, ReexpressAddTrue, and ReexpressAddOOD modify the training (support) set without re-training the estimator, which is great for fast, local updates.[^2] When you need to make a large number of updates (> 100 examples as a rule of thumb, given the size of the base support set here), we recommend re-training/re-calibrating the estimator, which you can do using the code in this repo. All of your added data (with embedding input to the estimator) is saved to `adaptation/running_updates.jsonl` in the model directory, which you can use to re-train the estimator. Note that calls to the main Reexpress tool do not save your data to disk (beyond the one-off HTML file, if enabled, which gets overwritten each call); that only occurs if ReexpressAddFalse, ReexpressAddTrue, or ReexpressAddOOD are called.
 
 ## The ReexpressAddTrue tool: `reexpress_add_true()`
 

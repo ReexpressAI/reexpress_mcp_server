@@ -1,6 +1,6 @@
 
 # Installation Instructions for the Reexpress Model-Context-Protocol (MCP) Server
-### For tool-calling LLMs (e.g., Claude Opus 4.7) and MCP clients running on macOS (Tahoe 26 or later on Apple silicon) or Linux
+### For tool-calling LLMs (e.g., Claude Fable 5) and MCP clients running on macOS (Tahoe 26 or later on Apple silicon) or Linux
 
 The Reexpress MCP server works with any [MCP client](https://modelcontextprotocol.io/clients). The easiest way to get started is with the [Claude Desktop App](https://claude.ai/download) for macOS Tahoe 26, running on an Apple silicon Mac, since it has web-search (which we highly recommend for verification) built-in as an option. We will assume you have downloaded and installed Claude Desktop in the following.
 
@@ -45,8 +45,8 @@ Run the following lines from the Terminal.
 ### macOS Tahoe 26 and Apple silicon:
 
 ```
-conda create -n re_mcp_v240 python=3.12
-conda activate re_mcp_v240
+conda create -n re_mcp_v250 python=3.12
+conda activate re_mcp_v250
 conda install -c pytorch -c conda-forge \
   faiss-cpu=1.14.1 \
   pytorch=2.9.1
@@ -57,15 +57,15 @@ python -m pip install \
   google-genai==1.73.1
 ```
 
-The above will create an environment "re_mcp_v240" with the required dependencies for macOS Tahoe 26 and Apple silicon.
+The above will create an environment "re_mcp_v250" with the required dependencies for macOS Tahoe 26 and Apple silicon.
 
 ### Linux with Nvidia GPUs
 
 For running the train/eval script reexpress.py on Nvidia GPUs to recalibrate over new data (i.e., create a new SDM estimator), the following environment has been verified to work on Nvidia L4 GPUs:
 
 ```
-conda create -n re_mcp_v240 python=3.12
-conda activate re_mcp_v240
+conda create -n re_mcp_v250 python=3.12
+conda activate re_mcp_v250
 conda install -c pytorch -c nvidia -c rapidsai -c conda-forge libnvjitlink faiss-gpu-cuvs=1.14.1
 python -m pip install \
   torch==2.9.1 \
@@ -130,7 +130,7 @@ In ${REEXPRESS_MCP_SERVER_REPO_DIR} (i.e., the repo directory) is a template fil
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /path/to/your_conda_directory/etc/profile.d/conda.sh && conda activate re_mcp_v240 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
+                "source /path/to/your_conda_directory/etc/profile.d/conda.sh && conda activate re_mcp_v250 && source /path/to/your/llm_api_setup.sh && python /path/to/the/repo/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }
@@ -148,7 +148,7 @@ Replace the following paths with your actual paths:
 For example, with  
 - macOS username `a` 
 - REEXPRESS_MCP_SERVER_REPO_DIR='/Users/a/Documents/repos_agents/reexpress_mcp_server'
-- /Users/a/local_projects/llm_api_setup_v2.4.0.sh (Here, we place llm_api_setup_v2.4.0.sh outside of the Documents folder in a directory arbitrarily named 'local_projects' to simplify macOS file permissions when using Claude for Mac.)
+- /Users/a/local_projects/llm_api_setup_v2.5.0.sh (Here, we place llm_api_setup_v2.5.0.sh outside of the Documents folder in a directory arbitrarily named 'local_projects' to simplify macOS file permissions when using Claude for Mac.)
 
 the file would be the following:
 
@@ -160,7 +160,7 @@ the file would be the following:
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "source /Users/a/miniconda3/etc/profile.d/conda.sh && conda activate re_mcp_v240 && source /Users/a/local_projects/llm_api_setup_v2.4.0.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
+                "source /Users/a/miniconda3/etc/profile.d/conda.sh && conda activate re_mcp_v250 && source /Users/a/local_projects/llm_api_setup_v2.5.0.sh && python /Users/a/Documents/repos_agents/reexpress_mcp_server/code/reexpress/reexpress_mcp_server.py"
             ]
         }
     }

@@ -110,13 +110,16 @@ def random_mode(a):
     return random.choice(modes)
 
 
-def construct_ensemble_prediction(prediction_meta_data_across_models):
-    # This mirrors the former utils_test_batch_ensemble.py. Currently, len(prediction_meta_data_across_models) == 1
+def construct_ensemble_prediction(prediction_meta_data_across_models,
+                                  most_conservative_hr_alpha_to_consider_in_ensemble=None):
+    # This mirrors utils_test_batch_ensemble.py. Currently, len(prediction_meta_data_across_models) == 1
 
     if len(prediction_meta_data_across_models) == 1:
         return {"ensemble_meta_data": None,
                 "prediction_meta_data_across_models": prediction_meta_data_across_models}
 
+    assert most_conservative_hr_alpha_to_consider_in_ensemble is not None and \
+           most_conservative_hr_alpha_to_consider_in_ensemble > 0.5
     total_models_in_ensemble = len(prediction_meta_data_across_models)
     predicted_class = random_mode(
         [prediction_meta_data["prediction"] for prediction_meta_data in prediction_meta_data_across_models])
@@ -127,26 +130,30 @@ def construct_ensemble_prediction(prediction_meta_data_across_models):
     # from numpy to int for JSON serialization.)
     is_high_reliability_region_lower = \
         np.sum(
-            [prediction_meta_data["is_high_reliability_region_lower"]
+            [prediction_meta_data["hr_region_alpha_lower"] >= most_conservative_hr_alpha_to_consider_in_ensemble
              for prediction_meta_data in prediction_meta_data_across_models]).item() == total_models_in_ensemble
     is_high_reliability_region = \
         np.sum(
-            [prediction_meta_data["is_high_reliability_region"]
+            [prediction_meta_data["hr_region_alpha"] >= most_conservative_hr_alpha_to_consider_in_ensemble
              for prediction_meta_data in prediction_meta_data_across_models]).item() == total_models_in_ensemble
 
-    is_ood = False
     sdm_output = None  # chosen min among predicted_class
     rescaled_similarity = None
     min_sdm_output_index = None
     sdm_output_lower = None  # chosen min among predicted_class
     rescaled_similarity_lower = None
     min_sdm_output_lower_index = None
+
+    q_is_0_or_d_is_0 = False
+    hr_region_alpha = None
+    hr_region_alpha_index = None
+    hr_region_alpha_lower = None
+    hr_region_alpha_lower_index = None
+
     shuffle_index = 0
     for prediction_meta_data in prediction_meta_data_across_models:
-        # OOD also takes into account d == 0. (See note in mcp_utils_test.test().)
-        if prediction_meta_data["is_ood"]:
-            # OOD if at least one OOD
-            is_ood = True
+        if prediction_meta_data["q"] == 0 or prediction_meta_data["d"] == 0:
+            q_is_0_or_d_is_0 = True
         if prediction_meta_data["prediction"] == predicted_class:
             if sdm_output is None or \
                     prediction_meta_data["sdm_output"][predicted_class] < sdm_output[predicted_class]:
@@ -158,6 +165,14 @@ def construct_ensemble_prediction(prediction_meta_data_across_models):
                 sdm_output_lower = prediction_meta_data["sdm_output_d_lower"]
                 rescaled_similarity_lower = prediction_meta_data["rescaled_similarity_lower"]
                 min_sdm_output_lower_index = shuffle_index
+            if hr_region_alpha is None or \
+                    prediction_meta_data["hr_region_alpha"] < hr_region_alpha:
+                hr_region_alpha = prediction_meta_data["hr_region_alpha"]
+                hr_region_alpha_index = shuffle_index
+            if hr_region_alpha_lower is None or \
+                    prediction_meta_data["hr_region_alpha_lower"] < hr_region_alpha_lower:
+                hr_region_alpha_lower = prediction_meta_data["hr_region_alpha_lower"]
+                hr_region_alpha_lower_index = shuffle_index
         else:
             is_high_reliability_region_lower = False
             is_high_reliability_region = False
@@ -167,25 +182,43 @@ def construct_ensemble_prediction(prediction_meta_data_across_models):
     ensemble_meta_data = {
         # Across models, the modal prediction, with ties randomly broken:
         "ensemble_prediction": predicted_class,
-        # All predictions match AND all predictions are in HR_lower:
+        # All predictions match AND all predictions are in the most conservative HR_lower (where that
+        # alpha is specified by the caller to this eval routine and recorded in the field
+        # 'most_conservative_hr_alpha_to_consider_in_ensemble'):
         "ensemble_is_high_reliability_region_lower": is_high_reliability_region_lower,
         # Among predictions matching "ensemble_prediction", lowest sdm(z')_lower for the predicted class:
         "ensemble_sdm_output_lower": sdm_output_lower,
         # q'_lower corresponding to the model iteration chosen for "ensemble_sdm_output_lower"
         "ensemble_rescaled_similarity_lower": rescaled_similarity_lower,
-        # All predictions match AND all predictions are in HR:
+        # All predictions match AND all predictions are in the most conservative HR (where that alpha is specified
+        # by the caller to this eval routine and recorded in the field
+        # 'most_conservative_hr_alpha_to_consider_in_ensemble'):
         "ensemble_is_high_reliability_region": is_high_reliability_region,
         # Among predictions matching "ensemble_prediction", lowest sdm(z') for the predicted class:
         "ensemble_sdm_output": sdm_output,
         # q' corresponding to the model iteration chosen for "ensemble_sdm_output"
         "ensemble_rescaled_similarity": rescaled_similarity,
-        # If any of the model predictions are OOD:
-        "ensemble_any_is_ood": is_ood,
+        # If any of the model predictions have q = 0 or d = 0:
+        "ensemble_any_is_q_is_0_or_d_is_0": q_is_0_or_d_is_0,
         # model shuffle index for the min SDM output:
         "min_sdm_output_index": min_sdm_output_index,
         # model shuffle index for the min SDM_lower output:
-        "min_sdm_output_lower_index": min_sdm_output_lower_index
+        "min_sdm_output_lower_index": min_sdm_output_lower_index,
+        # Among predictions matching "ensemble_prediction", lowest hr_region_alpha:
+        "hr_region_alpha": hr_region_alpha,
+        # model shuffle index for the min hr_region_alpha:
+        "hr_region_alpha_index": hr_region_alpha_index,
+        # Among predictions matching "ensemble_prediction", lowest hr_region_alpha_lower:
+        "hr_region_alpha_lower": hr_region_alpha_lower,
+        # model shuffle index for the min hr_region_alpha_lower:
+        "hr_region_alpha_lower_index": hr_region_alpha_lower_index,
+        # This is the alpha value that determines the most conservative HR region under consideration for the
+        # selection criteria requiring HR region membership AND prediction matches across all models. Note that
+        # hr_region_alpha and hr_region_alpha_lower are less restrictive criteria, as they only consider the modal
+        # predicted class.
+        "most_conservative_hr_alpha_to_consider_in_ensemble": most_conservative_hr_alpha_to_consider_in_ensemble
     }
+
     json_obj = {"ensemble_meta_data": ensemble_meta_data,
                 "prediction_meta_data_across_models": prediction_meta_data_across_models}
     return json_obj

@@ -133,8 +133,31 @@ def main():
                              "alpha = 1 - k*alpha_resolution for k = 1, 2, ..., while alpha > 0.5, successively  "
                              "excluding the points in every higher region with a finite q'_min.")
 
-    # Options not yet implemented in this version:
+    # ensemble parameters:
     parser.add_argument("--eval_ensemble", default=False, action='store_true', help="")
+    parser.add_argument("--eval_ensemble_start_iteration", default=-1, type=int, help="")
+    parser.add_argument("--eval_ensemble_end_iteration", default=-1, type=int, help="Inclusive indexing")
+    parser.add_argument("--eval_ensemble_label_error_file", default="",
+                        help="If provided, possible label annotation errors "
+                             "(in the most conservative HR region but y != prediction) are saved, "
+                             "sorted by the SDM(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_file", default="",
+                        help="If provided, instances with predictions in the most conservative "
+                             "High Reliability region are saved, "
+                             "sorted by the SDM(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_label_error_hr_lower_file", default="",
+                        help="If provided, possible label annotation errors "
+                             "(in the most conservative HR_lower region but y != prediction) "
+                             "are saved, sorted by the SDM_lower(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_predictions_in_high_reliability_region_lower_file", default="",
+                        help="If provided, instances with predictions in the most conservative High Reliability "
+                             "LOWER region are saved, "
+                             "sorted by the SDM_lower(z')_prediction probability.")
+    parser.add_argument("--eval_ensemble_prediction_output_file", default="",
+                        help="If provided, output predictions are saved to this file "
+                             "in the order of the input file.")
+
+    # Options not yet implemented in this version:
     parser.add_argument("--continue_training",
                         default=False, action='store_true', help="")
 
@@ -146,12 +169,6 @@ def main():
     # random.seed(options.seed_value)
     rng = np.random.default_rng(seed=options.seed_value)
 
-    if options.is_training_support:
-        assert options.batch_eval
-
-    assert not options.eval_ensemble, "--eval_ensemble is not yet implemented in this streamlined version. " \
-                                      "See release v2.4.1 of the Reexpress MCP Server for an example of " \
-                                      "an ensemble approach."
     assert not options.continue_training, "Not implemented"
 
     main_device = torch.device(options.main_device)
@@ -165,6 +182,40 @@ def main():
         utils_calibrate.calibrate_to_determine_high_reliability_region(options, model_dir=options.model_dir)
 
     utils_test_batch.test(options, main_device)
+
+    if options.eval_ensemble:
+        import os
+        import utils_test_batch_ensemble
+        import utils_model
+        id2ensemble_stats = {}
+        total_models_in_ensemble = \
+            len(list(range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1)))
+        print(f"------------------------------------------------------------------------------------------")
+        print(f"---------------Beginning Ensemble Evaluation of {total_models_in_ensemble} models---------------")
+        for iteration in range(options.eval_ensemble_start_iteration, options.eval_ensemble_end_iteration + 1):
+            iteration_model_dir = os.path.join(options.model_dir, str(iteration))
+            print(f"------------------------------------------------------------------------------------------")
+            print(f"---------------Processing Ensemble Shuffle Index {iteration_model_dir}---------------")
+            id2ensemble_stats = \
+                utils_test_batch.test(options, main_device,
+                                      iteration_model_dir=iteration_model_dir, id2ensemble_stats=id2ensemble_stats)
+        # First load the main model to get the most conservative HR region to consider in the ensemble:
+        model = \
+            utils_model.load_model_torch(options.model_dir, main_device, load_for_inference=True)
+        hr_region_stats = model.get_most_conservative_high_reliability_region_stats()
+        most_conservative_hr_alpha_to_consider_in_ensemble = hr_region_stats["most_conservative_hr_alpha"]
+        print(f'\tUsing the most conservative alpha of the model in the main directory to determine the '
+              f'most conservative high reliability region criteria that requires predictions and HR region matches '
+              f'across ALL ensembled models: {most_conservative_hr_alpha_to_consider_in_ensemble}')
+        maxQAvailableFromIndexer = model.maxQAvailableFromIndexer
+        numberOfClasses = model.numberOfClasses
+        del model
+        utils_test_batch_ensemble.test(options, id2ensemble_stats=id2ensemble_stats,
+                                       numberOfClasses=numberOfClasses,
+                                       maxQAvailableFromIndexer=maxQAvailableFromIndexer,
+                                       total_models_in_ensemble=total_models_in_ensemble,
+                                       most_conservative_hr_alpha_to_consider_in_ensemble=
+                                       most_conservative_hr_alpha_to_consider_in_ensemble)
 
     if options.update_support_set_with_eval_data:
         utils_update.batch_support_update(options, main_device)

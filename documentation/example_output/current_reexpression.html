@@ -399,7 +399,7 @@
 <body>
     <div class="container">
         <div class="header">
-            Reexpress MCP Server Output <span class="mcp-server-version">(v2.3.0.preview)</span>
+            Reexpress MCP Server Output <span class="mcp-server-version">(v2.5.0)</span>
         </div>
 
         <div class="section">
@@ -412,24 +412,34 @@
                 </div>
             </div>
 
-            <div class="field-box" style="margin-bottom: 20px;">
-                <div class="field-label">Confidence</div>
-                <div class="field-value"><span class="tag tag-positive">>= 90%</span></div>
+            
+        
+            <div class=field-box-highlight style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate, accounting for sample-size error in the distance eCDF)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.89</span></div>
             </div>
+    
+        
+            <div class=field-box style="margin-bottom: 20px;">
+                <div class="field-label">Confidence (Class- and prediction-conditional accuracy estimate)</div>
+                <div class="field-value"><span class="tag tag-caution">>= 0.89</span></div>
+            </div>
+    
+        
 
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>The question asked for the derivative of ln(x). The AI response stated that d/dx[ln(x)] = 1/x, noted the domain x &gt; 0, and briefly justified it using the inverse relationship with e^x and implicit differentiation.</div>
+                <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The user asked to find dy/dx for y = (x^2 + 1)^(sin x). The AI response uses logarithmic differentiation and gives dy/dx = (x^2 + 1)^(sin x)[cos x ln(x^2 + 1) + 2x sin x/(x^2 + 1)].</div>
             </div>
             
             <div class="explanation-box-positive">
-                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                <div>This is a standard calculus fact, and the response directly gives the correct derivative with an appropriate derivation and domain note. My verification is based on internal mathematical knowledge, and I have very high confidence because the answer is unambiguous and well established.</div>
+                <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                <div>The response correctly applies logarithmic differentiation/product and chain rules. Since x^2 + 1 is positive for all real x, the logarithm step is valid, and the final derivative is mathematically correct. This is based on internal mathematical knowledge and direct verification.</div>
             </div>
 
             <div class="explanation-box-positive">
                 <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                <div>The AI response correctly states that the derivative of ln(x) is 1/x, which is a well-established mathematical fact that can be verified using internal knowledge.</div>
+                <div>The AI response correctly applied logarithmic differentiation to calculate the derivative of the given function. I independently verified the calculus steps, and the final answer provided by the AI is perfectly accurate.</div>
             </div>
             
             
@@ -448,7 +458,7 @@
                 
                 <div class="field-box">
                     <div class="field-label">Date</div>
-                    <div class="field-value">2026-04-30 15:54:18</div>
+                    <div class="field-value">2026-08-27 21:16:48</div>
                 </div>
                 
             </div>
@@ -456,68 +466,44 @@
 
         <div class="section">
             <div class="section-title">Uncertainty (instance-level) Details</div>
-
-            <div class="field-grid">
-                <div class="field-box">
-                    <div class="field-label">Out-of-Distribution</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">False</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="field-grid">
-                <div class=field-box-highlight>
-                    <div class="field-label">High-Reliability Region (lower)</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">True</span>
-                    </div>
-                </div>
-                <div class=field-box>
-                    <div class="field-label">High-Reliability Region</div>
-                    <div class="field-value">
-                        <span class="tag tag-positive">True</span>
-                    </div>
-                </div>
-            </div>
             
             <div class=field-box-highlight style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_lower</div>
-                <div class="field-value">[1.662786885958667e-08, 1.0]</div>
+                <div class="field-value">[0.0002529078919906169, 0.999747097492218]</div>
             </div>
 
             <div class=field-box style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)</div>
-                <div class="field-value">[8.479558388785335e-09, 1.0]</div>
+                <div class="field-value">[0.00020913696789648384, 0.9997908473014832]</div>
             </div>
             
             <div class="field-box" style="margin-bottom: 20px;">
                 <div class="field-label">p(y | x)_upper</div>
-                <div class="field-value">[4.324240077124841e-09, 1.0]</div>
+                <div class="field-value">[0.00017294038843829185, 0.9998270869255066]</div>
             </div>
             <div class="field-grid">
                 <div class="field-box">
                     <div class="field-label">Effective Sample Size (by class)</div>
-                    <div class="field-value">[1916.0, 2946.0]</div>
+                    <div class="field-value">[4677.0, 5608.0]</div>
                 </div>
             </div>
             
             <div class="field-grid">
                 <div class=field-box-highlight>
                     <div class="field-label">Rescaled Similarity, lower (q'_lower)</div>
-                    <div class="field-value">187.0</div>
+                    <div class="field-value">39.0</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">Rescaled Similarity (q')</div>
-                    <div class="field-value">187.0</div>
+                    <div class="field-value">39.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Similarity to Training (q)
                     </div>
-                    <div class="field-value">187</div>
+                    <div class="field-value">39</div>
                 </div>                               
             </div>
             
@@ -526,21 +512,21 @@
                     <div class="field-label">
                         Distance to Training Lower Quantile (d_lower)
                     </div>
-                    <div class="field-value">0.743704080581665</div>
+                    <div class="field-value">0.7672618627548218</div>
                 </div>
 
                 <div class=field-box>
                     <div class="field-label">
                         Distance to Training Quantile (d)
                     </div>
-                    <div class="field-value">0.7716642022132874</div>
+                    <div class="field-value">0.7848707437515259</div>
                 </div>
                 
                 <div class="field-box">
                     <div class="field-label">
                         Distance to Training Upper Quantile (d_upper)
                     </div>
-                    <div class="field-value">0.7996243238449097</div>
+                    <div class="field-value">0.80247962474823</div>
                 </div>
             </div>
 
@@ -549,40 +535,48 @@
                     <div class="field-label">
                         Magnitude
                     </div>
-                    <div class="field-value">[-2.3239152431488037, 2.2709455490112305]</div>
+                    <div class="field-value">[-1.3379977941513062, 1.5687806606292725]</div>
                 </div>
             </div>
-        </div>
+        </div>   
+    
         <div class="section">
-            <div class="section-title">SDM Estimator (Model-level) Details</div>
+            <div class="section-title">SDM Estimator (Model-level) Details: The Model's Highest Available Confidence Region</div>
             <div class="field-grid">
-            
                 <div class="field-box">
                     <div class="field-label">
                         α
                     </div>
-                    <div class="field-value">0.9</div>
+                    <div class="field-value">0.98</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Minimum Rescaled Similarity (q'_min)
                     </div>
-                    <div class="field-value">3.3118863105773926</div>
+                    <div class="field-value">1003.0</div>
                 </div>
 
                 <div class="field-box">
                     <div class="field-label">
                         Class-wise Output Thresholds (ψ)
                     </div>
-                    <div class="field-value">[0.9685612320899963, 0.9005394577980042]</div>
+                    <div class="field-value">[0.9870682954788208, 0.9999830722808838]</div>
                 </div>
-                
+            </div>
+            <div class="section-title">SDM Estimator (Model-level) Details: Additional</div>
+            <div class="field-grid">
+                <div class="field-box">
+                    <div class="field-label">
+                        Resolution of available class- and prediction-conditional accuracy regions 
+                    </div>
+                    <div class="field-value">[0.98, 0.97, 0.95, 0.94, 0.93, 0.9, 0.89, 0.83, 0.81, 0.77, 0.74, 0.7, 0.67, 0.64, 0.63, 0.6, 0.59, 0.57, 0.56, 0.55, 0.54, 0.53, 0.52, 0.51]</div>
+                </div>
                 <div class="field-box">
                     <div class="field-label">
                         Support/training size
                     </div>
-                    <div class="field-value">14937</div>
+                    <div class="field-value">19814</div>
                 </div>
             </div>
         </div>
@@ -590,12 +584,12 @@
         
         <div class="section">
             <div class="section-title">Prompt</div>
-            <div class="prompt-box">What is the derivative of ln(x)?</div>
+            <div class="prompt-box">Find dy/dx if y = (x^2 + 1)^(sin x)</div>
         </div>
 
         <div class="section">
             <div class="section-title">AI Response</div>
-            <div class="document-box">Reference [1, internal knowledge]: The natural logarithm function ln(x) is the inverse of the exponential function e^x, and standard calculus establishes that d/dx[ln(x)] = 1/x for x &gt; 0. Reference [2, internal reasoning]: This can be derived using implicit differentiation: if y = ln(x), then e^y = x; differentiating both sides with respect to x gives e^y · (dy/dx) = 1, so dy/dx = 1/e^y = 1/x. Answer: The derivative of ln(x) is 1/x.</div>
+            <div class="document-box">Reference [1, internal knowledge]: For functions of the form f(x)^g(x) where both base and exponent depend on x, logarithmic differentiation applies: taking ln of both sides gives ln y = sin x · ln(x^2 + 1); Reference [2, internal reasoning]: Differentiating implicitly: (1/y)(dy/dx) = d/dx[sin x] · ln(x^2 + 1) + sin x · d/dx[ln(x^2 + 1)] = cos x · ln(x^2 + 1) + sin x · (2x/(x^2 + 1)), using the product rule and the chain rule (d/dx[ln(x^2+1)] = 2x/(x^2+1)). Multiplying both sides by y = (x^2 + 1)^(sin x) isolates dy/dx; Reference [3, internal reasoning — independent cross-check]: Rewrite y = e^(sin x · ln(x^2+1)). Then dy/dx = e^(sin x · ln(x^2+1)) · d/dx[sin x · ln(x^2+1)] = (x^2+1)^(sin x) · [cos x · ln(x^2+1) + 2x sin x/(x^2+1)], which matches the logarithmic-differentiation result exactly; Reference [4, internal reasoning — sanity check at a point]: At x = 0: y = 1^0 = 1, and the formula gives dy/dx = 1 · [1 · ln(1) + 0] = 0. Direct check: near x = 0, ln y = sin x · ln(1+x^2) ≈ x · x^2 = x^3, so y ≈ 1 + x^3 and y&#x27;(0) = 0, consistent; Answer: dy/dx = (x^2 + 1)^(sin x) · [cos x · ln(x^2 + 1) + (2x sin x)/(x^2 + 1)]</div>
         </div>
         
         <div class="separator"></div>
@@ -620,79 +614,77 @@
                 </div>
                 
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>The question asked for the derivative of y = ln(sqrt((1+2x)/(1-2x))). The AI response rewrote the expression using logarithm rules, differentiated term by term, and concluded that the derivative is 2/(1-4x^2).</div>
+                    <div class="explanation-title-positive">Model 1 Summary <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The user asked to find the derivative of y = x ln(sqrt(1-x)+sqrt(1+x)) + 1/2(arcsin x - x). The AI response differentiates using product/chain rules and concludes that the derivative simplifies to ln(sqrt(1-x)+sqrt(1+x)).</div>
                 </div>
                 <div class="explanation-box-positive">
-                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.4-2026-03-05)</span></div>
-                    <div>This is a straightforward calculus problem, and the response’s derivation is mathematically correct: y = (1/2)[ln(1+2x) - ln(1-2x)], so y&#x27; = (1/2)[2/(1+2x) + 2/(1-2x)] = 2/(1-4x^2). My verification is based on internal mathematical knowledge; it is not subjective and does not depend on recent information.</div>
+                    <div class="explanation-title-positive">Model 1 Explanation <span class="model-name">(gpt-5.5-2026-04-23)</span></div>
+                    <div>The derivative computation is correct. Let S = sqrt(1-x)+sqrt(1+x); then d/dx[x ln S] = ln S + x S&#x27;/S, and S&#x27;/S simplifies to -x/[2 sqrt(1-x^2)(1+sqrt(1-x^2))]. This extra term cancels exactly with 1/2(1/sqrt(1-x^2)-1), leaving ln S. This is a standard calculus result, not subjective or dependent on recent information.</div>
                 </div>
     
                 <div class="explanation-box-positive">
                     <div class="explanation-title-positive">Model 2 Explanation <span class="model-name">(gemini-3.1-pro-preview)</span></div>
-                    <div>The AI correctly applied logarithmic properties to simplify the expression before differentiating, correctly applied the chain rule to find the derivative, and accurately simplified the resulting algebraic expression to obtain the correct final answer.</div>
+                    <div>The LLM correctly applied the product rule and chain rule to find the derivative. The intermediate differentiation steps are accurate, and the algebraic simplification correctly cancels out the complex fraction with the derivative of the arcsin term, leaving the correct final answer. The provided solution is completely sound.</div>
                 </div>
                 
                 
                 
                 <div class="section">
                     <div class="section-title">Prompt</div>
-                    <div class="prompt-box">Example 5. Find the derivative of the function $y=\ln \sqrt{\frac{1+2 x}{1-2 x}}$.</div>
+                    <div class="prompt-box">## Problem Statement
+
+Find the derivative.
+
+$$
+y=x \ln (\sqrt{1-x}+\sqrt{1+x})+\frac{1}{2}(\arcsin x-x)
+$$</div>
                 </div>
     
                 <div class="section">
                     <div class="section-title">AI Response</div>
-                    <div class="document-box">To find the derivative of the function \( y = \ln \sqrt{\frac{1+2x}{1-2x}} \), we start by simplifying the function using logarithmic properties. 
+                    <div class="document-box">To find the derivative of the function 
 
-First, rewrite the square root as a power:
-\[
-y = \ln \left( \left( \frac{1+2x}{1-2x} \right)^{1/2} \right)
-\]
-Using the property \(\ln(a^b) = b \ln(a)\), this becomes:
-\[
-y = \frac{1}{2} \ln \left( \frac{1+2x}{1-2x} \right)
-\]
-Next, apply the quotient rule for logarithms:
-\[
-y = \frac{1}{2} \left( \ln(1+2x) - \ln(1-2x) \right)
-\]
+$$
+y = x \ln \left( \sqrt{1 - x} + \sqrt{1 + x} \right) + \frac{1}{2} \left( \arcsin x - x \right),
+$$
 
-Now, differentiate term by term. The derivative of \(\ln(u)\) is \(\frac{1}{u} \cdot u&#x27;\):
-\[
-\frac{dy}{dx} = \frac{1}{2} \left( \frac{d}{dx} \ln(1+2x) - \frac{d}{dx} \ln(1-2x) \right)
-\]
-\[
-= \frac{1}{2} \left( \frac{2}{1+2x} - \frac{-2}{1-2x} \right)
-\]
-\[
-= \frac{1}{2} \left( \frac{2}{1+2x} + \frac{2}{1-2x} \right)
-\]
+we break it down into two main parts and apply the product rule and chain rule where necessary.
 
-Factor out the common factor of 2:
-\[
-= \frac{1}{2} \cdot 2 \left( \frac{1}{1+2x} + \frac{1}{1-2x} \right)
-\]
-\[
-= \left( \frac{1}{1+2x} + \frac{1}{1-2x} \right)
-\]
+1. **Differentiating the first part: \( x \ln \left( \sqrt{1 - x} + \sqrt{1 + x} \right) \)**
+   - Let \( u = x \) and \( v = \ln \left( \sqrt{1 - x} + \sqrt{1 + x} \right) \).
+   - Using the product rule: \( \frac{d}{dx}(uv) = u&#x27;v + uv&#x27; \).
+   - \( u&#x27; = 1 \).
+   - For \( v&#x27; \), we use the chain rule on \( \ln(f(x)) \) where \( f(x) = \sqrt{1 - x} + \sqrt{1 + x} \):
+     - \( f&#x27;(x) = \frac{-1}{2\sqrt{1 - x}} + \frac{1}{2\sqrt{1 + x}} \).
+     - \( v&#x27; = \frac{f&#x27;(x)}{f(x)} = \frac{\frac{-1}{2\sqrt{1 - x}} + \frac{1}{2\sqrt{1 + x}}}{\sqrt{1 - x} + \sqrt{1 + x}} \).
 
-Combine the fractions over a common denominator:
-\[
-= \frac{(1-2x) + (1+2x)}{(1+2x)(1-2x)}
-\]
-\[
-= \frac{2}{1 - 4x^2}
-\]
+2. **Differentiating the second part: \( \frac{1}{2} \left( \arcsin x - x \right) \)**
+   - The derivative of \( \arcsin x \) is \( \frac{1}{\sqrt{1 - x^2}} \).
+   - The derivative of \( -x \) is \( -1 \).
+   - Therefore, the derivative of the second part is \( \frac{1}{2} \left( \frac{1}{\sqrt{1 - x^2}} - 1 \right) \).
 
-Thus, the derivative of the function is:
-\[
-\boxed{\dfrac{2}{1 - 4x^2}}
-\]</div>
+Combining these results, we get the derivative:
+
+$$
+y&#x27; = \ln \left( \sqrt{1 - x} + \sqrt{1 + x} \right) + x \left( \frac{\frac{-1}{2\sqrt{1 - x}} + \frac{1}{2\sqrt{1 + x}}}{\sqrt{1 - x} + \sqrt{1 + x}} \right) + \frac{1}{2} \left( \frac{1}{\sqrt{1 - x^2}} - 1 \right).
+$$
+
+After simplifying the terms, we find that the additional terms cancel out, leaving:
+
+$$
+y&#x27; = \ln \left( \sqrt{1 - x} + \sqrt{1 + x} \right).
+$$
+
+Thus, the derivative is 
+
+$$
+\boxed{\ln\left(\sqrt{1 - x} + \sqrt{1 + x}\right)}.
+```</div>
                 </div>
                 <div class="field-grid">        
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document ID</div>
-                        <div class="field-value">pos_745022_798d9095-e166-4e3b-9435-b099d5ecb2ad</div>
+                        <div class="field-value">pos_31521_1ca935c7-3a28-4070-be2b-61d96cb8b15c</div>
                     </div>
                     <div class="field-box" style="margin-bottom: 20px;">
                         <div class="field-label">Document Source</div>
@@ -712,10 +704,10 @@ Thus, the derivative of the function is:
                 <p>An ensemble of models 1, 2, and the embeddings of <span class="model-name">gemini-embedding-2</span> is taken as the input to the SDM estimator that determines the verification classification.</p>
         
                 
-            <p>The classification is in the <span class="tag-highlight">High-Reliability region (lower)</span> when the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> is at least the minimum rescaled Similarity (q'_min) AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>, for the predicted class is at least the corresponding class-wise output threshold (ψ) for the predicted class.</p>
+            <p>The classification is assigned a confidence based on the <span class="tag-highlight">rescaled Similarity, lower (q'_lower)</span> AND the predictive uncertainty, <span class="tag-highlight">p(y | x)_lower</span>.</p>
             <p>The <span class="tag-highlight">lower</span> (and upper) estimates are based on the DKW inequality applied to the distance quantiles.</p>        
         
-                <p>The estimates are fully described in the publication <a href="https://arxiv.org/pdf/2509.12760" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a>.</p>
+                <p>The estimates are fully described in the peer-reviewed publication <a href="https://doi.org/10.18653/v1/2026.findings-acl.1109" target="_blank" rel="noopener noreferrer">"Similarity-Distance-Magnitude Activations"</a> and the research note <a href="https://raw.githubusercontent.com/ReexpressAI/sdm_activations/main/research_notes/nested_sdm_estimators.pdf" target="_blank" rel="noopener noreferrer">"Nested Similarity-Distance-Magnitude Estimators"</a>.</p>
                 <div class="legend-items">
                     <div class="legend-item">
                         <span class="legend-label">Class 0:</span>
