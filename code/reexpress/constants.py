@@ -338,7 +338,7 @@ MCP_SERVER_AGREEMENT_MODEL_MAX_CHARACTER_LENGTH__DEFAULT = 7000
 MCP_SERVER_AGREEMENT_MODEL_DEVICE__DEFAULT = "cpu"
 
 REEXPRESS_MCP_SERVER_VERSION_KEY = "mcp_server_version"
-REEXPRESS_MCP_SERVER_VERSION = "2.5.0"  # see also ProgramIdentifiers_version for the classifier
+REEXPRESS_MCP_SERVER_VERSION = "2.5.1"  # see also ProgramIdentifiers_version for the classifier
 
 ######
 # This impacts the document id names used for added documents. This should be False for normal usage,
