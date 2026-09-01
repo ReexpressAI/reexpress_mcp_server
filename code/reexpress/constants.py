@@ -62,9 +62,6 @@ defaultDistanceQuantile: float = 0.05
 # ModelControl
 keyModelDimension = 1000
 
-# Resolution of the nested high-reliability regions: Alg. 1 in 'SDM Activations' is run at
-# alpha = 1 - k*alpha_resolution, for k = 1, 2, ..., while alpha > 0.5 (as required by Alg. 1).
-# The default of 0.05 results in the ladder [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55].
 defaultAlphaResolution = 0.01
 
 def floatProbToDisplaySignificantDigits(floatProb: float) -> str:

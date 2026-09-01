@@ -680,16 +680,28 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
             # Convert CDF array to tensor on the same device
             cdf_tensor = torch.tensor(self.trueClass_To_qCumulativeSampleSizeArray[label],
                                       dtype=torch.float32, device=self.device)
-            cdf_len = len(cdf_tensor)
-
-            # Use PyTorch's searchsorted for GPU acceleration
-            indices = torch.searchsorted(cdf_tensor, rescaled_similarities, side='left')
-
-            # The indices are the sample sizes, so we just need to apply the max constraint
-            sample_sizes = torch.minimum(
-                indices,
-                torch.tensor(max(0, cdf_len - 1), device=self.device, dtype=torch.long)
-            )
+            # cdf_len = len(cdf_tensor)
+            # # Use PyTorch's searchsorted for GPU acceleration
+            # indices = torch.searchsorted(cdf_tensor, rescaled_similarities, side='left')
+            #
+            # # The indices are the sample sizes, so we just need to apply the max constraint
+            # sample_sizes = torch.minimum(
+            #     indices,
+            #     torch.tensor(max(0, cdf_len - 1), device=self.device, dtype=torch.long)
+            # )
+            # Earlier versions used the above commented-out convention (inherited from the distance eCDF convention
+            # explicitly noted in A.4.2), but the following is arguably a more typical computational
+            # interpretation/implementation of Eq. 11. Here, side='right' counts the calibration points of
+            # the class with a rescaled similarity <= the eval instance's value (the standard,
+            # right-continuous eCDF convention: The cumulative effective sample at the instance's level
+            # includes the points at exactly that level). Since
+            # min(q, (2+q)^{p}) clamps confident points to integer q, exact-tie
+            # groups that belong to the cumulative effective
+            # sample can result. (However, in practice, with the data from release v2.5.0 of the MCP Server, for
+            # example, the difference in final assignments for our eval/analysis datasets is negligible.):
+            indices = torch.searchsorted(cdf_tensor, rescaled_similarities, side='right')
+            # The indices are the sample sizes:
+            sample_sizes = indices
 
             cumulative_effective_sample_sizes[:, label] = sample_sizes
 

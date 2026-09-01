@@ -129,9 +129,15 @@ def main():
                         default=False, action='store_true',
                         help="Used for profiling training.")
     parser.add_argument("--alpha_resolution", default=constants.defaultAlphaResolution, type=float,
-                        help="Resolution of the nested high-reliability regions: Alg. 1 is run at "
+                        help="Resolution of the nested high-reliability regions: Alg. 1 in 'SDM Activations' is run at "
                              "alpha = 1 - k*alpha_resolution for k = 1, 2, ..., while alpha > 0.5, successively  "
-                             "excluding the points in every higher region with a finite q'_min.")
+                             "excluding the points in every higher region with a finite q'_min. "
+                             "A resolution of 0.05, for example, results in the ladder "
+                             "[0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55]; however, for a given model and "
+                             "dataset, not all of the associated regions will necessarily be obtainable via the "
+                             "data/model (i.e., have a finite q'_min). In effect, this is an adaptive, "
+                             "data-driven approach for partitioning the calibration set into regions with "
+                             "class- and prediction-conditional accuracy >= the given value.")
 
     # ensemble parameters:
     parser.add_argument("--eval_ensemble", default=False, action='store_true', help="")
