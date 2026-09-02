@@ -219,7 +219,7 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
         assert calibration_exemplar_vectors_numpy.shape[1] == self.exemplar_vector_dimension
         if k is None:
             k = self.maxQAvailableFromIndexer
-        support_index = faiss.IndexFlatL2(dimensions)  # build the index
+        support_index = faiss.IndexFlatL2(dimensions)  # build the index (Squared Euclidean distance)
         support_index.add(support_exemplar_vectors_numpy)  # add exemplar vectors to the index
         if ood_support_exemplar_vectors_numpy is not None and ood_support_labels is not None and \
             ood_support_predicted_labels is not None and ood_support_document_ids is not None and \
@@ -1370,7 +1370,7 @@ class SimilarityDistanceMagnitudeCalibrator(nn.Module):
                 prediction_meta_data = {
                         # Similarity value: q:
                         "q": q.item(),
-                        # raw Distance value: d_nearest:
+                        # raw Distance value: d_nearest: (here, squared Euclidean distance)
                         "d0": d0_value.item(),
                         # raw Magnitude value (un-normalized logits):
                         "f": f,  # tensor
